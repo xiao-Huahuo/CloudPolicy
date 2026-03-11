@@ -1,0 +1,5 @@
+class GlobalConfig:
+    DEFAULT_ADMIN_PASSWORD = "111111"
+    DEFAULT_ADMIN_USERNAME="admin"
+    DEFAULT_ADMIN_EMAIL="unknown@email.com"
+    DEFAULT_ADMIN_PHONE=None
