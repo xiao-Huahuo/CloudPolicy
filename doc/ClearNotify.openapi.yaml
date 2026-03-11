@@ -1,0 +1,212 @@
+openapi: 3.0.1
+info:
+  title: 默认模块
+  description: ''
+  version: 1.0.0
+tags:
+  - name: login
+  - name: user
+  - name: ai
+paths:
+  /login/:
+    post:
+      summary: 用户登录
+      deprecated: false
+      description: ''
+      tags:
+        - login
+      parameters: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                username:
+                  description: 用户名,uname
+                  example: ''
+                  type: string
+                password:
+                  description: 密码
+                  example: ''
+                  type: string
+            examples: {}
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+      security: []
+  /user/:
+    post:
+      summary: 用户注册
+      deprecated: false
+      description: ''
+      tags:
+        - user
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+            examples: {}
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+      security: []
+  /user/me:
+    get:
+      summary: 查询个人信息
+      deprecated: false
+      description: ''
+      tags:
+        - user
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+      security:
+        - bearer: []
+    patch:
+      summary: 修改个人信息
+      deprecated: false
+      description: ''
+      tags:
+        - user
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+            examples: {}
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+      security:
+        - bearer: []
+  /ai/chat:
+    post:
+      summary: 询问AI
+      deprecated: false
+      description: 需在.env中配置MOONSHOT_API_KEY
+      tags:
+        - ai
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples: {}
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+      security:
+        - bearer: []
+components:
+  schemas:
+    UserBase:
+      type: object
+      properties:
+        uname:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+      required:
+        - uname
+        - email
+    UserCreate:
+      type: object
+      properties:
+        uname:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        pwd:
+          type: string
+          title: 明文密码
+      required:
+        - pwd
+        - uname
+        - email
+    UserRead:
+      type: object
+      properties:
+        uname:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        uid:
+          type: integer
+        created_time:
+          type: string
+        last_login:
+          type: string
+      required:
+        - uid
+        - created_time
+        - last_login
+        - uname
+        - email
+    UserUpdate:
+      type: object
+      properties:
+        uname:
+          type: string
+        pwd:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+    ChatRequest:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+      required:
+        - reply
+  responses: {}
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+servers: []
+security: []
