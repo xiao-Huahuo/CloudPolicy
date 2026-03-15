@@ -5,7 +5,8 @@ export const API_ROUTES = {
   LOGIN: '/login/',
   REGISTER: '/user',
   GET_ME: '/user/me',
-  CHAT_AI: '/ai/chat',
+  CHAT_MESSAGE: '/chat/', // 对应后端 main.py 中 prefix="/chat"
+  ANALYSIS_ME: '/analysis/me',
 };
 
 // 统一的 API Client

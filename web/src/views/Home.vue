@@ -72,8 +72,102 @@
         <h2>解读结果</h2>
       </div>
 
-      <div class="response-section">
-        <div class="result-content">{{ aiResponse }}</div>
+      <!-- 解析结果展示卡片 -->
+      <div class="response-section" v-if="aiResponse">
+        <!-- 头部信息：时间、办理事项和对象 -->
+        <div class="result-card-header">
+          <h3>{{ aiResponse.handling_matter || '未知事项' }}</h3>
+          <div class="tags-container">
+             <span class="highlight-tag" v-if="aiResponse.target_audience">{{ aiResponse.target_audience }}</span>
+             <span class="info-tag" v-if="aiResponse.chat_analysis?.notice_type">{{ aiResponse.chat_analysis.notice_type }}</span>
+          </div>
+        </div>
+
+        <!-- 难度分析仪表盘 -->
+        <div class="analysis-dashboard" v-if="aiResponse.chat_analysis">
+           <div class="dashboard-item">
+              <span class="label">语言复杂度</span>
+              <span class="value" :class="getComplexityClass(aiResponse.chat_analysis.language_complexity)">
+                {{ aiResponse.chat_analysis.language_complexity || '未知' }}
+              </span>
+           </div>
+           <div class="dashboard-item">
+              <span class="label">办理复杂度</span>
+              <span class="value" :class="getComplexityClass(aiResponse.chat_analysis.handling_complexity)">
+                {{ aiResponse.chat_analysis.handling_complexity || '未知' }}
+              </span>
+           </div>
+           <div class="dashboard-item">
+              <span class="label">风险等级</span>
+              <span class="value" :class="getComplexityClass(aiResponse.chat_analysis.risk_level)">
+                {{ aiResponse.chat_analysis.risk_level || '未知' }}
+              </span>
+           </div>
+        </div>
+
+        <div class="result-grid">
+          <!-- 左侧：具体信息提取 -->
+          <div class="info-list">
+             <div class="info-item" v-if="aiResponse.time_deadline">
+                <div class="info-icon">⏰</div>
+                <div class="info-text">
+                  <strong>办理时间：</strong>
+                  <p>{{ aiResponse.time_deadline }}</p>
+                </div>
+             </div>
+
+             <div class="info-item" v-if="aiResponse.location_entrance">
+                <div class="info-icon">📍</div>
+                <div class="info-text">
+                  <strong>办理地点/入口：</strong>
+                  <p>{{ aiResponse.location_entrance }}</p>
+                </div>
+             </div>
+
+             <div class="info-item" v-if="aiResponse.required_materials">
+                <div class="info-icon">📄</div>
+                <div class="info-text">
+                  <strong>所需材料：</strong>
+                  <p>{{ aiResponse.required_materials }}</p>
+                </div>
+             </div>
+
+             <div class="info-item" v-if="aiResponse.handling_process">
+                <div class="info-icon">🛠️</div>
+                <div class="info-text">
+                  <strong>办理流程：</strong>
+                  <div class="process-text">{{ aiResponse.handling_process }}</div>
+                </div>
+             </div>
+          </div>
+
+          <!-- 右侧：注意事项和风险提醒 -->
+          <div class="warning-panel">
+             <div class="warning-box info" v-if="aiResponse.precautions">
+                <h4>📌 注意事项</h4>
+                <p>{{ aiResponse.precautions }}</p>
+             </div>
+             <div class="warning-box danger" v-if="aiResponse.risk_warnings">
+                <h4>⚠️ 风险提醒</h4>
+                <p>{{ aiResponse.risk_warnings }}</p>
+             </div>
+             <div class="warning-box mapping" v-if="aiResponse.original_text_mapping">
+                <h4>🗺️ 原文对应位置</h4>
+                <p>{{ aiResponse.original_text_mapping }}</p>
+             </div>
+          </div>
+        </div>
+
+        <!-- 多版本改写工具栏 -->
+        <div class="rewrite-toolbar">
+           <span>切换改写版本：</span>
+           <button class="rewrite-btn" @click="rewriteTarget('老人版')" :disabled="isRewriting">👴 老人版</button>
+           <button class="rewrite-btn" @click="rewriteTarget('学生版')" :disabled="isRewriting">🎓 学生版</button>
+           <button class="rewrite-btn" @click="rewriteTarget('家属转述版')" :disabled="isRewriting">👨‍👩‍👧 家属转述版</button>
+           <button class="rewrite-btn" @click="rewriteTarget('极简版')" :disabled="isRewriting">⚡ 极简版</button>
+           <button class="rewrite-btn" @click="rewriteTarget('客服答复版')" :disabled="isRewriting">👩‍💻 客服答复版</button>
+           <span v-if="isRewriting" class="rewriting-status">正在生成...</span>
+        </div>
       </div>
     </div>
 
@@ -96,15 +190,16 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useUserStore } from '@/stores/user';
-import { chatWithAI } from '@/api/ai';
+import { createChatMessage, rewriteChatMessage } from '@/api/ai'; // 修改了导入的接口
 import Modal from '@/components/common/Modal.vue';
 import LoginForm from '@/components/Home/LoginForm.vue';
 import RegisterForm from '@/components/Home/RegisterForm.vue';
 
 const userStore = useUserStore();
 const inputText = ref('');
-const aiResponse = ref('');
+const aiResponse = ref(null); // 现在是一个对象而不是字符串
 const loading = ref(false);
+const isRewriting = ref(false);
 const showResult = ref(false);
 const fileInput = ref(null);
 
@@ -189,11 +284,12 @@ const submitToAI = async () => {
   }
 
   loading.value = true;
-  aiResponse.value = '';
+  aiResponse.value = null;
 
   try {
-    const response = await chatWithAI(inputText.value);
-    aiResponse.value = response.data.reply;
+    // 调用新的解析接口
+    const response = await createChatMessage(inputText.value);
+    aiResponse.value = response.data; // 整个 ChatMessageRead 对象
     showResult.value = true;
   } catch (error) {
     console.error(error);
@@ -201,21 +297,43 @@ const submitToAI = async () => {
        userStore.logout();
        openLoginModal();
     } else {
-       alert('AI 服务暂时不可用: ' + (error.response?.data?.detail || error.message));
+       alert('解析失败: ' + (error.response?.data?.detail || error.message));
     }
   } finally {
     loading.value = false;
   }
 };
 
+const rewriteTarget = async (target) => {
+  if (!aiResponse.value || !aiResponse.value.id) return;
+
+  isRewriting.value = true;
+  try {
+    const response = await rewriteChatMessage(aiResponse.value.id, target);
+    aiResponse.value = response.data; // 更新为改写后的对象
+  } catch (error) {
+    console.error(error);
+    alert('改写失败: ' + (error.response?.data?.detail || error.message));
+  } finally {
+    isRewriting.value = false;
+  }
+}
+
 const resetView = () => {
   inputText.value = '';
-  aiResponse.value = '';
+  aiResponse.value = null;
   showResult.value = false;
   if (fileInput.value) {
-    fileInput.value.value = ''; // 清空文件选择
+    fileInput.value.value = '';
   }
 };
+
+const getComplexityClass = (level) => {
+  if (level === '高') return 'level-high';
+  if (level === '中') return 'level-medium';
+  if (level === '低') return 'level-low';
+  return '';
+}
 </script>
 
 <style scoped>
@@ -251,7 +369,7 @@ const resetView = () => {
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
-  margin-bottom: 20px; /* 减小一点，给 banner 留空间 */
+  margin-bottom: 20px;
 }
 .upload-area:hover {
   border-color: var(--color-middle);
@@ -281,11 +399,10 @@ const resetView = () => {
   align-items: center;
   gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-shadow: none;
 }
 .action-btn:hover {
   background-color: #eee;
-  transform: translateY(-2px);
 }
 .upload-hint {
   font-size: 14px;
@@ -346,7 +463,6 @@ const resetView = () => {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #eee;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
   display: flex;
   flex-direction: column;
   transition: transform 0.3s;
@@ -354,7 +470,6 @@ const resetView = () => {
 }
 .example-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
 }
 .card-image {
   height: 140px;
@@ -411,16 +526,174 @@ const resetView = () => {
 .back-btn:hover {
   background-color: #f0f0f0;
 }
+
+/* 结果卡片详细设计 */
 .response-section {
   padding: 30px;
   background-color: #fff;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
   min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
-.result-content {
-  white-space: pre-wrap;
-  line-height: 1.8;
+
+.result-card-header {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+.result-card-header h3 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  color: #111;
+}
+.tags-container {
+  display: flex;
+  gap: 10px;
+}
+.highlight-tag {
+  background-color: var(--color-primary);
+  color: var(--color-text-dark);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.info-tag {
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.analysis-dashboard {
+  display: flex;
+  gap: 20px;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+.dashboard-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dashboard-item .label {
+  color: #666;
+  font-size: 14px;
+}
+.dashboard-item .value {
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.level-high { background-color: #ffebee; color: #e53935; }
+.level-medium { background-color: #fff3e0; color: #f57c00; }
+.level-low { background-color: #e8f5e9; color: #43a047; }
+
+.result-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+}
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.info-item {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+.info-icon {
+  font-size: 24px;
+  margin-top: 2px;
+}
+.info-text strong {
+  display: block;
+  margin-bottom: 5px;
   color: #333;
+}
+.info-text p {
+  margin: 0;
+  color: #555;
+  line-height: 1.5;
+}
+.process-text {
+  white-space: pre-wrap;
+  color: #555;
+  line-height: 1.6;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.warning-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.warning-box {
+  padding: 15px;
+  border-radius: 8px;
+}
+.warning-box h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+.warning-box p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.warning-box.info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+.warning-box.danger {
+  background-color: #ffebee;
+  color: #c62828;
+}
+.warning-box.mapping {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px dashed #ccc;
+}
+
+.rewrite-toolbar {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed #eee;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rewrite-btn {
+  background-color: #fff;
+  border: 1px solid var(--color-middle);
+  color: var(--color-middle);
+  padding: 6px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+.rewrite-btn:hover:not(:disabled) {
+  background-color: var(--color-middle);
+  color: #fff;
+}
+.rewrite-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rewriting-status {
+  font-size: 13px;
+  color: #999;
+  font-style: italic;
 }
 </style>

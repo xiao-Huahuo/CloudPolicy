@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <h1>功能 A</h1>
+    <h1>分析数据</h1>
     <p>Coming soon...</p>
   </div>
 </template>

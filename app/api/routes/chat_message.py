@@ -12,7 +12,7 @@ from app.services import chat_message_service
 
 router = APIRouter()
 
-@router.post("", response_model=ChatMessageRead)
+@router.post("/", response_model=ChatMessageRead)
 def create_chat_message(
     chat_in: ChatMessageCreate,
     session: Session = Depends(get_session),
@@ -44,7 +44,7 @@ def create_chat_message(
     
     return ChatMessageRead(**response_data)
 
-@router.get("", response_model=List[ChatMessageRead])
+@router.get("/", response_model=List[ChatMessageRead])
 def read_chat_messages(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
