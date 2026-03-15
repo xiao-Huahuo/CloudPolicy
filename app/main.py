@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
 
-from app.api.routes import user, login, ai
+from app.api.routes import user, login, chat_message, stats_analysis
 from app.services.init_db import init_db_and_admin
 
 # 定义生命周期管理器
@@ -20,10 +21,20 @@ async def lifespan(app: FastAPI):
 # 将 lifespan 传入 FastAPI
 app = FastAPI(lifespan=lifespan)
 
+# 配置 CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # 注入路由
 app.include_router(user.router, prefix="/user", tags=["user"])
 app.include_router(login.router, prefix="/login", tags=["login"])
-app.include_router(ai.router, prefix="/ai", tags=["ai","kimi"])
+app.include_router(chat_message.router, prefix="/chat", tags=["chat_message"])
+app.include_router(stats_analysis.router, prefix="/analysis", tags=["analysis"])
 
 @app.get("/")
 async def root():
