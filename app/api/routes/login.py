@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
+from app.core.config import GlobalConfig
 from app.core.database import get_session
-from app.core.security import create_access_token, verify_password, get_password_hash, ACCESS_TOKEN_EXPIRE_DAYS
+from app.core.security import create_access_token, verify_password, get_password_hash
 from app.models.user import User
 from app.schemas.token import Token
 
@@ -52,7 +53,7 @@ def login_access_token(
     session.add(user)
     session.commit()
 
-    access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    access_token_expires = timedelta(days=GlobalConfig.ACCESS_TOKEN_EXPIRE_DAYS)
     access_token = create_access_token(
         subject=user.uid, expires_delta=access_token_expires
     )

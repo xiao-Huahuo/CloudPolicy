@@ -7,8 +7,8 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.core import security
+from app.core.config import GlobalConfig
 from app.core.database import get_session
-from app.core.security import ALGORITHM, SECRET_KEY
 from app.models.user import User
 from app.schemas.token import TokenPayload
 
@@ -31,7 +31,7 @@ def get_current_user(
     try:
         # 解密 Token
         payload = jwt.decode(
-            token, SECRET_KEY, algorithms=[ALGORITHM]
+            token, GlobalConfig.SECRET_KEY, algorithms=[GlobalConfig.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
     except (JWTError, ValidationError):

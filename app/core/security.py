@@ -3,13 +3,7 @@ from typing import Any, Union
 from jose import jwt
 from passlib.context import CryptContext
 
-#####################
-# 常量,应该从环境变量获取,此处开发使用
-SECRET_KEY = "09d25e094faa6ca2556c81"  # 密钥
-ALGORITHM = "HS256"  # 加密算法,采用Hash256
-ACCESS_TOKEN_EXPIRE_DAYS = 30  # token有效期为30天
-#####################
-
+from app.core.config import GlobalConfig
 
 # 尝试更换哈希算法，解决 bcrypt 可能的兼容性问题
 # 使用 pbkdf2_sha256，它是纯 Python 支持良好的算法
@@ -37,7 +31,7 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+        expire = datetime.utcnow() + timedelta(days=GlobalConfig.ACCESS_TOKEN_EXPIRE_DAYS)
 
     # 准备载荷 (Payload)
     # sub (Subject) 是 JWT 标准字段，存放用户 ID
@@ -45,5 +39,5 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     to_encode = {"exp": expire, "sub": str(subject)}
 
     # 编码,生成 Token 并返回
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, GlobalConfig.SECRET_KEY, algorithm=GlobalConfig.ALGORITHM)
     return encoded_jwt

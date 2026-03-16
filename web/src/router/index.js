@@ -5,6 +5,9 @@ import FeatureB from '../views/FeatureB.vue'
 import FeatureC from '../views/FeatureC.vue'
 import Profile from '../views/Profile.vue'
 import Search from '../views/Search.vue'
+import Rewrite from '../views/Rewrite.vue'
+import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,6 +42,21 @@ const router = createRouter({
       name: 'search',
       component: Search,
     },
+    {
+      path: '/rewrite',
+      name: 'rewrite',
+      component: Rewrite,
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: Login,
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: Register,
+    }
   ],
 })
 
