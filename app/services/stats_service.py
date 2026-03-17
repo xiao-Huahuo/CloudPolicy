@@ -124,14 +124,7 @@ def aggregate_analysis_data(messages: List[ChatMessage]) -> Dict[str, Any]:
     # 选取 Top 5 的通知类型
     top_notice_types = dict(notice_type_dist.most_common(5))
     if not top_notice_types:
-        # 如果真实数据中没有解析出通知类型，提供一些更有表现力的默认占位数据，方便前端渲染南丁格尔玫瑰图
-        top_notice_types = {
-            "医保缴费": 15,
-            "社区活动": 8,
-            "政策补贴": 12,
-            "违章通知": 5,
-            "入学报名": 10
-        }
+        top_notice_types = {}
 
     return {
         "flattened_complexity": flattened_complexity,
@@ -156,13 +149,7 @@ def generate_user_stats(session: Session, user_id: int) -> Dict[str, Any]:
             "materials_freq": {},
             "risks_freq": {},
             "complexity_distribution": {},
-            "notice_type_distribution": {
-                "医保缴费": 15,
-                "社区活动": 8,
-                "政策补贴": 12,
-                "违章通知": 5,
-                "入学报名": 10
-            }, # 提供默认的丰富数据以供前端测试和展示
+            "notice_type_distribution": {}, 
             "total_time_saved_minutes": 0,
             "avg_time_saved_minutes": 0,
             "time_saved_distribution": {}

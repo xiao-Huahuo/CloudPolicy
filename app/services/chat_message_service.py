@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlmodel import Session, select
 from app.models.chat_message import ChatMessage
 from app.ai.document_parser import rewrite_document
+from app.ai.analysis_agent import analyze_complexity_and_type
 import json
 
 def get_messages(
@@ -127,18 +128,14 @@ def update_message_audience_via_ai(session: Session, user_id: int, message_id: i
 
 def evaluate_notice_difficulty(original_text: str, handling_matter: str, time_deadline: str, required_materials: str, risk_warnings: str) -> str:
     """
-    业务逻辑：纯算法评估通知的难度分级。
-    依据：时间节点数量、材料数量、风险提示长度等。
+    业务逻辑：调用大模型和算法结合，评估通知的难度分级和类型。
+    依据：调用大模型获取 notice_type 和基础复杂度，并根据内容丰富度计算各个维度的复杂度。
     返回 JSON 格式的字符串。
     """
-    # 1. 评估语言复杂度：看原文长度
-    text_length = len(original_text) if original_text else 0
-    if text_length > 1000:
-        language_complexity = "高"
-    elif text_length > 500:
-        language_complexity = "中"
-    else:
-        language_complexity = "低"
+    # 1. 调用大模型获取通知类型和基础理解复杂度
+    ai_analysis = analyze_complexity_and_type(original_text)
+    notice_type = ai_analysis.get("notice_type", "其他通知")
+    language_complexity = ai_analysis.get("complexity", "中")
         
     # 2. 评估办理复杂度：看所需材料和办理事项的复杂程度
     materials_count = len(str(required_materials).split('、')) + len(str(required_materials).split('，')) if required_materials else 0
@@ -165,7 +162,8 @@ def evaluate_notice_difficulty(original_text: str, handling_matter: str, time_de
     analysis_dict = {
         "language_complexity": language_complexity,
         "handling_complexity": handling_complexity,
-        "risk_level": risk_level
+        "risk_level": risk_level,
+        "notice_type": notice_type
     }
     
     return json.dumps(analysis_dict, ensure_ascii=False)
