@@ -1,13 +1,18 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+import os
 
 # 加载环境变量
 load_dotenv()
 
-from app.api.routes import user, login, chat_message, stats_analysis, settings
+from app.api.routes import user, login, chat_message, stats_analysis, settings, upload
 from app.services.init_db import init_db_and_admin
+
+# 确保上传目录存在
+os.makedirs("uploads/avatars", exist_ok=True)
 
 # 定义生命周期管理器
 @asynccontextmanager
@@ -30,12 +35,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 挂载静态文件目录，使得前端可以通过 /media/... 访问上传的文件
+app.mount("/media", StaticFiles(directory="uploads"), name="media")
+
 # 注入路由
 app.include_router(user.router, prefix="/user", tags=["user"])
 app.include_router(login.router, prefix="/login", tags=["login"])
 app.include_router(chat_message.router, prefix="/chat", tags=["chat_message"])
 app.include_router(stats_analysis.router, prefix="/analysis", tags=["analysis"])
 app.include_router(settings.router, prefix="/settings", tags=["settings"])
+app.include_router(upload.router, prefix="/upload", tags=["upload"])
 
 @app.get("/")
 async def root():

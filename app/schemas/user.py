@@ -22,3 +22,4 @@ class UserUpdate(SQLModel):
     email:Optional[str]=None
     phone:Optional[str]=None
     pwd:Optional[str]=None
+    avatar_url:Optional[str]=None

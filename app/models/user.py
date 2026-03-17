@@ -15,6 +15,8 @@ class UserBase(SQLModel):
     email:str=Field(unique=True,index=True)  #邮箱,不可重复,建立索引便于查找
     # 修改：手机号不再唯一，且可选
     phone:Optional[str]=Field(default=None)
+    # 新增：用户头像 URL (可选)
+    avatar_url: Optional[str] = Field(default=None)
 
 #数据库模型
 class User(UserBase,table=True):
