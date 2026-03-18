@@ -29,8 +29,8 @@
               URL上传
             </button>
           </div>
-          <p class="upload-hint">点击或拖拽上传需要改写的文档</p>
-          <input type="file" ref="fileInput" style="display: none" @change="handleFileUpload" />
+          <p class="upload-hint">点击或拖拽上传需要改写的文档 (支持 TXT, PDF, Word, Excel)</p>
+          <input type="file" ref="fileInput" style="display: none" @change="handleFileUpload" accept=".txt,.pdf,.doc,.docx,.xls,.xlsx" />
         </div>
 
         <div v-if="loading" class="loading-banner">
@@ -105,6 +105,8 @@
           <div class="compare-box">
             <h3 class="box-title">原文</h3>
             <div class="text-content original">
+              <a v-if="currentFileUrl" :href="currentFileUrl" target="_blank" class="file-link">点击查看上传的原文件</a>
+              <br v-if="currentFileUrl" />
               {{ currentMessageData?.original_text || inputText }}
             </div>
           </div>
@@ -142,7 +144,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { createChatMessage, rewriteChatMessage, getChatMessages } from '@/api/ai';
+import { createChatMessage, createChatMessageWithFile, uploadAndExtractDocument, rewriteChatMessage, getChatMessages } from '@/api/ai';
 import { useUserStore } from '@/stores/user';
 
 const router = useRouter();
@@ -150,6 +152,7 @@ const userStore = useUserStore();
 
 // 状态
 const inputText = ref('');
+const currentFileUrl = ref(null); // 保存当前解析文件的URL
 const fileInput = ref(null);
 const loading = ref(false);
 const isRewriting = ref(false);
@@ -211,14 +214,31 @@ const handleDrop = (event) => {
   processFile(file);
 };
 
-const processFile = (file) => {
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      inputText.value = e.target.result;
-      currentMessageId.value = null; // 新文件，清空历史 ID
-    };
-    reader.readAsText(file);
+const processFile = async (file) => {
+  if (!file) return;
+
+  loading.value = true;
+  currentMessageId.value = null; // 新文件，清空历史 ID
+  currentFileUrl.value = null;
+  inputText.value = '';
+
+  try {
+    // 调用通用文档上传接口
+    const uploadRes = await uploadAndExtractDocument(file);
+    const { extracted_text, file_url } = uploadRes.data;
+
+    // 把提取出来的纯文本显示在配置区域供用户确认
+    inputText.value = extracted_text;
+    currentFileUrl.value = file_url; // 保存文件 URL 以便后续存储或展示
+
+  } catch (error) {
+    console.error(error);
+    alert('文件提取失败: ' + (error.response?.data?.detail || error.message));
+  } finally {
+    loading.value = false;
+    if (fileInput.value) {
+       fileInput.value.value = ''; // 清空 input
+    }
   }
 };
 
@@ -228,6 +248,7 @@ const handleUrlUpload = () => {
   if (url) {
     inputText.value = `URL: ${url}`;
     currentMessageId.value = null;
+    currentFileUrl.value = null;
   }
 };
 
@@ -244,6 +265,7 @@ const selectHistoryItem = (msg) => {
   inputText.value = msg.original_text;
   currentMessageId.value = msg.id;
   currentMessageData.value = msg;
+  currentFileUrl.value = msg.file_url;
 };
 
 const resetConfig = () => {
@@ -264,9 +286,14 @@ const executeRewrite = async () => {
   try {
     let msgId = currentMessageId.value;
 
-    // 如果是全新上传的文件，先调用创建接口存库
+    // 如果是全新上传的文件（没有 msgId），先调用创建接口存库
     if (!msgId) {
-      const createRes = await createChatMessage(inputText.value);
+      let createRes;
+      if (currentFileUrl.value) {
+          createRes = await createChatMessageWithFile(inputText.value, currentFileUrl.value);
+      } else {
+          createRes = await createChatMessage(inputText.value);
+      }
       msgId = createRes.data.id;
       currentMessageId.value = msgId;
     }
@@ -580,6 +607,13 @@ const formatDate = (dateString) => {
 
 .text-content.original {
   background-color: #fafafa;
+}
+
+.file-link {
+  color: #00a8ff;
+  text-decoration: underline;
+  display: inline-block;
+  margin-bottom: 10px;
 }
 
 .structured-text p {

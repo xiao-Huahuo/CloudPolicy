@@ -7,3 +7,11 @@ python-multipart
 openai
 python-dotenv
 jieba
+python-docx
+pdfplumber
+PyJWT==2.8.0
+passlib==1.7.4
+bcrypt==4.1.2
+jieba==0.42.1
+openpyxl==3.1.2
+xlrd==2.0.1

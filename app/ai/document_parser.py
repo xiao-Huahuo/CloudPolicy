@@ -1,181 +1,187 @@
 import json
 from app.ai.request_kimi import RequestKimi
 from app.models.chat_message import ChatMessageBase
+from pathlib import Path
+
+def _clean_json_response(response_text: str) -> dict:
+    """清理并解析 JSON 响应"""
+    response_text = response_text.strip()
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    if response_text.startswith("```"):
+        response_text = response_text[3:]
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+    response_text = response_text.strip()
+    return json.loads(response_text)
+
+def _convert_list_to_str(data: dict, key: str) -> None:
+    """如果字典中的某个键的值是列表，将其转换为逗号分隔的字符串"""
+    if key in data and isinstance(data[key], list):
+        data[key] = "，".join([str(item) for item in data[key]])
 
 def parse_document(original_text: str, user_id: int) -> ChatMessageBase:
     """
-    调用 AI 解析文档，返回 ChatMessageBase 对象
+    通用文档解析，传入文本或提取出的文件文本，调用大模型进行归纳和解析
     """
     kimi = RequestKimi()
     
-    # 重新定义系统提示词，要求强制输出 JSON
+    # 构造系统提示词，要求返回 JSON 格式
     system_prompt = """
-    你是一个专业的政务和民生通知解读助手。你的任务是从用户提供的冗长通知文本中，提取出关键的结构化信息，以方便群众快速阅读和办理。
-    
-    你必须且只能返回一个合法的 JSON 对象，不要包含任何额外的解释性文字，也不要使用 Markdown 代码块包裹（如 ```json ... ```）。
-    如果你无法在原文中找到某个字段的信息，请将其值设置为 null。
-    
-    JSON 对象的键必须严格如下：
-    {
-        "target_audience": "适用对象是谁？（例如：全体居民、应届毕业生、退休老人等）",
-        "handling_matter": "需要办理什么事项？（例如：医保缴费、户口迁移等）",
-        "time_deadline": "办理的时间范围或截止时间是什么？",
-        "location_entrance": "办理的地点在哪里，或者线上办理的入口/网址是什么？",
-        "required_materials": "办理需要准备哪些材料？（请尽量列出清单，并组合成单个字符串，不要使用数组格式）",
-        "handling_process": "具体的办理流程分为哪几步？（请组合成单个字符串，使用序号分隔，不要使用数组格式）",
-        "precautions": "有哪些需要特别注意的事项？",
-        "risk_warnings": "如果逾期或不办理，会有什么风险或后果提醒？",
-        "original_text_mapping": "将上述提取出的关键信息在原文中的出处或段落进行简单映射（可以存为一段描述或JSON字符串，如果太复杂可简写）"
-    }
-    
-    请注意，所有字段的值必须是 string 类型或 null，绝对不能是数组(list)或对象(dict)。如果原本你想用列表表达，请用顿号或换行符将它们连接成一个长字符串。
+    你是一个专业的文档解析助手。你的任务是从用户提供的官方通知或长文本中，精确提取出关键的业务信息。
+    请务必返回一个标准的 JSON 对象，且仅包含以下键名（如果文中未提及，请填入null）。
+    注意：所有键对应的值都必须是字符串（String）或 null，绝对不能是数组（Array）或列表（List）！如果是多个项目，请用逗号连接成一个长字符串。
+    - target_audience (适用对象)
+    - handling_matter (办理事项)
+    - time_deadline (时间/截止时间)
+    - location_entrance (地点/入口)
+    - required_materials (所需材料)
+    - handling_process (办理流程)
+    - precautions (注意事项)
+    - risk_warnings (风险提醒)
     """
     
-    # 临时替换 RequestKimi 的 system_prompt
     kimi.system_prompt = system_prompt
     
+    # 调用 Kimi 接口，开启 json_object 格式返回
+    response_text = kimi.get_response(
+        content=original_text, 
+        response_format={"type": "json_object"},
+        temperature=0.3
+    )
+    
+    # 尝试解析返回的 JSON
     try:
-        # 调用 API，要求返回 JSON
-        # 注意：Moonshot API (kimi) 支持 response_format={"type": "json_object"}
-        response_text = kimi.get_response(
-            content=original_text, 
-            response_format={"type": "json_object"},
-            temperature=0.1 # 降低温度以获得更确定性的 JSON 输出
-        )
+        parsed_data = _clean_json_response(response_text)
         
-        # 将原始返回打印出来，方便排查问题
-        print("====== AI RAW RESPONSE START ======")
-        print(response_text)
-        print("====== AI RAW RESPONSE END ======")
+        # 强制类型转换，防止大模型抽风返回了列表
+        _convert_list_to_str(parsed_data, "required_materials")
+        _convert_list_to_str(parsed_data, "handling_process")
+        _convert_list_to_str(parsed_data, "precautions")
+        _convert_list_to_str(parsed_data, "risk_warnings")
+        _convert_list_to_str(parsed_data, "target_audience")
+        _convert_list_to_str(parsed_data, "handling_matter")
+        _convert_list_to_str(parsed_data, "time_deadline")
+        _convert_list_to_str(parsed_data, "location_entrance")
         
-        # 清理可能残留的 markdown 标记
-        response_text = response_text.strip()
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-            
-        parsed_data = json.loads(response_text)
-        
-        # 处理可能被 AI 错误返回为列表或字典的字段，强制转换为字符串
-        def force_string(val):
-            if isinstance(val, list):
-                return "\n".join([str(v) for v in val])
-            elif isinstance(val, dict):
-                return json.dumps(val, ensure_ascii=False)
-            elif val is None:
-                return None
-            else:
-                return str(val)
-                
-        # 构建并返回 ChatMessageBase
+        # 构建返回的模型
         return ChatMessageBase(
             original_text=original_text,
-            user_id=user_id,
-            target_audience=force_string(parsed_data.get("target_audience")),
-            handling_matter=force_string(parsed_data.get("handling_matter")),
-            time_deadline=force_string(parsed_data.get("time_deadline")),
-            location_entrance=force_string(parsed_data.get("location_entrance")),
-            required_materials=force_string(parsed_data.get("required_materials")),
-            handling_process=force_string(parsed_data.get("handling_process")),
-            precautions=force_string(parsed_data.get("precautions")),
-            risk_warnings=force_string(parsed_data.get("risk_warnings")),
-            original_text_mapping=force_string(parsed_data.get("original_text_mapping"))
+            target_audience=parsed_data.get("target_audience"),
+            handling_matter=parsed_data.get("handling_matter"),
+            time_deadline=parsed_data.get("time_deadline"),
+            location_entrance=parsed_data.get("location_entrance"),
+            required_materials=parsed_data.get("required_materials"),
+            handling_process=parsed_data.get("handling_process"),
+            precautions=parsed_data.get("precautions"),
+            risk_warnings=parsed_data.get("risk_warnings"),
+            user_id=user_id
         )
         
-    except json.JSONDecodeError as je:
-        print(f"JSON Parsing Error: {je}\nResponse was: {response_text}")
-        # 返回仅包含原文的 Base
-        return ChatMessageBase(original_text=original_text, user_id=user_id)
-    except Exception as e:
-        print(f"AI Calling Error: {e}")
-        return ChatMessageBase(original_text=original_text, user_id=user_id)
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse JSON: {e}")
+        print(f"Raw response: {response_text}")
+        # 如果解析失败，进行基础的回退处理
+        return ChatMessageBase(
+            original_text=original_text,
+            handling_matter="解析失败，请检查输入或稍后重试",
+            user_id=user_id
+        )
 
 def rewrite_document(original_text: str, target_audience: str, user_id: int) -> ChatMessageBase:
     """
-    调用 AI 根据特定的人群 (target_audience) 重新改写文档并返回 ChatMessageBase 对象
+    根据目标群体，重新改写文档并提取对应信息
     """
     kimi = RequestKimi()
     
     system_prompt = f"""
-    你是一个专业的政务和民生通知改写专家。现在的任务是：用户会提供一份官方通知原文，你需要将这份通知的内容专门针对【{target_audience}】这个群体进行改写和解读。
+    你是一个专业的公文翻译和改写专家。现在有一篇官方通知，你需要根据目标受众【{target_audience}】，重新审视并改写这份通知，以便于他们理解。
     
-    请遵循以下改写原则：
-    1. 如果受众是【老人版】或【长辈版】：语气要亲切、尊称，用极其大白话的语言，避免专业术语，步骤要像拆解动作一样详细，必要时提醒“可以让儿女帮忙”。
-    2. 如果受众是【学生版】：语气要活泼，重点突出与学生相关的日期、学分、奖惩、宿舍等信息，忽略无关的复杂政策背景。
-    3. 如果受众是【家属转述版】：请用第一人称口吻（例如“爸/妈/老婆，有个通知是这样的...”），提炼出需要对方配合的关键点（要带什么、要去哪、截止时间）。
-    4. 如果受众是【极简版】：请用纯粹的要点列表（Bullet Points），能用 10 个字说清的绝不用 11 个字。
-    5. 如果受众是【客服答复版】：请用官方、礼貌的 QA (问答) 形式，预判可能会问的核心问题并给出标准答案。
+    改写原则：
+    1. 如果目标受众是“老人版”，请使用大白话，极其精简，强调防骗和核心步骤。
+    2. 如果目标受众是“学生版”，请条理清晰，突出他们需要交的材料和截止日期。
+    3. 其他受众同理，确保用词符合他们的阅读习惯。
     
-    除了以上的改写原则外，你的输出仍然必须严格是一个 JSON 对象，结构与之前相同。请在每个字段的提取中，都融入针对【{target_audience}】的改写语气和侧重点。
+    你必须先在脑海中完成全文改写，然后将你改写后的内容，重新按照下面的 JSON 结构输出。
+    注意：所有键对应的值都必须是字符串（String）或 null，绝对不能是数组（Array）或列表（List）！如果是多个项目，请用换行或逗号连接成一个长字符串。
+    - target_audience (适用对象：写上这次的目标群体名称)
+    - handling_matter (办理事项：用最简单的话概括)
+    - time_deadline (时间节点)
+    - location_entrance (地点/入口)
+    - required_materials (所需材料：精简描述)
+    - handling_process (办理流程：步骤化，不要废话)
+    - precautions (注意事项：针对该人群的特别提醒)
+    - risk_warnings (风险提醒)
     
-    JSON 对象的键必须严格如下：
-    {{
-        "target_audience": "适用对象是谁？（请固定填写为用户指定的群体：{target_audience}）",
-        "handling_matter": "需要办理什么事项？（用符合该群体身份的口吻描述）",
-        "time_deadline": "办理的时间范围或截止时间是什么？",
-        "location_entrance": "办理的地点或网址？",
-        "required_materials": "办理需要准备哪些材料？（必须是单个字符串）",
-        "handling_process": "具体的办理流程？（必须是单个字符串，用换行符或顿号连接步骤）",
-        "precautions": "有哪些需要特别注意的事项？",
-        "risk_warnings": "逾期或不办理的风险提醒？",
-        "original_text_mapping": "这些信息在原文的哪里？"
-    }}
-    
-    请注意，所有字段的值必须是 string 类型或 null，绝对不能是数组(list)或对象(dict)。
-    请不要输出任何多余的 Markdown 代码块或文字，只输出纯 JSON。
+    必须且只能返回纯 JSON。
     """
     
     kimi.system_prompt = system_prompt
     
+    response_text = kimi.get_response(
+        content=original_text, 
+        response_format={"type": "json_object"},
+        temperature=0.4
+    )
+    
     try:
-        response_text = kimi.get_response(
-            content=original_text, 
-            response_format={"type": "json_object"},
-            temperature=0.3
-        )
+        parsed_data = _clean_json_response(response_text)
         
-        response_text = response_text.strip()
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-            
-        parsed_data = json.loads(response_text)
+        # 强制类型转换，防止大模型抽风返回了列表
+        _convert_list_to_str(parsed_data, "required_materials")
+        _convert_list_to_str(parsed_data, "handling_process")
+        _convert_list_to_str(parsed_data, "precautions")
+        _convert_list_to_str(parsed_data, "risk_warnings")
+        _convert_list_to_str(parsed_data, "target_audience")
+        _convert_list_to_str(parsed_data, "handling_matter")
+        _convert_list_to_str(parsed_data, "time_deadline")
+        _convert_list_to_str(parsed_data, "location_entrance")
         
-        def force_string(val):
-            if isinstance(val, list):
-                return "\n".join([str(v) for v in val])
-            elif isinstance(val, dict):
-                return json.dumps(val, ensure_ascii=False)
-            elif val is None:
-                return None
-            else:
-                return str(val)
-                
         return ChatMessageBase(
-            original_text=original_text,
-            user_id=user_id,
-            target_audience=force_string(parsed_data.get("target_audience", target_audience)),
-            handling_matter=force_string(parsed_data.get("handling_matter")),
-            time_deadline=force_string(parsed_data.get("time_deadline")),
-            location_entrance=force_string(parsed_data.get("location_entrance")),
-            required_materials=force_string(parsed_data.get("required_materials")),
-            handling_process=force_string(parsed_data.get("handling_process")),
-            precautions=force_string(parsed_data.get("precautions")),
-            risk_warnings=force_string(parsed_data.get("risk_warnings")),
-            original_text_mapping=force_string(parsed_data.get("original_text_mapping"))
+            original_text=original_text, # 确保原文不丢失
+            target_audience=parsed_data.get("target_audience", target_audience),
+            handling_matter=parsed_data.get("handling_matter"),
+            time_deadline=parsed_data.get("time_deadline"),
+            location_entrance=parsed_data.get("location_entrance"),
+            required_materials=parsed_data.get("required_materials"),
+            handling_process=parsed_data.get("handling_process"),
+            precautions=parsed_data.get("precautions"),
+            risk_warnings=parsed_data.get("risk_warnings"),
+            user_id=user_id
         )
-        
-    except json.JSONDecodeError as je:
-        print(f"JSON Parsing Error: {je}\nResponse was: {response_text}")
-        return ChatMessageBase(original_text=original_text, user_id=user_id, target_audience=target_audience)
     except Exception as e:
-        print(f"AI Calling Error: {e}")
-        return ChatMessageBase(original_text=original_text, user_id=user_id, target_audience=target_audience)
+        print(f"Failed to rewrite: {e}")
+        return ChatMessageBase(original_text=original_text, user_id=user_id)
+
+
+def extract_pdf_with_ai(file_path: Path) -> str:
+    """
+    使用 Kimi大模型(或其他支持文档上传的模型) 直接解析 PDF，包括扫描版。
+    注意：这里需要依赖官方 SDK 的文件上传接口 (kimi/moonshot 提供了 file-upload 和基于 file_id 的对话能力)
+    由于本项目中你的 request_kimi 封装暂时只支持纯文本对话，
+    这里提供一种降级的通用方案：先尝试本地提取，如果没有，则提示用户。
+    或者如果你想调用真实的大模型文件接口，可以在这里重写逻辑。
+    """
+    import pdfplumber
+    
+    # 尝试使用本地 pdfplumber 提取
+    full_text = []
+    has_text = False
+    
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text and text.strip():
+                    full_text.append(text)
+                    has_text = True
+                    
+        # 1. 正常PDF，成功提取文本
+        if has_text:
+            return "\n".join(full_text)
+            
+        # 2. 如果全空，极大可能是扫描版 (全是图片)，触发 OCR 或多模态 AI
+        return "提示：系统检测到这是一个扫描版 PDF 或纯图片构成的文件，当前的文本提取引擎未能识别出有效文字。在未来的版本中，此部分将自动切换至 AI 多模态视觉模型进行深度文字识别（OCR）。"
+        
+    except Exception as e:
+        return f"PDF 解析失败: {str(e)}"

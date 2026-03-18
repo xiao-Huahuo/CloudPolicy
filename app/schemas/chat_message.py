@@ -6,6 +6,7 @@ from app.models.chat_message import ChatMessageBase
 # 新增 DTO (前端传入要解析的原文，其他字段由后端 AI 填充)
 class ChatMessageCreate(SQLModel):
     original_text: str
+    file_url: Optional[str] = None # 支持带文件路径创建
 
 # 响应 DTO (返回给前端的结构化数据)
 # 我们在这里重新定义字段，将 chat_analysis 由 str 转换为 Dict 以方便前端调用
@@ -13,6 +14,7 @@ class ChatMessageRead(SQLModel):
     id: int
     created_time: datetime
     original_text: str
+    file_url: Optional[str] = None # 新增，将文件链接传给前端
     target_audience: Optional[str] = None
     handling_matter: Optional[str] = None
     time_deadline: Optional[str] = None

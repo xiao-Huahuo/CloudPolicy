@@ -1,11 +1,12 @@
 <template>
   <header class="app-header">
-    <div class="search-bar">
-      <input type="text" v-model="searchQuery" @keyup.enter="handleSearch" placeholder="搜索此功能 (开发中...)" />
+    <div class="search-bar" v-if="showSearch">
+      <input type="text" v-model="searchQuery" @keyup.enter="handleSearch" placeholder="搜索文档..." />
       <button class="search-btn" @click="handleSearch">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       </button>
     </div>
+    <div class="spacer" v-else></div>
 
     <div class="user-actions">
       <!-- 通知图标 (对接 settingsStore) -->
@@ -27,10 +28,13 @@
 
       <!-- 用户头像区 -->
       <div class="user-profile" @click="handleUserClick" title="个人中心">
-        <img v-if="displayAvatar" :src="displayAvatar" alt="avatar" class="header-avatar" />
-        <div v-else class="header-avatar-placeholder">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        </div>
+        <button v-if="!userStore.token" @click.stop="emitLoginEvent" class="login-capsule">登录</button>
+        <template v-else>
+            <img v-if="displayAvatar" :src="displayAvatar" alt="avatar" class="header-avatar" />
+            <div v-else class="header-avatar-placeholder">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+        </template>
       </div>
 
       <!-- 退出登录按钮 (恢复) -->
@@ -58,6 +62,11 @@ const settingsStore = useSettingsStore();
 
 const searchQuery = ref('');
 
+// 某些页面可能不需要搜索栏
+const showSearch = computed(() => {
+  return route.name !== 'login' && route.name !== 'register';
+});
+
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     router.push({ path: '/search', query: { q: searchQuery.value } });
@@ -74,8 +83,14 @@ const displayAvatar = computed(() => {
     return url;
 });
 
+const emitLoginEvent = () => {
+  window.dispatchEvent(new CustomEvent('open-login-modal'));
+};
+
 const handleUserClick = () => {
-  router.push('/profile');
+  if (userStore.token) {
+    router.push('/profile');
+  }
 };
 
 const handleLogout = () => {
@@ -97,11 +112,13 @@ const toggleNotification = async () => {
 
 <style scoped>
 .app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
+  height: 60px;
   background-color: var(--header-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
   /* 移除边框线，与左侧融为一体 */
 }
 
@@ -112,8 +129,7 @@ const toggleNotification = async () => {
   border: none; /* 移除搜索框边缘线 */
   border-radius: var(--border-radius-pill); /* 两边圆的圆角矩形 */
   padding: 5px 10px;
-  flex: 1;
-  max-width: 500px;
+  width: 300px;
   transition: box-shadow 0.3s;
 }
 
@@ -131,11 +147,9 @@ const toggleNotification = async () => {
 }
 
 .search-btn {
-  background: #000; /* 黑色底色 */
-  color: #fff; /* 白色文字 */
+  background: none;
+  color: #666;
   border: none;
-  border-radius: var(--border-radius-pill); /* 两边圆的圆角矩形 */
-  padding: 8px 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -144,7 +158,7 @@ const toggleNotification = async () => {
 }
 
 .search-btn:hover {
-  background: #333;
+  color: #000;
 }
 
 .spacer {
@@ -199,5 +213,21 @@ const toggleNotification = async () => {
   align-items: center;
   justify-content: center;
   color: #999;
+}
+
+.login-capsule {
+  background-color: #000;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: var(--border-radius-pill);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.login-capsule:hover {
+  opacity: 0.8;
 }
 </style>

@@ -12,6 +12,9 @@ class ChatMessageBase(SQLModel):
     # 输入信息
     original_text: str = Field(description="输入的官方通知原文")
     
+    # 新增：原文件的 URL 路径，允许为空（纯文本解析时为空）
+    file_url: Optional[str] = Field(default=None, description="原文件的访问URL")
+    
     # 结构化输出信息 (由于提取结果可能缺失，全部设为可选)
     target_audience: Optional[str] = Field(default=None, description="适用对象")
     handling_matter: Optional[str] = Field(default=None, description="办理事项")

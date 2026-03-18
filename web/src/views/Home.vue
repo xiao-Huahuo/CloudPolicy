@@ -29,7 +29,7 @@
             截图
           </button>
         </div>
-        <p class="upload-hint">点击或拖拽上传</p>
+        <p class="upload-hint">点击或拖拽上传 (支持 TXT, PDF, Word, Excel)</p>
 
         <!-- 隐藏的文件输入框 -->
         <input
@@ -37,6 +37,7 @@
           ref="fileInput"
           style="display: none"
           @change="handleFileUpload"
+          accept=".txt,.pdf,.doc,.docx,.xls,.xlsx"
         />
       </div>
 
@@ -179,7 +180,11 @@
                </div>
 
                <!-- 原文映射作为参考，如果有的话 -->
-               <div class="mapping-section" v-if="aiResponse.original_text_mapping">
+               <div class="mapping-section" v-if="aiResponse.file_url">
+                  <h4>原文件参考</h4>
+                  <a :href="aiResponse.file_url" target="_blank" class="file-link">点击查看上传的原文件</a>
+               </div>
+               <div class="mapping-section" v-else-if="aiResponse.original_text_mapping">
                   <h4>对应位置参考</h4>
                   <p>{{ aiResponse.original_text_mapping }}</p>
                </div>
@@ -231,7 +236,7 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue';
 import { useUserStore } from '@/stores/user';
-import { createChatMessage, rewriteChatMessage } from '@/api/ai';
+import { createChatMessage, createChatMessageWithFile, uploadAndExtractDocument, rewriteChatMessage } from '@/api/ai';
 import { useRouter } from 'vue-router';
 import Modal from '@/components/common/Modal.vue';
 import LoginForm from '@/components/Home/LoginForm.vue';
@@ -328,14 +333,34 @@ const handleDrop = (event) => {
   processFile(file);
 };
 
-const processFile = (file) => {
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      inputText.value = e.target.result;
-      submitToAI();
-    };
-    reader.readAsText(file);
+const processFile = async (file) => {
+  if (!file) return;
+
+  loading.value = true;
+  aiResponse.value = null;
+
+  try {
+    // 1. 上传文件到后端提取文本并获取 URL
+    const uploadRes = await uploadAndExtractDocument(file);
+    const { extracted_text, file_url } = uploadRes.data;
+
+    // 2. 将提取的文本连同 file_url 提交给大模型进行解析
+    const chatRes = await createChatMessageWithFile(extracted_text, file_url);
+    aiResponse.value = chatRes.data;
+    showResult.value = true;
+  } catch (error) {
+    console.error(error);
+    if (error.response?.status === 401) {
+       userStore.logout();
+       openLoginModal();
+    } else {
+       alert('文件处理失败: ' + (error.response?.data?.detail || error.message));
+    }
+  } finally {
+    loading.value = false;
+    if (fileInput.value) {
+       fileInput.value.value = ''; // 清空 input 允许重复上传相同文件
+    }
   }
 };
 
@@ -803,6 +828,10 @@ const getComplexityClass = (level) => {
   font-size: 13px;
   line-height: 1.5;
   color: #666;
+}
+.file-link {
+  color: #00a8ff;
+  text-decoration: underline;
 }
 
 /* Modal 中的表单切换过渡动画 */

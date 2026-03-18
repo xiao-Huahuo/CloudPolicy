@@ -24,6 +24,7 @@ class GlobalConfig:
     # 上传文件存放路径 (绝对路径)
     UPLOAD_DIR = PROJECT_ROOT / "uploads"
     AVATAR_UPLOAD_DIR = UPLOAD_DIR / "avatars"
+    DOCS_UPLOAD_DIR = UPLOAD_DIR / "docs"
 
     # JWT配置
     # 常量,应该从环境变量获取,此处开发使用

@@ -13,6 +13,7 @@ from app.services.init_db import init_db_and_admin
 
 # 确保上传目录存在 (基于绝对路径)
 GlobalConfig.AVATAR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+GlobalConfig.DOCS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # 定义生命周期管理器
 @asynccontextmanager
