@@ -8,6 +8,7 @@ export const API_ROUTES = {
   CHAT_MESSAGE: '/chat/', // 对应后端 main.py 中 prefix="/chat"
   ANALYSIS_ME: '/analysis/me',
   SETTINGS_ME: '/settings/me', // 新增设置接口
+  UPLOAD_AVATAR: '/upload/avatar' // 新增头像上传接口
 };
 
 // 统一的 API Client

@@ -13,8 +13,9 @@
     <div class="settings-content" v-else-if="userStore.token">
       <!-- 个人资料大卡片 -->
       <div class="profile-card widget">
-        <div class="profile-avatar">
-          <svg viewBox="0 0 24 24" width="60" height="60" stroke="#ccc" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <div class="profile-avatar" @click="showAvatarEditor = true" style="cursor: pointer;" title="点击修改头像">
+          <img v-if="displayAvatar" :src="displayAvatar" alt="avatar" class="user-avatar" />
+          <svg v-else viewBox="0 0 24 24" width="60" height="60" stroke="#ccc" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
@@ -23,7 +24,7 @@
           <h2 class="username">{{ userStore.user?.uname || '加载中...' }}</h2>
           <p class="user-email">{{ userStore.user?.email || '暂无邮箱' }}</p>
           <div class="profile-actions">
-            <button class="action-btn outline">更换头像</button>
+            <button class="action-btn outline" @click="showAvatarEditor = true">更换头像</button>
             <button class="action-btn outline">编辑资料</button>
           </div>
         </div>
@@ -146,32 +147,112 @@
                 <button class="action-btn danger small">申请注销</button>
               </div>
             </div>
-
           </div>
         </div>
+
+        <!-- 退出登录 (整块红色 Widget) -->
+        <div class="logout-widget widget" @click="handleLogout" style="cursor: pointer;">
+           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+             <polyline points="16 17 21 12 16 7"></polyline>
+             <line x1="21" y1="12" x2="9" y2="12"></line>
+           </svg>
+           <span>退出当前账号</span>
+        </div>
+
       </div>
     </div>
 
     <!-- 未登录状态 -->
     <div v-else class="login-prompt widget">
-      <h2>您尚未登录，无法访问设置</h2>
-      <button @click="$router.push('/profile')" class="primary-btn">去登录</button>
+      <!-- 移除这里的默认文字和按钮，只渲染 Modal 弹窗 -->
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" width="48" height="48" stroke="#ccc" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      </div>
+      <h2>您尚未登录</h2>
+      <p class="desc">登录后即可管理您的个人资产和 AI 偏好设置</p>
+      <button @click="openLoginModal" class="primary-btn">立即登录 / 注册</button>
     </div>
+
+    <!-- 弹窗：登录/注册 (复用 Home.vue 里的设计) -->
+    <Modal :isOpen="showModal" @close="closeModal">
+      <!-- 这个容器包裹了图标、标题和表单，在切换时由于 key 的存在，整个容器会平滑过渡 -->
+      <div class="auth-modal-content">
+        <div class="logo-area-transition">
+          <h1 class="logo-text">ClearNotify</h1>
+        </div>
+
+        <!-- 使用动态高度包裹容器来实现上下平滑撑开 -->
+        <div class="form-transition-container" :style="{ height: containerHeight + 'px' }">
+          <transition
+            name="form-slide"
+            @before-enter="onBeforeEnter"
+            @enter="onEnter"
+            @after-enter="onAfterEnter"
+            @leave="onLeave"
+          >
+            <!-- 使用绝对定位来实现平滑滑动切换，避免高度瞬间变化和挤压 -->
+            <div v-if="currentForm === 'login'" class="form-wrapper login-wrapper-abs" key="login">
+              <LoginForm
+                @success="handleLoginSuccess"
+                @switch-to-register="currentForm = 'register'"
+              />
+            </div>
+            <div v-else-if="currentForm === 'register'" class="form-wrapper register-wrapper-abs" key="register">
+              <RegisterForm
+                @switch-to-login="currentForm = 'login'"
+                @success="handleLoginSuccess"
+              />
+            </div>
+          </transition>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- 头像编辑弹窗 -->
+    <Modal :isOpen="showAvatarEditor" @close="showAvatarEditor = false">
+      <AvatarEditor @close="showAvatarEditor = false" />
+    </Modal>
+
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import { useSettingsStore } from '@/stores/settings';
+import Modal from '@/components/common/Modal.vue';
+import AvatarEditor from '@/components/common/AvatarEditor.vue';
+import LoginForm from '@/components/Home/LoginForm.vue';
+import RegisterForm from '@/components/Home/RegisterForm.vue';
 
+const router = useRouter();
 const userStore = useUserStore();
 const settingsStore = useSettingsStore();
+
+const showAvatarEditor = ref(false);
+
+const showModal = ref(false);
+const currentForm = ref('login');
+const containerHeight = ref(350); // 默认登录框高度
+
+const displayAvatar = computed(() => {
+    if (!userStore.user?.avatar_url) return null;
+    const url = userStore.user.avatar_url;
+    if (url.startsWith('default:')) {
+        const defaultName = url.substring(8);
+        return `/src/assets/photos/default-avatars/${defaultName}`;
+    }
+    return url;
+});
 
 onMounted(async () => {
   if (userStore.token) {
     userStore.fetchUser();
     await settingsStore.fetchSettings();
+  } else {
+    openLoginModal(); // 如果直接通过 URL 进入设置页且未登录，自动弹窗
   }
 });
 
@@ -184,6 +265,50 @@ const handleSettingChange = async (key) => {
 const handleThemeChange = async (theme) => {
     settingsStore.settings.theme_mode = theme;
     await handleSettingChange('theme_mode');
+};
+
+const handleLogout = () => {
+  if (confirm('确定要退出登录吗？')) {
+    userStore.logout();
+    router.push('/');
+  }
+};
+
+// 弹窗相关方法
+const openLoginModal = () => {
+  currentForm.value = 'login';
+  containerHeight.value = 350; // 重置高度
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+};
+
+const handleLoginSuccess = () => {
+  closeModal();
+};
+
+// 弹窗动画
+const onBeforeEnter = (el) => {
+  el.style.opacity = 0;
+};
+
+const onEnter = (el, done) => {
+  nextTick(() => {
+    containerHeight.value = el.offsetHeight;
+    el.style.opacity = 1;
+    done();
+  });
+};
+
+const onAfterEnter = (el) => {
+  el.style.opacity = '';
+};
+
+const onLeave = (el, done) => {
+  el.style.opacity = 0;
+  setTimeout(done, 400); // 等待 CSS 动画结束
 };
 
 </script>
@@ -247,6 +372,17 @@ const handleThemeChange = async (theme) => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+  transition: opacity 0.2s;
+}
+.profile-avatar:hover {
+  opacity: 0.8;
+}
+
+.user-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .profile-details {
@@ -429,6 +565,27 @@ const handleThemeChange = async (theme) => {
   color: #ff4d4f;
 }
 
+/* 整块红色退出按钮 Widget */
+.logout-widget {
+  background-color: #ff4d4f;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.2s;
+  border: none;
+}
+
+.logout-widget:hover {
+  background-color: #ff7875;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 77, 79, 0.3);
+}
+
 /* Switch 开关样式 */
 .switch {
   position: relative;
@@ -488,5 +645,67 @@ input:checked + .slider:before {
   padding: 10px 24px;
   border-radius: 24px;
   cursor: pointer;
+}
+
+/* Modal 中的表单切换过渡动画 (复用 Home 的样式) */
+.auth-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0 0 0;
+  background: linear-gradient(45deg, skyblue, darkblue);
+  border-radius: 20px;
+  width: 480px;
+  min-height: 450px;
+  overflow: hidden;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.logo-area-transition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.auth-modal-content .logo-text {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.form-transition-container {
+  width: 100%;
+  position: relative;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.login-wrapper-abs, .register-wrapper-abs {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.form-slide-enter-active,
+.form-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-slide-enter-from {
+  opacity: 0;
+  transform: translateY(30px);
+}
+.form-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-30px);
 }
 </style>
