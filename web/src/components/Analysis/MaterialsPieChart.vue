@@ -69,7 +69,7 @@ const updateChart = () => {
   }
 
   const option = {
-    color: ['#002059', '#00e2dc', '#d4ff80', '#1890ff', '#33c9dc', '#e6f7ff', '#b3e5fc', '#81d4fa'],
+    color: ['#c0392b', '#e67e22', '#f1c40f', '#7f8c8d', '#922b21', '#d35400', '#f39c12', '#95a5a6'],
     tooltip: {
       trigger: 'item',
       formatter: '{b}: {c} 次 ({d}%)',

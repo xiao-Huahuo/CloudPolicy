@@ -112,29 +112,27 @@ const toggleNotification = async () => {
 
 <style scoped>
 .app-header {
-  height: 60px;
-  background-color: var(--header-bg);
+  height: 56px;
+  background: linear-gradient(90deg, #c0392b 0%, #7f8c8d 100%);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
   flex-shrink: 0;
-  /* 移除边框线，与左侧融为一体 */
 }
 
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: #f5f7fa;
-  border: none; /* 移除搜索框边缘线 */
-  border-radius: var(--border-radius-pill); /* 两边圆的圆角矩形 */
+  background-color: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--border-radius-pill);
   padding: 5px 10px;
   width: 300px;
-  transition: box-shadow 0.3s;
+  transition: background 0.3s;
 }
-
 .search-bar:focus-within {
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1); /* 用浅阴影代替粗边框 */
+  background-color: rgba(255,255,255,0.28);
 }
 
 .search-bar input {
@@ -144,26 +142,23 @@ const toggleNotification = async () => {
   flex: 1;
   padding: 5px;
   font-size: 14px;
+  color: #fff;
 }
+.search-bar input::placeholder { color: rgba(255,255,255,0.65); }
 
 .search-btn {
   background: none;
-  color: #666;
+  color: rgba(255,255,255,0.8);
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: color 0.2s;
 }
+.search-btn:hover { color: #fff; }
 
-.search-btn:hover {
-  color: #000;
-}
-
-.spacer {
-  flex: 1;
-}
+.spacer { flex: 1; }
 
 .user-actions {
   display: flex;
@@ -175,19 +170,14 @@ const toggleNotification = async () => {
   background: none;
   border: none;
   cursor: pointer;
-  color: #666;
+  color: rgba(255,255,255,0.85);
   transition: color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.icon-btn:hover {
-  color: #000;
-}
-
-.logout-btn:hover {
-  color: #f44336; /* 退出按钮悬浮变红 */
-}
+.icon-btn:hover { color: #fff; }
+.logout-btn:hover { color: rgba(255,255,255,0.7); }
 
 .user-profile {
   cursor: pointer;
@@ -201,33 +191,31 @@ const toggleNotification = async () => {
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #eee;
+  border: 2px solid rgba(255,255,255,0.5);
 }
 
 .header-avatar-placeholder {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #f0f0f0;
+  background-color: rgba(255,255,255,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: rgba(255,255,255,0.8);
 }
 
 .login-capsule {
-  background-color: #000;
+  background-color: rgba(255,255,255,0.2);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255,255,255,0.4);
   padding: 8px 20px;
   border-radius: var(--border-radius-pill);
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background 0.2s;
 }
 
-.login-capsule:hover {
-  opacity: 0.8;
-}
+.login-capsule:hover { background-color: rgba(255,255,255,0.35); }
 </style>

@@ -10,8 +10,8 @@
         主页
       </router-link>
       <router-link to="/feature-a" class="nav-item" active-class="active">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        文件处理
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        发现
       </router-link>
       <router-link to="/feature-b" class="nav-item" active-class="active">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
@@ -20,6 +20,14 @@
       <router-link to="/feature-c" class="nav-item" active-class="active">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         会话历史
+      </router-link>
+      <router-link to="/todo" class="nav-item" active-class="active">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        办事进度
+      </router-link>
+      <router-link v-if="userStore.user?.is_admin" to="/admin" class="nav-item" active-class="active">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        管理员
       </router-link>
       <router-link to="/profile" class="nav-item" active-class="active">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -36,82 +44,110 @@
 
 <script setup>
 import { ref } from 'vue';
-const hasIcon = ref(true); // 如果图标不存在，优雅降级
+import { useUserStore } from '@/stores/user';
+const hasIcon = ref(true);
+const userStore = useUserStore();
 </script>
 
 <style scoped>
 .sidebar {
   width: 200px;
-  background-color: var(--sidebar-bg);
-  color: var(--color-text-dark);
+  background: linear-gradient(180deg, #c0392b 0%, #922b21 60%, #7f8c8d 100%);
+  color: #fff;
   height: 100vh;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  /* 去掉边框线，和右边融为一体 */
+  position: relative;
+  overflow: hidden;
 }
+
+/* 波浪装饰 */
+.sidebar::before {
+  content: '';
+  position: absolute;
+  bottom: -30px;
+  left: -40px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+
 .logo {
   padding: 20px;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  /* 去掉底边框线 */
-  color: var(--color-text-dark);
+  color: #fff;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
 }
-.logo-icon {
-  width: 24px;
-  height: 24px;
-  /* 可以使用 CSS 滤镜将黑色图标变为与主题匹配的颜色，但按要求此处应该是黑色的，所以原样显示即可 */
-}
+.logo-icon { width: 24px; height: 24px; filter: brightness(0) invert(1); }
+
 nav {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 10px 0;
+  position: relative;
+  z-index: 1;
 }
+
 .nav-item {
   padding: 10px 20px;
-  color: #666;
+  color: rgba(255,255,255,0.75);
   text-decoration: none;
   transition: all 0.2s;
-  border-radius: 12px;
-  margin: 4px 10px;
+  border-radius: 10px;
+  margin: 3px 10px;
   display: flex;
   align-items: center;
   gap: 12px;
+  font-size: 14px;
 }
 .nav-item:hover {
-  background-color: #f5f7fa;
-  color: #000;
+  background-color: rgba(255,255,255,0.12);
+  color: #fff;
 }
-
-/* 选中项：淡蓝色背景，水晶蓝文字和图标 */
 .nav-item.active {
-  background-color: #e6f7ff; /* 淡蓝色底色 */
-  color: #00a8ff; /* 水晶蓝文字 */
+  background-color: rgba(255,255,255,0.2);
+  color: #fff;
   font-weight: bold;
+  box-shadow: inset 3px 0 0 #fff;
 }
-.nav-item.active .nav-icon {
-  color: #00a8ff; /* 水晶蓝图标 */
-}
+.nav-item.active .nav-icon { color: #fff; }
 
 .sidebar-footer {
   padding: 20px;
   display: flex;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 .settings-btn {
-  color: #999;
+  color: rgba(255,255,255,0.6);
   cursor: pointer;
   transition: color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.settings-btn:hover, .settings-btn.active {
-  color: #000;
-}
+.settings-btn:hover, .settings-btn.active { color: #fff; }
 </style>

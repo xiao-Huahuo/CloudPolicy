@@ -147,3 +147,102 @@ async def upload_document(
         "extracted_text": extracted_text,
         "filename": file.filename
     }
+
+
+# 允许的 OCR 输入格式（图片 + 扫描 PDF）
+ALLOWED_OCR_TYPES = {
+    "image/jpeg", "image/png", "image/webp", "image/gif",
+    "application/pdf"
+}
+MAX_OCR_SIZE = 20 * 1024 * 1024  # 20MB
+
+@router.post("/ocr")
+async def ocr_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    截图/扫描型PDF的OCR识别接口。
+    上传图片或扫描PDF，调用 Kimi 视觉模型提取文字内容。
+    """
+    content_type = file.content_type
+    filename = file.filename.lower()
+
+    # 兜底：根据扩展名判断
+    if content_type not in ALLOWED_OCR_TYPES:
+        if filename.endswith((".jpg", ".jpeg")):
+            content_type = "image/jpeg"
+        elif filename.endswith(".png"):
+            content_type = "image/png"
+        elif filename.endswith(".pdf"):
+            content_type = "application/pdf"
+        else:
+            raise HTTPException(status_code=400, detail="不支持的文件类型，仅支持图片（JPG/PNG/WEBP）和 PDF。")
+
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > MAX_OCR_SIZE:
+        raise HTTPException(status_code=400, detail="文件过大，OCR 最大支持 20MB。")
+
+    # 保存到临时目录
+    ext = ".pdf" if content_type == "application/pdf" else (mimetypes.guess_extension(content_type) or ".jpg")
+    new_filename = f"ocr_{current_user.uid}_{uuid.uuid4().hex[:8]}{ext}"
+    file_path = GlobalConfig.DOCS_UPLOAD_DIR / new_filename
+
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"保存文件失败: {str(e)}")
+    finally:
+        file.file.close()
+
+    # 调用 Kimi 文件上传 OCR
+    try:
+        from app.ai.request_kimi import RequestKimi
+        kimi = RequestKimi()
+
+        # 使用 Kimi 文件上传接口
+        with open(file_path, "rb") as f:
+            upload_resp = kimi.client.files.create(file=(new_filename, f, content_type), purpose="file-extract")
+
+        file_id = upload_resp.id
+
+        # 获取文件内容
+        file_content_resp = kimi.client.files.content(file_id)
+        extracted_text = file_content_resp.text
+
+        # 清理上传的文件（可选）
+        try:
+            kimi.client.files.delete(file_id)
+        except Exception:
+            pass
+
+        if not extracted_text or not extracted_text.strip():
+            # 降级：用视觉模型直接识别图片
+            import base64
+            with open(file_path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode()
+            kimi.system_prompt = "你是一个OCR识别助手，请将图片中的所有文字原样提取出来，保持原有格式和段落结构。"
+            completion = kimi.client.chat.completions.create(
+                model="moonshot-v1-8k",
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{img_b64}"}},
+                        {"type": "text", "text": "请提取图片中的所有文字内容。"}
+                    ]
+                }],
+                temperature=0.1
+            )
+            extracted_text = completion.choices[0].message.content
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OCR 识别失败: {str(e)}")
+
+    return {
+        "file_url": f"/media/docs/{new_filename}",
+        "extracted_text": extracted_text,
+        "filename": file.filename
+    }

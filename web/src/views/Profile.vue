@@ -264,10 +264,11 @@ const onLeave = (el, done) => {
 /* 基础卡片样式 */
 .widget {
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  padding: 24px;
-  border: 1px solid rgba(0,0,0,0.02);
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid #e8e8e8;
+  border-left: 3px solid #c0392b;
+  padding: 20px;
 }
 
 /* 顶部用户信息卡片 */
@@ -418,17 +419,19 @@ const onLeave = (el, done) => {
 
 /* 强调高亮的卡片 */
 .highlight-widget {
-  background: var(--color-primary);
-  color: #000;
+  background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+  color: #fff;
+  border-left-color: #922b21;
 }
 .highlight-icon {
-  background: rgba(0,0,0,0.05);
-  color: #000;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
 }
 .highlight-text .stat-label,
 .highlight-text .stat-value small {
-  color: rgba(0,0,0,0.6);
+  color: rgba(255,255,255,0.75);
 }
+.highlight-text .stat-value { color: #fff; }
 
 /* 未登录状态 */
 .login-prompt {

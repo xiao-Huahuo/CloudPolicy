@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from app.core.config import GlobalConfig
 load_dotenv(dotenv_path=GlobalConfig.ENV_PATH)
 
-from app.api.routes import user, login, chat_message, stats_analysis, settings, upload
+from app.api.routes import user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin
 from app.services.init_db import init_db_and_admin
 
 # 确保上传目录存在 (基于绝对路径)
@@ -46,6 +46,10 @@ app.include_router(chat_message.router, prefix="/chat", tags=["chat_message"])
 app.include_router(stats_analysis.router, prefix="/analysis", tags=["analysis"])
 app.include_router(settings.router, prefix="/settings", tags=["settings"])
 app.include_router(upload.router, prefix="/upload", tags=["upload"])
+app.include_router(news.router, prefix="/news", tags=["news"])
+app.include_router(todo.router, prefix="/todo", tags=["todo"])
+app.include_router(favorite.router, prefix="/favorite", tags=["favorite"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 @app.get("/")
 async def root():

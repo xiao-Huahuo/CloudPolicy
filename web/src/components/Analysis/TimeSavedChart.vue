@@ -131,25 +131,19 @@ const updateChart = () => {
         showSymbol: false, // 曲线隐藏节点，更极简
         itemStyle: {
           // 如果是柱状图，使用主色调从左往右渐变（此处为单柱颜色一致的效果模拟）
-          color: props.chartType === 'bar' ? '#d4ff80' : '#002059',
-          borderRadius: props.chartType === 'bar' ? [4, 4, 0, 0] : 0 // 柱状图顶部圆角
+          color: props.chartType === 'bar' ? '#e67e22' : '#c0392b',
+          borderRadius: props.chartType === 'bar' ? [4, 4, 0, 0] : 0
         },
         lineStyle: {
           width: 3,
-          color: '#002059' // 曲线改为蓝色 (主色调的最深端，或者你可以选 #00e2dc)
+          color: '#c0392b'
         },
         areaStyle: props.chartType === 'line' ? {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            {
-              offset: 0,
-              color: 'rgba(0, 32, 89, 0.2)' // 蓝色半透明
-            },
-            {
-              offset: 1,
-              color: 'rgba(0, 32, 89, 0)'
-            }
+            { offset: 0, color: 'rgba(192, 57, 43, 0.25)' },
+            { offset: 1, color: 'rgba(192, 57, 43, 0)' }
           ])
-        } : null, // 仅曲线图显示渐变面积
+        } : null,
         animationDelay: function (idx) {
           // 线条从左往右延伸的动画核心：让不同索引的数据点延迟出现
           return idx * 100;
@@ -163,9 +157,9 @@ const updateChart = () => {
   if (props.chartType === 'bar') {
       option.series[0].itemStyle = {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#d4ff80' },
-            { offset: 0.5, color: '#00e2dc' },
-            { offset: 1, color: '#002059' }
+            { offset: 0, color: '#e67e22' },
+            { offset: 0.5, color: '#c0392b' },
+            { offset: 1, color: '#922b21' }
           ]),
           borderRadius: [4, 4, 0, 0]
       }

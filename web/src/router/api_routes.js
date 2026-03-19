@@ -5,28 +5,35 @@ export const API_ROUTES = {
   LOGIN: '/login/',
   REGISTER: '/user',
   GET_ME: '/user/me',
-  CHAT_MESSAGE: '/chat/', // 对应后端 main.py 中 prefix="/chat"
+  CHAT_MESSAGE: '/chat/',
   ANALYSIS_ME: '/analysis/me',
-  SETTINGS_ME: '/settings/me', // 新增设置接口
-  UPLOAD_AVATAR: '/upload/avatar', // 新增头像上传接口
-  UPLOAD_DOCUMENT: '/upload/document', // 新增文档上传解析接口
+  SETTINGS_ME: '/settings/me',
+  UPLOAD_AVATAR: '/upload/avatar',
+  UPLOAD_DOCUMENT: '/upload/document',
+  UPLOAD_OCR: '/upload/ocr',
+  NEWS_HOT: '/news/hot',
+  NEWS_CENTRAL_DOCS: '/news/central-docs',
+  NEWS_KEYWORDS: '/news/keywords',
+  NEWS_SEARCH: '/news/search',
+  NEWS_WITH_IMAGES: '/news/with-images',
+  NEWS_DAILY_SUMMARY: '/news/daily-summary',
+  TODO: '/todo/',
+  TODO_FROM_CHAT: '/todo/from-chat',
+  FAVORITE: '/favorite/',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_STATS: '/admin/stats',
 };
 
 // 统一的 API Client
 export const apiClient = axios.create({
-  baseURL: '/api', // 这里使用 /api，通过 Vite 代理转发到后端
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 10000,
 });
 
 // 请求拦截器：自动附加 Token
 apiClient.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
-}, error => {
-  return Promise.reject(error);
-});
+}, error => Promise.reject(error));

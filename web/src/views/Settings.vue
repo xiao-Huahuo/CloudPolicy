@@ -349,10 +349,11 @@ const onLeave = (el, done) => {
 /* 基础卡片样式 */
 .widget {
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  padding: 24px;
-  border: 1px solid rgba(0,0,0,0.02);
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid #e8e8e8;
+  border-left: 3px solid #c0392b;
+  padding: 20px;
 }
 
 /* 个人资料大卡片 */

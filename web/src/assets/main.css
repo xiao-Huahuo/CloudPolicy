@@ -1,25 +1,47 @@
 :root {
-  /* 主色调定义 */
-  --color-primary: #d4ff80;
-  --color-secondary: #00e2dc;
-  --color-text-dark: #002059;
+  /* 红灰主题主色 */
+  --color-primary: #c0392b;
+  --color-primary-light: #e74c3c;
+  --color-primary-dark: #922b21;
+  --color-secondary: #7f8c8d;
+  --color-text-dark: #2c3e50;
 
   /* 布局颜色 */
-  --sidebar-bg: #ffffff;
-  --header-bg: #ffffff;
-  --content-bg: #ffffff; /* 修改这里：改为真正的白色 */
+  --sidebar-bg: #2c3e50;
+  --header-bg: linear-gradient(90deg, #c0392b 0%, #7f8c8d 100%);
+  --content-bg: #f4f5f7;
+  --card-bg: #ffffff;
   --border-color: #e0e0e0;
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-muted: #aaaaaa;
 
   /* 按钮和激活项颜色 */
-  --btn-primary-bg: var(--color-primary);
-  --btn-primary-text: var(--color-text-dark);
-  --btn-hover-bg: #c3f070;
-  --sidebar-active-bg: #e6fffa; /* 淡青色 */
-  --sidebar-active-border: var(--color-secondary); /* #00e2dc */
+  --btn-primary-bg: #c0392b;
+  --btn-primary-text: #ffffff;
+  --btn-hover-bg: #e74c3c;
+  --sidebar-active-bg: rgba(192, 57, 43, 0.25);
+  --sidebar-active-border: #e74c3c;
 
   /* 统一圆角 */
-  --border-radius-main: 8px; /* 增大圆角 */
-  --border-radius-pill: 20px; /* 两边圆的圆角矩形 */
+  --border-radius-main: 8px;
+  --border-radius-pill: 20px;
+}
+
+[data-theme="dark"] {
+  --content-bg: #1a1a1a;
+  --card-bg: #242424;
+  --border-color: #333333;
+  --text-primary: #f0f0f0;
+  --text-secondary: #aaaaaa;
+  --text-muted: #666666;
+  --sidebar-bg: #111111;
+  --color-text-dark: #e0e0e0;
+}
+
+[data-theme="dark"] body {
+  background-color: var(--content-bg);
+  color: var(--text-primary);
 }
 
 body {
@@ -31,16 +53,7 @@ body {
 }
 
 /* 全局滚动条样式优化 */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #999;
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }

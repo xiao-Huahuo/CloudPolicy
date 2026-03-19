@@ -377,9 +377,9 @@ onMounted(() => {
 }
 
 .custom-checkbox.checked {
-  background-color: #000;
-  border-color: #000;
-  color: #fff; /* 选中时 SVG 显示为白色 */
+  background-color: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
 }
 
 .col-name {

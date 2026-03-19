@@ -4,46 +4,61 @@ from sqlmodel import Session, select
 from app.core.database import create_db_and_tables, engine
 from app.models.user import User
 from app.models.chat_message import ChatMessage
+from app.models.favorite import Favorite
+from app.models.todo import TodoItem
 from app.core.security import get_password_hash
 from app.core.config import GlobalConfig
 
 def init_db_and_admin():
-    """
-    初始化数据库表并检查/创建默认管理员用户
-    """
     # 1. 创建数据库表
     create_db_and_tables()
-    
-    # 2. 自动创建管理员
-    # 优先从环境变量获取，否则使用默认配置
+
+    # 2. 迁移旧库：补充新列
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        for sql in [
+            "ALTER TABLE user ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0",
+            "ALTER TABLE chatmessage ADD COLUMN source_chat_id INTEGER REFERENCES chatmessage(id)",
+        ]:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception:
+                pass
+
+    # 3. 自动创建/修复管理员
     admin_email = os.getenv("ADMIN_EMAIL", GlobalConfig.DEFAULT_ADMIN_EMAIL)
     admin_username = os.getenv("ADMIN_USERNAME", GlobalConfig.DEFAULT_ADMIN_USERNAME)
     admin_password = os.getenv("ADMIN_PASSWORD", GlobalConfig.DEFAULT_ADMIN_PASSWORD)
-    
-    if admin_email:
-        with Session(engine) as session:
-            statement = select(User).where(User.email == admin_email)
-            existing_user = session.exec(statement).first()
-            
-            if not existing_user:
-                print(f"Initializing admin user: {admin_username} ({admin_email})")
-                
-                hashed_pwd = get_password_hash(admin_password)
-                new_admin = User(
-                    uname=admin_username,
-                    email=admin_email,
-                    hashed_pwd=hashed_pwd
-                )
-                session.add(new_admin)
+
+    if not admin_email:
+        return
+
+    with Session(engine) as session:
+        existing_user = session.exec(select(User).where(User.email == admin_email)).first()
+
+        if existing_user:
+            if not existing_user.is_admin:
+                existing_user.is_admin = True
+                session.add(existing_user)
                 session.commit()
-                session.refresh(new_admin)
-                print(f"Admin user created successfully. Password: {admin_password}")
-                
-                # 3. 导入初始数据
-                import_admin_original_data(session, new_admin.uid)
-                
+                print(f"Migrated admin flag for {existing_user.email}")
             else:
                 print(f"Admin user check: {existing_user.email} already exists.")
+        else:
+            print(f"Initializing admin user: {admin_username} ({admin_email})")
+            new_admin = User(
+                uname=admin_username,
+                email=admin_email,
+                hashed_pwd=get_password_hash(admin_password),
+                is_admin=True
+            )
+            session.add(new_admin)
+            session.commit()
+            session.refresh(new_admin)
+            print(f"Admin user created successfully. Password: {admin_password}")
+            import_admin_original_data(session, new_admin.uid)
+
 
 def import_admin_original_data(session: Session, admin_uid: int):
     """

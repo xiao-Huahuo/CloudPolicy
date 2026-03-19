@@ -68,7 +68,7 @@ const updateChart = () => {
 
   const option = {
     // 配合主色调：#d4ff80, #00e2dc, #002059，以及一些衍生过渡色
-    color: ['#002059', '#00e2dc', '#d4ff80', '#007bb5', '#81d4fa', '#b2dfdb'],
+    color: ['#c0392b', '#e67e22', '#f1c40f', '#7f8c8d', '#95a5a6', '#bdc3c7'],
     tooltip: {
       trigger: 'item',
       formatter: '{b} : {c} 份 ({d}%)',

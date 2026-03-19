@@ -3,7 +3,7 @@ database.db
 .venv
 .idea
 .vscode
-node_modules
+web/node_modules
 build
 dist
 

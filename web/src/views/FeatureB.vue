@@ -260,9 +260,11 @@ onMounted(async () => {
 /* ======= Widget 基础样式 ======= */
 .widget {
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-  padding: 20px;
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid #e8e8e8;
+  border-top: 3px solid #c0392b;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -304,7 +306,7 @@ onMounted(async () => {
 }
 
 .action-tag.active {
-  background: #000;
+  background: #c0392b;
   color: #fff;
   font-weight: bold;
 }

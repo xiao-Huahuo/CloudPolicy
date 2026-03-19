@@ -142,8 +142,8 @@ const updateChart = () => {
           borderRadius: 6, // 胶囊圆角
           // 使用渐变色 #00e2dc -> #d4ff80
           color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: '#00e2dc' },
-            { offset: 1, color: '#d4ff80' }
+            { offset: 0, color: '#922b21' },
+            { offset: 1, color: '#e67e22' }
           ])
         },
         label: {

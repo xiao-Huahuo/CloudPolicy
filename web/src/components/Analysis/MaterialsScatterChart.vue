@@ -91,7 +91,7 @@ const updateChart = () => {
           // 词频越高，symbolSize 越大
           symbolSize: 20 + Math.sqrt(item.value) * 10,
           itemStyle: {
-            color: ['#002059', '#00e2dc', '#d4ff80', '#b3e5fc', '#81d4fa'][index % 5],
+            color: ['#c0392b', '#e67e22', '#f1c40f', '#7f8c8d', '#922b21'][index % 5],
           },
           label: {
             show: true,
