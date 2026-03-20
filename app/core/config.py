@@ -25,6 +25,7 @@ class GlobalConfig:
     UPLOAD_DIR = PROJECT_ROOT / "uploads"
     AVATAR_UPLOAD_DIR = UPLOAD_DIR / "avatars"
     DOCS_UPLOAD_DIR = UPLOAD_DIR / "docs"
+    IMAGES_UPLOAD_DIR=UPLOAD_DIR / "images"
 
     # JWT配置
     # 常量,应该从环境变量获取,此处开发使用

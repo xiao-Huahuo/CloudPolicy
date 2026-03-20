@@ -244,7 +244,7 @@ import slide2Img from '@/assets/photos/discover/slide2.jpg';
 import slide3Img from '@/assets/photos/discover/slide3.jpg';
 
 const router = useRouter();
-
+let slideTimer = null;
 // ── 轮播 ──────────────────────────────────────────────────────────────────────
 const slideIdx = ref(0);
 const slides = [

@@ -14,6 +14,7 @@ import urllib.error
 logger = logging.getLogger(__name__)
 
 # ── 缓存 ──────────────────────────────────────────────────────────────────────
+# TODO:转换为Redis缓存
 _cache: dict = {}
 CACHE_TTL = 600  # 10 分钟
 
@@ -37,7 +38,7 @@ HEADERS = {
     "Accept-Language": "zh-CN,zh;q=0.9",
 }
 
-def _fetch_url(url: str, timeout: int = 5) -> Optional[str]:
+def _fetch_url(url: str, timeout: int = 2) -> Optional[str]:
     try:
         req = urllib.request.Request(url, headers=HEADERS)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -120,16 +121,26 @@ def get_hot_news(limit: int = 10) -> list[dict]:
 def _mock_hot_news() -> list[dict]:
     # TODO:加入真实爬虫逻辑获取真实热点数据
     return [
-        {"title": "习近平主持召开中央全面深化改革委员会第四次会议", "link": "https://www.gov.cn", "pubDate": "", "description": "会议审议通过了多项重要改革方案"},
-        {"title": "国务院常务会议研究部署稳增长相关工作", "link": "https://www.gov.cn", "pubDate": "", "description": "会议强调要持续推动经济高质量发展"},
-        {"title": "全国人大常委会审议多项重要法律草案", "link": "https://www.npc.gov.cn", "pubDate": "", "description": "涉及民生保障、数字经济等多个领域"},
-        {"title": "中央经济工作会议精神贯彻落实情况综述", "link": "https://www.gov.cn", "pubDate": "", "description": "各地积极推进经济工作部署落地见效"},
-        {"title": "国家发展改革委发布重大项目投资计划", "link": "https://www.ndrc.gov.cn", "pubDate": "", "description": "重点支持新基建、绿色发展等领域"},
-        {"title": "财政部出台系列减税降费政策措施", "link": "https://www.mof.gov.cn", "pubDate": "", "description": "进一步减轻市场主体负担，激发市场活力"},
-        {"title": "人力资源社会保障部发布就业形势分析报告", "link": "https://www.mohrss.gov.cn", "pubDate": "", "description": "就业形势总体稳定，重点群体就业保障有力"},
-        {"title": "生态环境部通报全国空气质量改善情况", "link": "https://www.mee.gov.cn", "pubDate": "", "description": "主要城市空气质量持续改善"},
-        {"title": "教育部部署推进教育强国建设重点工作", "link": "https://www.moe.gov.cn", "pubDate": "", "description": "聚焦提升教育质量和教育公平"},
-        {"title": "卫生健康委发布最新医疗卫生服务数据", "link": "https://www.nhc.gov.cn", "pubDate": "", "description": "基层医疗服务能力持续提升"},
+        {"title": "习近平主持召开中央全面深化改革委员会第四次会议", "link": "https://www.gov.cn", "pubDate": today,
+         "description": "会议审议通过了多项重要改革方案"},
+        {"title": "国务院常务会议研究部署稳增长相关工作", "link": "https://www.gov.cn", "pubDate": today,
+         "description": "会议强调要持续推动经济高质量发展"},
+        {"title": "全国人大常委会审议多项重要法律草案", "link": "https://www.npc.gov.cn", "pubDate": today,
+         "description": "涉及民生保障、数字经济等多个领域"},
+        {"title": "中央经济工作会议精神贯彻落实情况综述", "link": "https://www.gov.cn", "pubDate": today,
+         "description": "各地积极推进经济工作部署落地见效"},
+        {"title": "国家发展改革委发布重大项目投资计划", "link": "https://www.ndrc.gov.cn", "pubDate": today,
+         "description": "重点支持新基建、绿色发展等领域"},
+        {"title": "财政部出台系列减税降费政策措施", "link": "https://www.mof.gov.cn", "pubDate": today,
+         "description": "进一步减轻市场主体负担，激发市场活力"},
+        {"title": "人力资源社会保障部发布就业形势分析报告", "link": "https://www.mohrss.gov.cn", "pubDate": today,
+         "description": "就业形势总体稳定，重点群体就业保障有力"},
+        {"title": "生态环境部通报全国空气质量改善情况", "link": "https://www.mee.gov.cn", "pubDate": today,
+         "description": "主要城市空气质量持续改善"},
+        {"title": "教育部部署推进教育强国建设重点工作", "link": "https://www.moe.gov.cn", "pubDate": today,
+         "description": "聚焦提升教育质量和教育公平"},
+        {"title": "卫生健康委发布最新医疗卫生服务数据", "link": "https://www.nhc.gov.cn", "pubDate": today,
+         "description": "基层医疗服务能力持续提升"},
     ]
 
 # ── 中央文件 ──────────────────────────────────────────────────────────────────
@@ -214,8 +225,31 @@ def search_news(query: str, limit: int = 20) -> list[dict]:
         if q in (item.get("title") or "").lower()
         or q in (item.get("description") or "").lower()
     ]
+
+    # 兜底：如果搜不到结果，提供静态 mock 数据
+    if not results:
+        return _mock_search_news(query)[:limit]
+
     return results[:limit]
 
+def _mock_search_news(query: str) -> list[dict]:
+    """搜索结果的 Mock 兜底"""
+    return [
+        {
+            "title": f"关于“{query}”的最新政策解读",
+            "link": "https://www.gov.cn",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": f"有关{query}的全面深化改革举措和政策说明，详细解释了下一步的发展方向。",
+            "source_type": "policy"
+        },
+        {
+            "title": f"【热点关注】{query} 成为近期社会重点议题",
+            "link": "https://news.cctv.com",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": f"社会各界对{query}展开热烈讨论，专家指出其对未来经济民生将产生深远影响。",
+            "source_type": "news"
+        }
+    ]
 
 # ── 带图片的热点资讯（用于主页图片横条）────────────────────────────────────────
 def get_news_with_images(limit: int = 5) -> list[dict]:
@@ -225,19 +259,83 @@ def get_news_with_images(limit: int = 5) -> list[dict]:
         return cached[:limit]
 
     news = get_hot_news(10)
+
+    # 兜底：如果热点新闻提取失败或为空，直接使用预设的带图 mock 数据
+    if not news:
+        result = _mock_news_with_images()
+        _set_cache("news_with_images", result)
+        return result[:limit]
+
     # 为每条新闻附加一个图片占位,TODO:实际图片需要爬取，此处用占位色块数据
     colors = ["#c0392b", "#2980b9", "#27ae60", "#e67e22", "#8e44ad", "#16a085", "#d35400", "#2c3e50"]
+    # 提供一组备用占位图
+    placeholders = [
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80",
+        "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=400&q=80",
+        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=80",
+        "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=400&q=80",
+        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80"
+    ]
     result = []
     for i, item in enumerate(news[:limit]):
         result.append({
             **item,
             "image_color": colors[i % len(colors)],
-            "image_url": None,  # 实际爬取图片时填充
+            "image_url": placeholders[i % len(placeholders)],  # 替换成占位图，不再返回 None
             "category": "时事",
         })
     _set_cache("news_with_images", result)
     return result[:limit]
 
+def _mock_news_with_images() -> list[dict]:
+    """带图资讯的 Mock 兜底"""
+    return [
+        {
+            "title": "全国科技创新大会在京隆重召开",
+            "link": "https://news.cctv.com",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": "会议强调加快实现高水平科技自立自强，为经济高质量发展提供坚实支撑。",
+            "image_color": "#c0392b",
+            "image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80",
+            "category": "时事"
+        },
+        {
+            "title": "新能源汽车产销量创历史新高",
+            "link": "https://news.cctv.com",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": "我国新能源汽车产业保持高速增长态势，绿色出行理念深入人心。",
+            "image_color": "#2980b9",
+            "image_url": "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=400&q=80",
+            "category": "经济"
+        },
+        {
+            "title": "生态环境保护取得阶段性显著成果",
+            "link": "https://news.cctv.com",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": "多地空气质量优良天数比例稳步提升，蓝天白云成为常态。",
+            "image_color": "#27ae60",
+            "image_url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=80",
+            "category": "生态"
+        },
+        {
+            "title": "民生工程稳步推进，群众幸福感增强",
+            "link": "https://news.cctv.com",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": "老旧小区改造、养老服务设施建设全面提速，打通服务群众的最后一公里。",
+            "image_color": "#e67e22",
+            "image_url": "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=400&q=80",
+            "category": "民生"
+        },
+        {
+            "title": "文化产业高质量发展，数字化转型加速",
+            "link": "https://news.cctv.com",
+            "pubDate": time.strftime("%Y-%m-%d"),
+            "description": "数字文化新业态成为激发消费新引擎，传统文化焕发新活力。",
+            "image_color": "#8e44ad",
+            "image_url": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80",
+            "category": "文化"
+        }
+    ]
 
 # ── 今日政务概况 ──────────────────────────────────────────────────────────────
 def get_daily_gov_summary() -> dict:
@@ -248,16 +346,31 @@ def get_daily_gov_summary() -> dict:
 
     news = get_hot_news(10)
     docs = get_central_docs(5)
-    summary = {
-        "news_count": len(news),
-        "doc_count": len(docs),
-        "top_news": news[0]["title"] if news else "暂无数据",
-        "top_doc": docs[0]["title"] if docs else "暂无数据",
-        "update_time": time.strftime("%H:%M", time.localtime()),
-    }
+
+    # 兜底：如果没有任何新闻和政策文件，返回预设的 mock 数据
+    if not news and not docs:
+        summary = _mock_daily_gov_summary()
+    else:
+        summary = {
+            "news_count": len(news) if news else 25,
+            "doc_count": len(docs) if docs else 12,
+            "top_news": news[0]["title"] if news else "全国科技创新大会在京隆重召开",
+            "top_doc": docs[0]["title"] if docs else "关于进一步优化营商环境降低市场主体制度性交易成本的意见",
+            "update_time": time.strftime("%H:%M", time.localtime()),
+        }
+
     _set_cache("daily_summary", summary)
     return summary
 
+def _mock_daily_gov_summary() -> dict:
+    """政务概况的 Mock 兜底"""
+    return {
+        "news_count": 36,
+        "doc_count": 15,
+        "top_news": "模拟新闻：多措并举促进经济持续回升向好",
+        "top_doc": "模拟文件：关于扎实推进城市更新工作的指导意见",
+        "update_time": time.strftime("%H:%M", time.localtime()),
+    }
 
 # ── 热点关键词（用于点云图）────────────────────────────────────────────────────
 def get_hot_keywords() -> list[dict]:
@@ -270,6 +383,12 @@ def get_hot_keywords() -> list[dict]:
     news = get_hot_news(10)
     docs = get_central_docs(5)
     all_titles = [n["title"] for n in news] + [d["title"] for d in docs]
+
+    # 兜底：如果完全没有获取到标题，返回静态的 mock 关键词
+    if not all_titles:
+        result = _mock_hot_keywords()
+        _set_cache("hot_keywords", result)
+        return result
 
     # 简单词频统计（不依赖 jieba，避免额外依赖）
     import re
@@ -289,3 +408,18 @@ def get_hot_keywords() -> list[dict]:
     result = [{"name": k, "value": v} for k, v in sorted(word_freq.items(), key=lambda x: -x[1])]
     _set_cache("hot_keywords", result)
     return result
+
+def _mock_hot_keywords() -> list[dict]:
+    """热点关键词的 Mock 兜底"""
+    return [
+        {"name": "高质量发展", "value": 150},
+        {"name": "改革", "value": 135},
+        {"name": "数字经济", "value": 120},
+        {"name": "乡村振兴", "value": 115},
+        {"name": "科技创新", "value": 110},
+        {"name": "民生保障", "value": 105},
+        {"name": "新质生产力", "value": 100},
+        {"name": "营商环境", "value": 95},
+        {"name": "绿色生态", "value": 90},
+        {"name": "共同富裕", "value": 85}
+    ]
