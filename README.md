@@ -9,7 +9,7 @@
 - **学生与职场人**：在琐碎的通知中极易遗漏截止日期、所需材料等核心要素。
 - **普通居民**：因政策解读偏差，常导致办事过程中“往返跑、多次跑”。
 
-**ClearNotify** 致力于通过最前沿的 AI 技术，将这些零散且难读的文本，转化为结构清晰、直观易懂的**全场景办事助手**。我们的核心目标是：
+**ClearNotify** 是致力于通过最前沿的 AI 技术，将这些零散且难读的文本，转化为结构清晰、直观易懂的结构化信息的**全场景办事助手**。我们的核心目标是：
 
 1.  **重塑阅读体验**：利用 LLM 驱动的结构化引擎，将万字长文瞬间浓缩为“谁能办、带什么、去哪办”的极简卡片。
 2.  **跨越数字壁垒**：通过**多模态感知系统**（OCR 截图解析、语音交互输入），让不便打字的用户也能无障碍获取信息。
@@ -116,6 +116,7 @@ ClearNotify/
 │   ├── models/                 # 【模型】基于 SQLModel 的数据库实体与 Pydantic 模式
 │   ├── services/               # 【业务层】核心逻辑实现、复杂统计计算与邮件发送服务
 │   ├── db/                     # 【数据库】存储引擎初始化、连接池与 Session 管理
+│   ├── requirements.txt        # 【环境】后端 Python 核心依赖库清单
 │   └── Dockerfile              # 后台Dockerfile配置
 ├── web/                        # 前端核心 (Vue3)
 │   ├── src/
@@ -139,7 +140,6 @@ ClearNotify/
 ├── README.md                   # 【文档】项目说明书、技术架构与启动指南
 ├── TODO.md                     # 【路线图】开发进度跟踪与全功能设想清单
 ├── database.db                 # 【存储】本地 SQLite 数据库文件
-├── requirements.txt            # 【环境】后端 Python 核心依赖库清单
 ├── admin_original_data.json    # 【预置数据】系统初始化的政务公告测试数据集
 ├── docker-compose.yml          # Docker-Compose自动部署配置
 └── project_tree.md             # 【结构】当前项目最新的目录树记录
@@ -266,47 +266,8 @@ MOONSHOT_API_KEY=your_kimi_api_key
 ```
 说明：未配置 SMTP 时系统会自动将邮件写入 `mail_outbox` 目录供本地预览。
 
-### Docker 部署 (推荐)
 
-使用 Docker 可以极大地简化环境配置和项目启动过程。请确保您的系统已安装 Docker 和 Docker Compose。
-并在Docker Desktop - Settings - Docker Engine中配置镜像源:
-``` json
-{
-  "builder": {
-    "gc": {
-      "defaultKeepStorage": "20GB",
-      "enabled": true
-    }
-  },
-  "experimental": false,
-  "registry-mirrors": [
-    "https://docker.xuanyuan.me",
-    "https://xuanyuan.cloud",
-    "https://mirror.ccs.tencentyun.com",
-    "https://docker.1panel.live",
-    "https://docker.nju.edu.cn"
-  ]
-}
-```
-1.  **启动服务**:
-    在项目根目录执行以下命令：
-    ```bash
-    docker-compose up --build -d
-    ```
-    *   `--build`: 首次运行时或当 Dockerfile 有更新时，用于重新构建镜像。
-    *   `-d`: 在后台运行服务。
-
-2. **访问应用**:
-    *   前端应用将通过 Nginx 运行在 `http://localhost:80`。
-    *   后端 API 将在 Docker 内部运行于 `http://app:8000`，并通过前端 Nginx 代理访问。
-
-3. **停止服务**:
-    在项目根目录执行：
-    ```bash
-    docker-compose down
-    ```
-
-### 手动部署 (传统方式)
+### 运行
 
 #### 前端(web):
 ```shell
@@ -341,7 +302,7 @@ pip install -r requirements.txt
 ```
 uvicorn app.main:app --reload
 ```
-### 打包与部署
+### 构建
 1. 安装打包工具:
 ```
 pip install pyinstaller
@@ -350,7 +311,7 @@ pip install pyinstaller
 Windows:     ```pyinstaller --onefile --noconsole --name ClearNotifyServer --add-data "app/core;app/core" app/main.py```
 macOS/Linux: ```pyinstaller --onefile --name ClearNotifyServer --add-data "app/core:app/core" app/main.py```
 构建完成后,在`ClearNotify/dist/`生成可执行文件`ClearNotifyServer.exe`（Windows 系统）或`ClearNotifyServer`（Linux/macOS 系统）.
-2. 前端生产环境构建：
+3. 前端生产环境构建：
 ```shell 
 cd web
 npm install --verbose
@@ -359,25 +320,68 @@ npm run build
 构建完成后，将在 `web/dist` 目录下生成静态文件 , 可以直接将其部署至 Nginx 的`html/`目录.
 **若集成到后端**: 将 `dist` 内的所有内容拷贝至后端项目的静态文件目录，并在 FastAPI 中挂载：
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")
-3. Docker 一键部署：
+
+---
+
+### Docker 部署 
+
+使用 Docker 可以极大地简化环境配置和项目启动过程。请确保您的系统已安装 Docker 和 Docker Compose。
+并在Docker Desktop - Settings - Docker Engine中配置镜像源:
+``` json
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
+  "registry-mirrors": [
+    "https://dockerproxy.com",
+    "https://docker.nju.edu.cn",
+    "https://docker.mirrors.sjtug.sjtu.edu.cn",
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com",
+    "https://docker.xuanyuan.me",
+    "https://xuanyuan.cloud",
+    "https://mirror.ccs.tencentyun.com",
+    "https://docker.1panel.live",
+    "https://docker.nju.edu.cn"
+  ]
+}
+```
+必要时可以手动安装所需镜像:
+![Docker-Images](doc/assets/Docker-Images.png)
+拉取指令:
 ```shell
-`docker-compose up -d --build`
+docker pull redis:latest
+docker pull node:16-alpine
+docker pull nginx:stable-alpine
+docker pull python:3.12-slim-bullseye
 ```
-4. 环境与安全:
-- 务必检查 .env 文件中的配置，确保生产环境的安全性.
-- 打包后的可执行文件需与 .env 文件放在同一目录下运行.
-- 生产环境下的跨域由 Nginx 处理，请确保 vite.config.js 中的代理路径与 Nginx 配置一致.
-- 使用 Docker 部署时，请确保 `docker-compose.yml` 中已配置 volumes 挂载，以持久化存储数据库文件.
-```toml
-# 生产环境建议关闭调试模式
-DEBUG=False
+1.  **启动服务**:
+    在项目根目录执行以下命令：
+    ```bash
+    docker-compose up --build -d
+    ```
+    *   `--build`: 首次运行时或当 Dockerfile 有更新时，用于重新构建镜像。
+    *   `-d`: 在后台运行服务。
 
-# 必须更换为强随机字符串
-SECRET_KEY=your_random_secret_string_here
-
-# 确保 SMTP 授权码正确以维持邮件系统运转
-MAIL_PASSWORD=your_smtp_auth_code 
-```
+2. **访问应用**:
+    *   前端应用将通过 Nginx 运行在 `http://localhost:80`。
+    *   后端 API 将在 Docker 内部运行于 `http://app:8080`，并通过前端 Nginx 代理访问。
+    *   也可以打开Docker Desktop找到clearnotify容器,即可运行,点击web的链接即可打开网页.
+3. **停止服务**:
+    在项目根目录执行：
+    ```bash
+    docker-compose down
+    ```
+    **再次启动服务**:
+   在项目根目录执行:
+    ```bash
+    docker-compose up
+    ```
 ---
 
 ## 开发阶段:代码编写规范

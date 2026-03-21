@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   redis:
     image: redis:latest
@@ -12,12 +10,14 @@ services:
 
   app:
     build: ./app
+    working_dir: /app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
     container_name: ClearNotify_app
     ports:
       - "${PORT:-8080}:8080"
     environment:
-      DEBUG: ${DEBUG}
-      HOST: ${HOST}
+      DEBUG: false
+      HOST: 0.0.0.0
       PORT: ${PORT}
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM}
@@ -36,9 +36,9 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS}
       EMAIL_VERIFICATION_CODE_LENGTH: ${EMAIL_VERIFICATION_CODE_LENGTH}
       EMAIL_VERIFICATION_EXPIRE_MINUTES: ${EMAIL_VERIFICATION_EXPIRE_MINUTES}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL} # 生产环境这个必须是真实域名/公网IP
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
-      REDIS_HOST: ${REDIS_HOST}
+      REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT}
       REDIS_DB_CACHE: ${REDIS_DB_CACHE}
       REDIS_DB_QUEUE: ${REDIS_DB_QUEUE}
@@ -47,8 +47,12 @@ services:
       CRAWLER_RATE_WINDOW_SECONDS: ${CRAWLER_RATE_WINDOW_SECONDS}
       MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
     volumes:
-      - ./app/app:/app/app
+      - ./app:/app/app/
       - ./database.db:/app/database.db
+      - ./uploads:/app/uploads
+      - ./.env:/app/.env
+      - ./logs:/app/logs
+      - ./mail_outbox:/app/mail_outbox
     depends_on:
       - redis
     restart: always
@@ -61,6 +65,8 @@ services:
     depends_on:
       - app
     restart: always
-
+    volumes:
+      - ./web:/app
+      - /app/node_modules      # 关键：不要让宿主机的 node_modules 覆盖容器内的
 volumes:
   redis_data:

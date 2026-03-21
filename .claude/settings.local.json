@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(pip list:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(docker pull:*)",
+      "Bash(docker tag:*)",
+      "Bash(docker-compose up:*)"
     ]
   }
 }
