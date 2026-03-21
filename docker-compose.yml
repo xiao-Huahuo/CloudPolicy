@@ -14,22 +14,41 @@ services:
     build: ./app
     container_name: ClearNotify_app
     ports:
-      - "8000:8000"
+      - "${PORT:-8080}:8080"
     environment:
-      # 生产环境建议关闭调试模式
       DEBUG: ${DEBUG}
-      # 必须更换为强随机字符串
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      # 确保 SMTP 授权码正确以维持邮件系统运转
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      # 你的KIMI-API-KEY
-      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
-      # 自定义管理员账户 (可选)
+      HOST: ${HOST}
+      PORT: ${PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_DAYS: ${ACCESS_TOKEN_EXPIRE_DAYS}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PHONE: ${ADMIN_PHONE}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_SENDER: ${SMTP_SENDER}
+      SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+      SMTP_USE_SSL: ${SMTP_USE_SSL}
+      SMTP_USE_TLS: ${SMTP_USE_TLS}
+      EMAIL_VERIFICATION_CODE_LENGTH: ${EMAIL_VERIFICATION_CODE_LENGTH}
+      EMAIL_VERIFICATION_EXPIRE_MINUTES: ${EMAIL_VERIFICATION_EXPIRE_MINUTES}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_DB_CACHE: ${REDIS_DB_CACHE}
+      REDIS_DB_QUEUE: ${REDIS_DB_QUEUE}
+      REDIS_QUEUE_NAME: ${REDIS_QUEUE_NAME}
+      CRAWLER_RATE_LIMIT: ${CRAWLER_RATE_LIMIT}
+      CRAWLER_RATE_WINDOW_SECONDS: ${CRAWLER_RATE_WINDOW_SECONDS}
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY}
     volumes:
-      - ./app/app:/app/app # 挂载 app 目录，方便开发时代码修改
-      - ./database.db:/app/database.db # 挂载数据库文件
+      - ./app/app:/app/app
+      - ./database.db:/app/database.db
     depends_on:
       - redis
     restart: always

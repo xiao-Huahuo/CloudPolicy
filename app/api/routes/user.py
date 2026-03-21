@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.models.user import User
@@ -8,6 +9,7 @@ from app.schemas.user import *
 from app.core.security import get_password_hash
 from app.api.deps import get_current_user
 from app.core.config import GlobalConfig
+from app.core.security import decode_email_verification_token
 from app.services import email_service
 
 # 创建路由器
@@ -91,6 +93,58 @@ def verify_email(
     session.add(user)
     session.commit()
     return {"message": "邮箱验证成功"}
+
+
+@router.get("/verify-email-link", response_class=HTMLResponse)
+def verify_email_link(
+    token: str,
+    session: Session = Depends(get_session),
+):
+    payload = decode_email_verification_token(token)
+    email = payload.get("sub")
+    code = payload.get("code")
+    if not email or not code:
+        return HTMLResponse(
+            "<h2>验证失败：链接无效</h2>",
+            status_code=400,
+        )
+
+    user = session.exec(select(User).where(User.email == email)).first()
+    if not user:
+        return HTMLResponse("<h2>验证失败：用户不存在</h2>", status_code=404)
+
+    if user.email_verified:
+        return HTMLResponse(
+            f"<h2>邮箱已验证</h2><p><a href=\"{GlobalConfig.FRONTEND_BASE_URL}\">返回应用</a></p>",
+            status_code=200,
+        )
+
+    if not user.email_verification_code or not user.email_verification_sent_at:
+        return HTMLResponse("<h2>验证失败：验证码不存在</h2>", status_code=400)
+
+    if datetime.now() - user.email_verification_sent_at > timedelta(
+        minutes=GlobalConfig.EMAIL_VERIFICATION_EXPIRE_MINUTES
+    ):
+        return HTMLResponse("<h2>验证失败：链接已过期</h2>", status_code=400)
+
+    if code != user.email_verification_code:
+        return HTMLResponse("<h2>验证失败：链接无效</h2>", status_code=400)
+
+    user.email_verified = True
+    user.email_verification_code = None
+    user.email_verification_sent_at = None
+    session.add(user)
+    session.commit()
+    return HTMLResponse(
+        f"""
+        <div style="font-family: Arial, sans-serif; line-height:1.6;">
+          <h2>邮箱验证成功</h2>
+          <p>您可以返回应用继续登录。</p>
+          <p><a href="{GlobalConfig.FRONTEND_BASE_URL}">返回应用</a></p>
+        </div>
+        """,
+        status_code=200,
+    )
 
 
 @router.post("/resend-verification")

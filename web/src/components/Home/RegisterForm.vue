@@ -46,8 +46,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { register, verifyEmail } from '@/api/user';
-import { useUserStore } from '@/stores/auth.js';
+import { register } from '@/api/user';
 
 const emit = defineEmits(['success', 'switch-to-login']);
 
@@ -57,12 +56,6 @@ const password = ref('');
 const confirmPassword = ref('');
 const errorMessage = ref('');
 const loading = ref(false);
-const userStore = useUserStore();
-
-const askForCode = (previewCode) => {
-  const prefix = previewCode ? `当前为本地预览模式，验证码：${previewCode}\n` : '';
-  return window.prompt(`${prefix}请输入邮箱收到的验证码`);
-};
 
 const handleRegister = async () => {
   if (password.value !== confirmPassword.value) {
@@ -78,16 +71,12 @@ const handleRegister = async () => {
       email: email.value,
       pwd: password.value,
     });
-
-    const code = askForCode(registerRes.data.preview_code);
-    if (!code) {
-      errorMessage.value = '注册成功，但尚未完成邮箱验证';
+    if (registerRes.data.delivery_channel === 'preview' && registerRes.data.preview_code) {
+      errorMessage.value = `注册成功，请查看本地邮件预览完成验证。验证码：${registerRes.data.preview_code}`;
       return;
     }
-
-    await verifyEmail(email.value, code.trim());
-    await userStore.login(username.value, password.value);
-    emit('success');
+    errorMessage.value = '注册成功，请前往邮箱点击按钮完成验证后再登录';
+    emit('switch-to-login');
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || 'Registration failed';
   } finally {

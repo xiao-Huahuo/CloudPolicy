@@ -57,6 +57,9 @@ class GlobalConfig:
     SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "true").lower() == "true"
     SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "false").lower() == "true"
 
+    PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", f"http://{HOST}:{PORT}")
+    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:5173")
+
     EMAIL_VERIFICATION_CODE_LENGTH = int(os.getenv("EMAIL_VERIFICATION_CODE_LENGTH", 6))
     EMAIL_VERIFICATION_EXPIRE_MINUTES = int(
         os.getenv("EMAIL_VERIFICATION_EXPIRE_MINUTES", 15)

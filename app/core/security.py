@@ -41,3 +41,24 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     # 编码,生成 Token 并返回
     encoded_jwt = jwt.encode(to_encode, GlobalConfig.SECRET_KEY, algorithm=GlobalConfig.ALGORITHM)
     return encoded_jwt
+
+
+def create_email_verification_token(email: str, code: str, expires_minutes: int) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    payload = {
+        "exp": expire,
+        "sub": email,
+        "code": code,
+        "purpose": "email_verify",
+    }
+    return jwt.encode(payload, GlobalConfig.SECRET_KEY, algorithm=GlobalConfig.ALGORITHM)
+
+
+def decode_email_verification_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, GlobalConfig.SECRET_KEY, algorithms=[GlobalConfig.ALGORITHM])
+    except Exception:
+        return {}
+    if payload.get("purpose") != "email_verify":
+        return {}
+    return payload

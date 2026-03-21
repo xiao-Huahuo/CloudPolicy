@@ -9,36 +9,36 @@
       </div>
 
       <form class="form" @submit.prevent="handleRegister">
-        <div class="flex-column"><label>用户名 / Username</label></div>
+        <div class="flex-column"><label>Username</label></div>
         <div class="inputForm">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           <input v-model="username" type="text" class="input" placeholder="Enter your username" required />
         </div>
 
-        <div class="flex-column"><label>邮箱 / Email</label></div>
+        <div class="flex-column"><label>Email</label></div>
         <div class="inputForm">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
           <input v-model="email" type="email" class="input" placeholder="Enter your email" required />
         </div>
 
-        <div class="flex-column"><label>密码 / Password</label></div>
+        <div class="flex-column"><label>Password</label></div>
         <div class="inputForm">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           <input v-model="password" type="password" class="input" placeholder="Enter your password" required />
         </div>
 
-        <div class="flex-column"><label>确认密码 / Confirm Password</label></div>
+        <div class="flex-column"><label>Confirm Password</label></div>
         <div class="inputForm">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           <input v-model="confirmPassword" type="password" class="input" placeholder="Confirm your password" required />
         </div>
 
         <div class="flex-row">
-          <span class="span" @click="$router.push('/login')">已有账号？去登录</span>
+          <span class="span" @click="$router.push('/login')">Go to Login</span>
         </div>
 
         <button class="button-submit" type="submit" :disabled="loading">
-          {{ loading ? '注册中...' : '注 册' }}
+          {{ loading ? 'Registering...' : 'Register' }}
         </button>
 
         <p class="error-msg" v-if="errorMessage">{{ errorMessage }}</p>
@@ -49,15 +49,13 @@
 
 <script setup>
 import { ref } from 'vue';
-import { register, verifyEmail } from '@/api/user';
-import { useUserStore } from '@/stores/auth.js';
+import { register } from '@/api/user';
 import { useRouter } from 'vue-router';
 
 const username = ref('');
 const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
-const userStore = useUserStore();
 const router = useRouter();
 const loading = ref(false);
 const errorMessage = ref('');
@@ -65,7 +63,7 @@ const hasIcon = ref(true);
 
 const handleRegister = async () => {
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = '两次输入的密码不一致';
+    errorMessage.value = 'Passwords do not match';
     return;
   }
 
@@ -78,18 +76,15 @@ const handleRegister = async () => {
       pwd: password.value,
     });
 
-    const prefix = res.data.preview_code ? `当前为本地预览模式，验证码：${res.data.preview_code}\n` : '';
-    const code = window.prompt(`${prefix}请输入邮箱收到的验证码`);
-    if (!code) {
-      errorMessage.value = '注册成功，但尚未完成邮箱验证';
+    if (res.data.delivery_channel === 'preview' && res.data.preview_code) {
+      errorMessage.value = `注册成功，请查看本地邮件预览完成验证。验证码：${res.data.preview_code}`;
       return;
     }
 
-    await verifyEmail(email.value, code.trim());
-    await userStore.login(username.value, password.value);
-    router.push('/');
+    alert('注册成功，请前往邮箱点击按钮完成验证后再登录。');
+    router.push('/login');
   } catch (error) {
-    errorMessage.value = error.response?.data?.detail || error.message || '注册失败';
+    errorMessage.value = error.response?.data?.detail || error.message || 'Registration failed';
   } finally {
     loading.value = false;
   }

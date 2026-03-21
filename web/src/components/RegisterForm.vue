@@ -28,7 +28,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { register, verifyEmail } from '@/api/user';
+import { register } from '@/api/user';
 
 const emit = defineEmits(['success', 'switch-to-login']);
 
@@ -47,14 +47,11 @@ const handleRegister = async () => {
       email: email.value,
       pwd: password.value,
     });
-    const prefix = res.data.preview_code ? `当前为本地预览模式，验证码：${res.data.preview_code}\n` : '';
-    const code = window.prompt(`${prefix}请输入邮箱收到的验证码`);
-    if (!code) {
-      errorMessage.value = '注册成功，但尚未完成邮箱验证';
+    if (res.data.delivery_channel === 'preview' && res.data.preview_code) {
+      errorMessage.value = `注册成功，请查看本地邮件预览完成验证。验证码：${res.data.preview_code}`;
       return;
     }
-    await verifyEmail(email.value, code.trim());
-    alert('Registration successful! Please login.');
+    alert('注册成功，请前往邮箱点击按钮完成验证后再登录。');
     emit('switch-to-login');
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || 'Registration failed';

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from app.core.config import GlobalConfig
+from app.core.security import create_email_verification_token
 from app.models.user import User
 
 
@@ -95,13 +96,31 @@ def send_email(
 
 def send_verification_email(user: User) -> dict:
     code = user.email_verification_code or ""
+    token = create_email_verification_token(
+        user.email,
+        code,
+        GlobalConfig.EMAIL_VERIFICATION_EXPIRE_MINUTES,
+    )
+    verify_url = f"{GlobalConfig.PUBLIC_BASE_URL}/user/verify-email-link?token={token}"
     content = (
         f"{user.uname}，您好：\n\n"
-        f"您的 ClearNotify 邮箱验证码为：{code}\n"
-        f"验证码 {GlobalConfig.EMAIL_VERIFICATION_EXPIRE_MINUTES} 分钟内有效。\n"
-        "若非本人操作，请忽略此邮件。"
+        "请点击下面的链接完成邮箱验证：\n"
+        f"{verify_url}\n\n"
+        f"该链接 {GlobalConfig.EMAIL_VERIFICATION_EXPIRE_MINUTES} 分钟内有效。\n"
+        "如非本人操作，请忽略此邮件。"
     )
-    result = send_email(user.email, "ClearNotify 邮箱验证", content)
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <p>{user.uname}，您好：</p>
+      <p>请点击下面按钮完成邮箱验证：</p>
+      <p>
+        <a href="{verify_url}" style="display:inline-block;padding:10px 16px;background:#c0392b;color:#fff;text-decoration:none;border-radius:4px;">验证邮箱</a>
+      </p>
+      <p style="font-size:12px;color:#666;">该链接 {GlobalConfig.EMAIL_VERIFICATION_EXPIRE_MINUTES} 分钟内有效。</p>
+      <p style="font-size:12px;color:#999;">如非本人操作，请忽略此邮件。</p>
+    </div>
+    """
+    result = send_email(user.email, "ClearNotify 邮箱验证", content, html_content=html_content)
     if result["delivery_channel"] == "preview":
         result["preview_code"] = code
     return result

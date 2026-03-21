@@ -145,6 +145,9 @@ ClearNotify/
 
 ## 技术亮点 (Technical Highlights)
 
+### 1.1 真实 SMTP 邮件验证闭环
+注册完成后系统会通过 SMTP 发送带按钮的邮箱验证邮件，用户点击邮件按钮即可完成验证并回到应用，避免手动输入验证码的摩擦。
+
 ### 1. 声明式智能体协同架构 (Declarative Agentic Workflow)
 项目后端并未采用简单的 API 转发，而是构建了一套基于 **LangChain** 的“逻辑自洽”智能体层，重点在于对非结构化文本的深度理解与策略分发。
 * **确定性逻辑拆解**：系统通过预设的 Prompt 链条，强制 LLM 在解析前先进行**意图识别**。无论是政务公告、社区通知还是办事指南，智能体都能根据文本特征自动匹配最佳的提取模板，确保“适用对象、材料清单、办理流程”等核心要素的提取具备高度的确定性。
@@ -207,7 +210,55 @@ $$
 
 
 ---
-## 启动与部署 
+## 启动与部署
+
+### .env 环境变量（请在项目根目录创建）
+以下为**所有可配置字段**的模板，按需填写即可：
+```env
+# 基础服务配置
+HOST=127.0.0.1
+PORT=8080
+SECRET_KEY=your_random_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_DAYS=30
+
+# 默认管理员初始化（可选）
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=111111
+ADMIN_EMAIL=admin@example.com
+ADMIN_PHONE=your_phone
+
+# SMTP 邮件系统（真实发信需配置）
+SMTP_HOST=smtp.example.com
+SMTP_PORT=465
+SMTP_USERNAME=your_smtp_user
+SMTP_PASSWORD=your_smtp_password
+SMTP_SENDER=your_sender@example.com
+SMTP_SENDER_NAME=ClearNotify
+SMTP_USE_SSL=true
+SMTP_USE_TLS=false
+
+# 邮箱验证与前后端回跳
+EMAIL_VERIFICATION_CODE_LENGTH=6
+EMAIL_VERIFICATION_EXPIRE_MINUTES=15
+PUBLIC_BASE_URL=http://127.0.0.1:8080
+FRONTEND_BASE_URL=http://127.0.0.1:5173
+
+# Redis/任务队列
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB_CACHE=0
+REDIS_DB_QUEUE=1
+REDIS_QUEUE_NAME=crawler_tasks
+
+# 爬虫限流
+CRAWLER_RATE_LIMIT=30
+CRAWLER_RATE_WINDOW_SECONDS=60
+
+# 模型密钥（如需）
+MOONSHOT_API_KEY=your_kimi_api_key
+```
+说明：未配置 SMTP 时系统会自动将邮件写入 `mail_outbox` 目录供本地预览。
 
 ### Docker 部署 (推荐)
 
@@ -231,28 +282,7 @@ $$
   ]
 }
 ```
-1.  **配置环境变量**:
-    在项目根目录创建 `.env` 文件（如果尚未创建），并根据您的实际情况填写以下环境变量：
-    ```
-    # 生产环境建议关闭调试模式
-    DEBUG=False
-
-    # 必须更换为强随机字符串
-    JWT_SECRET_KEY=your_random_secret_string_here
-
-    # 确保 SMTP 授权码正确以维持邮件系统运转
-    MAIL_PASSWORD=your_smtp_auth_code
-
-    # 你的KIMI-API_KEY 
-    MOONSHOT_API_KEY=your_kimi_api_key
-
-    # 自定义管理员账户 (可选，如果数据库不存在，后台会优先使用这些信息初始化管理员)
-    # ADMIN_USERNAME=your_admin_username
-    # ADMIN_PASSWORD=your_admin_password
-    ```
-    **重要提示**: 请务必替换 `JWT_SECRET_KEY`, `MAIL_PASSWORD` 和 `MOONSHOT_API_KEY` 为您自己的值。
-
-2.  **启动服务**:
+1.  **启动服务**:
     在项目根目录执行以下命令：
     ```bash
     docker-compose up --build -d
@@ -260,19 +290,14 @@ $$
     *   `--build`: 首次运行时或当 Dockerfile 有更新时，用于重新构建镜像。
     *   `-d`: 在后台运行服务。
 
-3.  **访问应用**:
+2. **访问应用**:
     *   前端应用将通过 Nginx 运行在 `http://localhost:80`。
     *   后端 API 将在 Docker 内部运行于 `http://app:8000`，并通过前端 Nginx 代理访问。
 
-4.  **停止服务**:
+3. **停止服务**:
     在项目根目录执行：
     ```bash
     docker-compose down
-    ```
-
-5.  **查看日志**:
-    ```bash
-    docker-compose logs -f
     ```
 
 ### 手动部署 (传统方式)
@@ -342,7 +367,7 @@ app.mount("/", StaticFiles(directory="dist", html=True), name="static")
 DEBUG=False
 
 # 必须更换为强随机字符串
-JWT_SECRET_KEY=your_random_secret_string_here
+SECRET_KEY=your_random_secret_string_here
 
 # 确保 SMTP 授权码正确以维持邮件系统运转
 MAIL_PASSWORD=your_smtp_auth_code 
