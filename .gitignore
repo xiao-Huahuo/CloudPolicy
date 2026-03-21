@@ -8,4 +8,7 @@ build
 dist
 
 # 上传的文件目录
-/uploads/
+uploads
+mail_outbox
+# 日志
+logs
