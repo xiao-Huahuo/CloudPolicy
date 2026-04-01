@@ -17,17 +17,14 @@ from app.services.agent_memory_service import (
 
 
 def _build_llm() -> ChatOpenAI:
-    api_key = GlobalConfig.MOONSHOT_API_KEY
-    if not api_key:
-        raise ValueError("MOONSHOT_API_KEY is not set in environment variables (check .env file)")
-    timeout = float(GlobalConfig.MOONSHOT_API_TIMEOUT)
-    model = os.getenv(GlobalConfig.MOONSHOT_MODEL)
+    if not GlobalConfig.LLM_API_KEY:
+        raise ValueError("LLM_API_KEY is not set in environment variables (check .env file)")
     return ChatOpenAI(
-        api_key=api_key,
-        base_url="https://api.moonshot.cn/v1",
-        model=model,
-        temperature=0.3,
-        timeout=timeout,
+        api_key=GlobalConfig.LLM_API_KEY,
+        base_url=GlobalConfig.LLM_BASE_URL,
+        model=GlobalConfig.LLM_MODEL,
+        temperature=GlobalConfig.LLM_TEMPERATURE,
+        timeout=GlobalConfig.LLM_TIMEOUT
     )
 
 

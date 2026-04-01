@@ -74,9 +74,11 @@ class GlobalConfig:
     PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL")
     FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL")
 
-    MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY")
-    MOONSHOT_API_TIMEOUT = float(os.getenv("MOONSHOT_API_TIMEOUT"))
-    MOONSHOT_MODEL=os.getenv("MOONSHOT_MODEL")
+    LLM_API_KEY = os.getenv("LLM_API_KEY")
+    LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+    LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT"))
+    LLM_MODEL=os.getenv("LLM_MODEL")
+    LLM_TEMPERATURE=float(os.getenv("LLM_TEMPERATURE"))
 
     @staticmethod
     def _show_config():
