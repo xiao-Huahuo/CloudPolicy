@@ -2,7 +2,7 @@
   <div class="sidebar">
     <div class="logo">
       <img src="@/assets/photos/main-icon.png" alt="icon" class="logo-icon" v-if="hasIcon" @error="hasIcon = false" />
-      ClearNotify
+      云上观策
     </div>
     <nav>
       <router-link to="/" class="nav-item" active-class="active">
@@ -99,8 +99,8 @@
     <!-- 关于弹窗 -->
     <div class="overlay" v-if="showAbout" @click.self="showAbout = false">
       <div class="dialog">
-        <h3 class="dialog-title">关于 ClearNotify</h3>
-        <p class="dialog-text"><strong>关于本平台</strong><br>ClearNotify 是一款面向普通市民的政务文件智能解析平台，致力于让每一份通知都清晰易懂。</p>
+        <h3 class="dialog-title">关于 CloudPolicy</h3>
+        <p class="dialog-text"><strong>关于本平台</strong><br>CloudPolicy 是一款面向普通市民的政务文件智能解析平台，致力于让每一份通知都清晰易懂。</p>
         <p class="dialog-text"><strong>关于我们</strong><br>我们是一支热爱技术与公共服务的小团队，相信科技可以让政务信息更加普惠。</p>
         <button class="dialog-close" @click="showAbout = false">关闭</button>
       </div>
@@ -203,7 +203,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
 <style scoped>
 .sidebar {
   width: 200px;
-  background: linear-gradient(180deg, #c0392b 0%, #922b21 60%, #7f8c8d 100%);
+  background: var(--sidebar-bg-gradient);
   color: #fff;
   height: 100vh;
   display: flex;

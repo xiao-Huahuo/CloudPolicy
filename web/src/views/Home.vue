@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-container">
     <!-- ═══════════════════════════════════════════════════════════
          三栏布局：左(时事热点) | 中(文件处理) | 右(红头文件)
@@ -363,24 +363,6 @@
 
     </div><!-- end three-col-layout -->
 
-    <!-- 登录弹窗 -->
-    <Modal :isOpen="showModal" @close="closeModal">
-      <div class="auth-modal-content">
-        <div class="logo-area-transition">
-          <h1 class="logo-text">ClearNotify</h1>
-        </div>
-        <div class="form-transition-container" :style="{ height: containerHeight + 'px' }">
-          <transition name="form-slide" @before-enter="onBeforeEnter" @enter="onEnter" @after-enter="onAfterEnter" @leave="onLeave">
-            <div v-if="currentForm === 'login'" class="form-wrapper login-wrapper-abs" key="login">
-              <LoginForm @success="handleLoginSuccess" @switch-to-register="currentForm = 'register'" />
-            </div>
-            <div v-else-if="currentForm === 'register'" class="form-wrapper register-wrapper-abs" key="register">
-              <RegisterForm @switch-to-login="currentForm = 'login'" @success="handleLoginSuccess" />
-            </div>
-          </transition>
-        </div>
-      </div>
-    </Modal>
   </div>
 </template>
 
@@ -392,9 +374,6 @@ import { useUserStore } from '@/stores/auth.js';
 import { createChatMessage, createChatMessageWithFile, exportChatMessage, importChatMessage, uploadAndExtractDocument, rewriteChatMessage, getChatMessages, getChatMessage } from '@/api/ai';
 import { getHotNews, getCentralDocs, getHotKeywords, getNewsWithImages } from '@/api/news';
 import { useRouter } from 'vue-router';
-import Modal from '@/components/common/Modal.vue';
-import LoginForm from '@/components/Home/LoginForm.vue';
-import RegisterForm from '@/components/Home/RegisterForm.vue';
 import { toggleSpeak, isSpeaking } from '@/utils/tts.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 
@@ -417,11 +396,6 @@ const showUrlInput = ref(false);
 const urlInputValue = ref('');
 const urlInputRef = ref(null);
 const focusMode = computed(() => loading.value || showResult.value);
-
-// ── 登录弹窗 ──────────────────────────────────────────────────────────────────
-const showModal = ref(false);
-const currentForm = ref('login');
-const containerHeight = ref(350);
 
 // ── 左栏：时事热点 ────────────────────────────────────────────────────────────
 const hotNews = ref([]);
@@ -463,7 +437,6 @@ const getExampleImage = (num) => {
 // ── 生命周期 ──────────────────────────────────────────────────────────────────
 onMounted(async () => {
   if (userStore.token) userStore.fetchUser();
-  window.addEventListener('open-login-modal', openLoginModal);
 
   // 并行加载新闻和文件
   await Promise.all([loadHotNews(), loadCentralDocs(), loadNewsImages()]);
@@ -497,7 +470,6 @@ onMounted(async () => {
 onUnmounted(() => {
   clearInterval(carouselTimer);
   wordCloudChart?.dispose();
-  window.removeEventListener('open-login-modal', openLoginModal);
 });
 
 watch(() => userStore.token, async (val) => {
@@ -686,22 +658,14 @@ const toggleHistoryFavorite = async (item) => {
   }
 };
 
-// ── 登录弹窗逻辑 ──────────────────────────────────────────────────────────────
-const onBeforeEnter = (el) => { el.style.opacity = 0; };
-const onEnter = (el, done) => {
-  nextTick(() => { containerHeight.value = el.offsetHeight; el.style.opacity = 1; done(); });
+const requestLoginModal = () => {
+  window.dispatchEvent(new CustomEvent('open-login-modal'));
 };
-const onAfterEnter = (el) => { el.style.opacity = ''; };
-const onLeave = (el, done) => { el.style.opacity = 0; setTimeout(done, 400); };
-
-const openLoginModal = () => { currentForm.value = 'login'; containerHeight.value = 350; showModal.value = true; };
-const closeModal = () => { showModal.value = false; };
-const handleLoginSuccess = () => closeModal();
 
 // ── 文件处理逻辑 ──────────────────────────────────────────────────────────────
 const triggerFileUpload = () => {
   if (loading.value) return;
-  if (!userStore.token) { openLoginModal(); return; }
+  if (!userStore.token) { requestLoginModal(); return; }
   if (fileInput.value) {
     fileInput.value.value = '';
     fileInput.value.click();
@@ -709,7 +673,7 @@ const triggerFileUpload = () => {
 };
 
 const triggerImportConversation = () => {
-  if (!userStore.token) { openLoginModal(); return; }
+  if (!userStore.token) { requestLoginModal(); return; }
   importInput.value?.click();
 };
 
@@ -717,7 +681,7 @@ const handleFileUpload = (event) => processFile(event.target.files[0]);
 
 const handleDrop = (event) => {
   if (loading.value) return;
-  if (!userStore.token) { openLoginModal(); return; }
+  if (!userStore.token) { requestLoginModal(); return; }
   processFile(event.dataTransfer.files[0]);
 };
 
@@ -734,7 +698,7 @@ const processFile = async (file) => {
     await fetchRecentHistory();
     await fetchFavorites();
   } catch (error) {
-    if (error.response?.status === 401) { userStore.logout(); openLoginModal(); }
+    if (error.response?.status === 401) { userStore.logout(); requestLoginModal(); }
     else alert('文件处理失败: ' + (error.response?.data?.detail || error.message));
   } finally {
     loading.value = false;
@@ -744,7 +708,7 @@ const processFile = async (file) => {
 
 const handleUrlUpload = () => {
   if (loading.value) return;
-  if (!userStore.token) { openLoginModal(); return; }
+  if (!userStore.token) { requestLoginModal(); return; }
   showUrlInput.value = true;
   nextTick(() => urlInputRef.value?.focus());
 };
@@ -768,7 +732,7 @@ const cancelUrlUpload = () => {
 
 const handleScreenshot = () => {
   if (loading.value) return;
-  if (!userStore.token) { openLoginModal(); return; }
+  if (!userStore.token) { requestLoginModal(); return; }
   if (screenshotInput.value) {
     screenshotInput.value.value = '';
     screenshotInput.value.click();
@@ -832,7 +796,7 @@ const handleImportConversation = async (event) => {
 };
 
 const submitToAI = async () => {
-  if (!userStore.token) { openLoginModal(); return; }
+  if (!userStore.token) { requestLoginModal(); return; }
   if (!inputText.value.trim()) return;
   loading.value = true;
   aiResponse.value = null;
@@ -843,7 +807,7 @@ const submitToAI = async () => {
     await fetchRecentHistory();
     await fetchFavorites();
   } catch (error) {
-    if (error.response?.status === 401) { userStore.logout(); openLoginModal(); }
+    if (error.response?.status === 401) { userStore.logout(); requestLoginModal(); }
     else alert('解析失败: ' + (error.response?.data?.detail || error.message));
   } finally {
     loading.value = false;
@@ -1840,25 +1804,5 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   100% { background-position: -200% 0; }
 }
 
-/* ── 登录弹窗 ─────────────────────────────────────────────────────────────── */
-.auth-modal-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 0 0;
-  background: linear-gradient(140deg, #5a1e1e 0%, #7f8c8d 55%, #2c2c2c 100%);
-  border-radius: 20px;
-  width: 480px;
-  min-height: 450px;
-  overflow: hidden;
-  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.logo-area-transition { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; }
-.auth-modal-content .logo-text { color: #fff; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: 1px; }
-.form-transition-container { width: 100%; position: relative; transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-.form-wrapper { width: 100%; display: flex; justify-content: center; }
-.login-wrapper-abs, .register-wrapper-abs { position: absolute; top: 0; left: 0; }
-.form-slide-enter-active, .form-slide-leave-active { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-.form-slide-enter-from { opacity: 0; transform: translateY(30px); }
-.form-slide-leave-to { opacity: 0; transform: translateY(-30px); }
 </style>
+

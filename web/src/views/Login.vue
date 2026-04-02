@@ -162,9 +162,25 @@ const handleLogin = async () => {
   font-size: 15px;
   background: transparent;
   color: #fff;
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  box-shadow: none;
+  appearance: none;
 }
 
 .input:focus { outline: none; }
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-background-clip: text;
+  transition: background-color 9999s ease-out 0s;
+}
 
 .inputForm:focus-within {
   border: 1.5px solid #e74c3c;
@@ -225,4 +241,3 @@ const handleLogin = async () => {
   font-weight: 500;
 }
 </style>
-

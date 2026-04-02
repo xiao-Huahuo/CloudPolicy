@@ -74,41 +74,6 @@
       <button @click="openLoginModal" class="primary-btn">立即登录 / 注册</button>
     </div>
 
-    <!-- 弹窗：登录/注册 (复用 Home.vue 里的设计) -->
-    <Modal :isOpen="showModal" @close="closeModal">
-      <!-- 这个容器包裹了图标、标题和表单，在切换时由于 key 的存在，整个容器会平滑过渡 -->
-      <div class="auth-modal-content">
-        <div class="logo-area-transition">
-          <h1 class="logo-text">ClearNotify</h1>
-        </div>
-
-        <!-- 使用动态高度包裹容器来实现上下平滑撑开 -->
-        <div class="form-transition-container" :style="{ height: containerHeight + 'px' }">
-          <transition
-            name="form-slide"
-            @before-enter="onBeforeEnter"
-            @enter="onEnter"
-            @after-enter="onAfterEnter"
-            @leave="onLeave"
-          >
-            <!-- 使用绝对定位来实现平滑滑动切换，避免高度瞬间变化和挤压 -->
-            <div v-if="currentForm === 'login'" class="form-wrapper login-wrapper-abs" key="login">
-              <LoginForm
-                @success="handleLoginSuccess"
-                @switch-to-register="currentForm = 'register'"
-              />
-            </div>
-            <div v-else-if="currentForm === 'register'" class="form-wrapper register-wrapper-abs" key="register">
-              <RegisterForm
-                @switch-to-login="currentForm = 'login'"
-                @success="handleLoginSuccess"
-              />
-            </div>
-          </transition>
-        </div>
-      </div>
-    </Modal>
-
     <!-- 弹窗：修改头像 -->
     <Modal :isOpen="showAvatarEditor" @close="showAvatarEditor = false">
       <AvatarEditor @close="showAvatarEditor = false" @saved="handleAvatarSaved" />
@@ -118,21 +83,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useUserStore } from '@/stores/auth.js';
 import { useRouter } from 'vue-router';
 import { apiClient, API_ROUTES } from '@/router/api_routes';
 import Modal from '@/components/common/Modal.vue';
-import LoginForm from '@/components/Home/LoginForm.vue';
-import RegisterForm from '@/components/Home/RegisterForm.vue';
 import AvatarEditor from '@/components/common/AvatarEditor.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
-
-const showModal = ref(false);
-const currentForm = ref('login');
-const containerHeight = ref(350); // 默认登录框高度
 
 const statsData = ref(null);
 const showAvatarEditor = ref(false);
@@ -177,39 +136,7 @@ const handleAvatarSaved = () => {
 
 // 弹窗相关方法
 const openLoginModal = () => {
-  currentForm.value = 'login';
-  containerHeight.value = 350; // 重置高度
-  showModal.value = true;
-};
-
-const closeModal = () => {
-  showModal.value = false;
-};
-
-const handleLoginSuccess = () => {
-  closeModal();
-};
-
-// 弹窗动画
-const onBeforeEnter = (el) => {
-  el.style.opacity = 0;
-};
-
-const onEnter = (el, done) => {
-  nextTick(() => {
-    containerHeight.value = el.offsetHeight;
-    el.style.opacity = 1;
-    done();
-  });
-};
-
-const onAfterEnter = (el) => {
-  el.style.opacity = '';
-};
-
-const onLeave = (el, done) => {
-  el.style.opacity = 0;
-  setTimeout(done, 400); // 等待 CSS 动画结束
+  window.dispatchEvent(new CustomEvent('open-login-modal'));
 };
 </script>
 
@@ -475,65 +402,4 @@ const onLeave = (el, done) => {
   box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 
-/* Modal 中的表单切换过渡动画 (复用 Home 的样式) */
-.auth-modal-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 0 0 0;
-  background: linear-gradient(45deg, skyblue, darkblue);
-  border-radius: 20px;
-  width: 480px;
-  min-height: 450px;
-  overflow: hidden;
-  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.logo-area-transition {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.auth-modal-content .logo-text {
-  color: #fff;
-  font-size: 28px;
-  font-weight: 800;
-  margin: 0;
-  letter-spacing: 1px;
-}
-
-.form-transition-container {
-  width: 100%;
-  position: relative;
-  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.form-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.login-wrapper-abs, .register-wrapper-abs {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.form-slide-enter-active,
-.form-slide-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.form-slide-enter-from {
-  opacity: 0;
-  transform: translateY(30px);
-}
-.form-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-30px);
-}
 </style>

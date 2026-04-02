@@ -18,7 +18,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: Home },
-    { path: '/discovery-home', name: 'discovery-home', component: DiscoveryHome },
+    { path: '/discovery-home', name: 'discovery-home', component: DiscoveryHome, meta: { standalone: true } },
     { path: '/data-analysis-and-visualization', name: 'data-analysis-and-visualization', component: DataAnalysisAndVisualization },
     { path: '/history', name: 'history', component: History },
     { path: '/favorites', name: 'favorites', component: Favorites },

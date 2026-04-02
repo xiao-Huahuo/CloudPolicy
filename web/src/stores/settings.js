@@ -6,7 +6,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const settings = ref({
     default_audience: 'none',
     theme_mode: 'light',
-    system_notifications: true
+    system_notifications: true,
+    color_scheme: 'classic'
   });
 
   const loading = ref(false);
@@ -16,8 +17,12 @@ export const useSettingsStore = defineStore('settings', () => {
     loading.value = true;
     try {
       const response = await apiClient.get(API_ROUTES.SETTINGS_ME);
-      settings.value = response.data;
+      settings.value = {
+        ...settings.value,
+        ...response.data,
+      };
       applyTheme(settings.value.theme_mode);
+      applyColorScheme(settings.value.color_scheme);
     } catch (error) {
       console.error('获取设置失败:', error);
     } finally {
@@ -29,9 +34,15 @@ export const useSettingsStore = defineStore('settings', () => {
   const updateSettings = async (newSettings) => {
     try {
       const response = await apiClient.patch(API_ROUTES.SETTINGS_ME, newSettings);
-      settings.value = response.data;
+      settings.value = {
+        ...settings.value,
+        ...response.data,
+      };
       if (newSettings.theme_mode !== undefined) {
-          applyTheme(settings.value.theme_mode);
+        applyTheme(settings.value.theme_mode);
+      }
+      if (newSettings.color_scheme !== undefined) {
+        applyColorScheme(settings.value.color_scheme);
       }
       return true;
     } catch (error) {
@@ -45,18 +56,47 @@ export const useSettingsStore = defineStore('settings', () => {
     const root = document.documentElement;
     if (theme === 'dark') {
       root.setAttribute('data-theme', 'dark');
-      // 这里可以根据你的 CSS 变量体系进行深色模式的注入
     } else if (theme === 'light') {
       root.setAttribute('data-theme', 'light');
     } else {
       // System
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          root.setAttribute('data-theme', 'dark');
+        root.setAttribute('data-theme', 'dark');
       } else {
-          root.setAttribute('data-theme', 'light');
+        root.setAttribute('data-theme', 'light');
       }
     }
+    localStorage.setItem('theme_mode', theme);
   };
 
-  return { settings, loading, fetchSettings, updateSettings, applyTheme };
+  const applyColorScheme = (scheme) => {
+    const root = document.documentElement;
+    root.setAttribute('data-color-scheme', scheme || 'classic');
+    localStorage.setItem('color_scheme', scheme || 'classic');
+  };
+
+  const updateColorScheme = (scheme) => {
+    settings.value.color_scheme = scheme;
+    applyColorScheme(scheme);
+  };
+
+  const initAppearance = () => {
+    const storedTheme = localStorage.getItem('theme_mode');
+    const storedScheme = localStorage.getItem('color_scheme');
+    if (storedTheme) settings.value.theme_mode = storedTheme;
+    if (storedScheme) settings.value.color_scheme = storedScheme;
+    applyTheme(settings.value.theme_mode);
+    applyColorScheme(settings.value.color_scheme);
+  };
+
+  return {
+    settings,
+    loading,
+    fetchSettings,
+    updateSettings,
+    applyTheme,
+    applyColorScheme,
+    updateColorScheme,
+    initAppearance,
+  };
 });

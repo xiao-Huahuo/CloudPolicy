@@ -95,17 +95,33 @@ const handleLogin = async () => {
 
 .input {
   margin-left: 10px;
-  border-radius: 10rem;
+  border-radius: 0;
   border: none;
   width: 100%;
   height: 100%;
   font-size: 15px;
   background: transparent;
   color: #2f2f2f;
+  -webkit-text-fill-color: #2f2f2f;
+  caret-color: #2f2f2f;
+  box-shadow: none;
+  appearance: none;
 }
 
 .input:focus {
   outline: none;
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  -webkit-text-fill-color: #2f2f2f;
+  caret-color: #2f2f2f;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-background-clip: text;
+  transition: background-color 9999s ease-out 0s;
 }
 
 .inputForm:focus-within {

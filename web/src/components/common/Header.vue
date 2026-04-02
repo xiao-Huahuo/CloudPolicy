@@ -9,6 +9,12 @@
     <div class="spacer" v-else></div>
 
     <div class="user-actions">
+      <select class="palette-select" :value="settingsStore.settings.color_scheme" @change="toggleColorScheme($event)">
+        <option value="classic">经典红灰</option>
+        <option value="morandi">莫兰迪</option>
+        <option value="graphite">石墨灰</option>
+      </select>
+
       <!-- 明暗切换开关 -->
       <label class="theme-switch" title="切换明暗模式">
         <input class="theme-switch__checkbox" type="checkbox" :checked="isDark" @change="toggleTheme" />
@@ -93,6 +99,11 @@ const toggleTheme = async () => {
   }
 };
 
+const toggleColorScheme = (event) => {
+  const scheme = event.target.value;
+  settingsStore.updateColorScheme(scheme);
+};
+
 const searchQuery = ref('');
 
 // 某些页面可能不需要搜索栏
@@ -146,7 +157,7 @@ const toggleNotification = async () => {
 <style scoped>
 .app-header {
   height: 56px;
-  background: linear-gradient(90deg, #c0392b 0%, #7f8c8d 100%);
+  background: var(--header-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -197,6 +208,21 @@ const toggleNotification = async () => {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.palette-select {
+  height: 30px;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  padding: 0 8px;
+  outline: none;
+  font-size: 12px;
+}
+
+.palette-select option {
+  color: #222;
 }
 
 .icon-btn {
