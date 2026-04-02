@@ -143,8 +143,21 @@ user_audience_label=None) -> Dict[str, Any]:
     parsed = tool_state.get("structured")
     parse_mode = tool_state.get("parse_mode")
     if not parsed or not parse_mode:
-        parsed_base, parse_mode = parse_document(safe_text, user_id)
-        parsed = parsed_base.model_dump()
+        parsed, parse_mode = parse_document(safe_text, user_id)
+    # 关键兼容层（禁止删除）：parse_document 可能返回 Pydantic 模型，后续逻辑统一按 dict 处理。
+    if not isinstance(parsed, dict):
+        if hasattr(parsed, "model_dump"):
+            parsed = parsed.model_dump()
+        elif hasattr(parsed, "dict"):
+            parsed = parsed.dict()
+        else:
+            parsed = {"original_text": safe_text}
+
+    parsed.setdefault("original_text", safe_text)
+    parsed.setdefault("nodes", [])
+    parsed.setdefault("links", [])
+    parsed.setdefault("dynamic_payload", {})
+    parsed.setdefault("visual_config", {"focus_node": None, "initial_zoom": 1.0, "text_mapping": {}})
     parsed["file_url"] = file_url or parsed.get("file_url")
 
     steps = _build_steps(parsed.get("handling_process"))

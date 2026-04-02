@@ -45,9 +45,62 @@ def serialize_message(message: ChatMessage) -> dict[str, Any]:
     for key, value in data.items():
         if isinstance(value, datetime):
             data[key] = value.isoformat()
-    data["chat_analysis"] = _parse_chat_analysis(message.chat_analysis)
+    analysis = _parse_chat_analysis(message.chat_analysis)
+    data["chat_analysis"] = analysis
+    data["content"] = analysis.get("content") or message.original_text or ""
+    data["nodes"] = analysis.get("nodes") or []
+    data["links"] = analysis.get("links") or []
+    # DO NOT CHANGE: dynamic_payload must come from raw LLM output only.
+    # Never inject fixed business fields or schema templates here.
+    data["dynamic_payload"] = analysis.get("dynamic_payload") if isinstance(analysis.get("dynamic_payload"), dict) else {}
+    data["visual_config"] = analysis.get("visual_config") or {
+        "focus_node": None,
+        "initial_zoom": 1.0,
+        "text_mapping": {},
+    }
     data["estimated_time_saved_minutes"] = estimate_message_time_saved(message)
     return data
+
+
+def build_chat_analysis_payload(
+    *,
+    parse_mode: str,
+    content: str,
+    nodes: list[dict[str, Any]],
+    links: list[dict[str, Any]],
+    dynamic_payload: dict[str, Any],
+    visual_config: dict[str, Any],
+) -> dict[str, Any]:
+    node_count = len(nodes)
+    link_count = len(links)
+    content_len = len(content or "")
+    negative_edges = sum(1 for item in links if str(item.get("logic_type")) == "negative")
+
+    if node_count >= 12 or link_count >= 14 or negative_edges >= 4:
+        complexity = "高"
+    elif node_count >= 7 or link_count >= 7 or negative_edges >= 2:
+        complexity = "中"
+    else:
+        complexity = "低"
+
+    # DO NOT CHANGE: no fixed-field probing on dynamic_payload.
+    notice_type = "graph"
+    risk_level = "高" if negative_edges >= 4 else ("中" if negative_edges >= 2 else "低")
+    language_complexity = "高" if content_len > 1200 else ("中" if content_len > 400 else "低")
+
+    return {
+        "version": "kg_v1",
+        "parse_mode": parse_mode,
+        "language_complexity": language_complexity,
+        "handling_complexity": complexity,
+        "risk_level": risk_level,
+        "notice_type": str(notice_type),
+        "content": content,
+        "nodes": nodes,
+        "links": links,
+        "dynamic_payload": dynamic_payload,
+        "visual_config": visual_config,
+    }
 
 
 def _ensure_export_dir(user_id: int) -> Path:
@@ -270,6 +323,24 @@ def import_message_from_file(
     clean_payload = {
         key: value for key, value in message_data.items() if key in allowed_fields
     }
+    graph_keys = {
+        "content",
+        "nodes",
+        "links",
+        "dynamic_payload",
+        "visual_config",
+    }
+    graph_payload = {
+        key: message_data.get(key)
+        for key in graph_keys
+        if message_data.get(key) is not None
+    }
+    if graph_payload:
+        analysis = _parse_chat_analysis(clean_payload.get("chat_analysis"))
+        analysis.update(graph_payload)
+        if "version" not in analysis:
+            analysis["version"] = "kg_v1"
+        clean_payload["chat_analysis"] = analysis
     if not clean_payload.get("original_text"):
         raise ValueError("导入的会话文件缺少 original_text")
     return create_message_from_payload(session, clean_payload, user_id)

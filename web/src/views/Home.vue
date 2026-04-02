@@ -28,7 +28,7 @@
                 @click="selectHistory(item)"
               >
                 <div class="history-main">
-                  <span class="history-item-title">{{ item.handling_matter || '未命名事项' }}</span>
+                  <span class="history-item-title">{{ getMessageTitle(item) }}</span>
                   <span class="history-item-date">{{ formatHistoryDate(item.created_time) }}</span>
                 </div>
                 <button
@@ -47,7 +47,7 @@
               </div>
             </div>
             <div v-if="selectedHistoryDetail" class="history-detail">
-              <div class="history-detail-title">{{ selectedHistoryDetail.handling_matter || '未命名事项' }}</div>
+              <div class="history-detail-title">{{ getMessageTitle(selectedHistoryDetail) }}</div>
               <p class="history-detail-text">{{ selectedHistoryDetail.original_text || '暂无详情' }}</p>
               <button class="history-restore-btn" @click="restoreHistory(selectedHistoryDetail)">恢复该解析</button>
             </div>
@@ -204,7 +204,7 @@
           <div class="response-section" v-if="aiResponse">
             <div class="fixed-result-header">
               <div class="header-top-row">
-                <h3 class="result-title">{{ aiResponse.handling_matter || '未知事项' }}</h3>
+                <h3 class="result-title">{{ currentTitle }}</h3>
                 <div class="tags-container">
                   <span class="highlight-tag" v-if="aiResponse.target_audience">{{ aiResponse.target_audience }}</span>
                   <span class="info-tag" v-if="aiResponse.chat_analysis?.notice_type">{{ aiResponse.chat_analysis.notice_type }}</span>
@@ -241,71 +241,27 @@
               </span>
             </div>
             <div class="scrollable-content">
-              <div class="result-grid">
-                <div class="info-list">
-                  <div class="info-item" v-if="aiResponse.time_deadline">
-                    <div class="info-text"><strong>办理时间：</strong><p>{{ aiResponse.time_deadline }}</p></div>
-                  </div>
-                  <div class="info-item" v-if="aiResponse.location_entrance">
-                    <div class="info-text"><strong>办理地点/入口：</strong><p>{{ aiResponse.location_entrance }}</p></div>
-                  </div>
-                  <div class="info-item" v-if="aiResponse.required_materials">
-                    <div class="info-text"><strong>所需材料：</strong><p>{{ aiResponse.required_materials }}</p></div>
-                  </div>
-                  <div class="info-item" v-if="aiResponse.handling_process">
-                    <div class="info-text"><strong>办理流程：</strong>
-                      <div class="process-text">{{ aiResponse.handling_process }}</div>
-                      <!-- 流程图 -->
-                      <div class="process-flowchart" v-if="parseProcessSteps(aiResponse.handling_process).length > 1">
-                        <div
-                          v-for="(step, si) in parseProcessSteps(aiResponse.handling_process)"
-                          :key="si"
-                          class="flow-step-wrap"
-                        >
-                          <div class="flow-step">
-                            <span class="flow-num">{{ si + 1 }}</span>
-                            <span class="flow-text">{{ step }}</span>
-                          </div>
-                          <div class="flow-arrow" v-if="si < parseProcessSteps(aiResponse.handling_process).length - 1">▼</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="warning-panel">
-                    <div class="warning-box" v-if="aiResponse.precautions"><h4>注意事项</h4><p>{{ aiResponse.precautions }}</p></div>
-                    <div class="warning-box" v-if="aiResponse.risk_warnings"><h4>风险提醒</h4><p>{{ aiResponse.risk_warnings }}</p></div>
-                  </div>
+              <KnowledgeGraphPanel
+                :content="kgPayload.content"
+                :nodes="kgPayload.nodes"
+                :links="kgPayload.links"
+                :dynamic-payload="kgPayload.dynamicPayload"
+                :visual-config="kgPayload.visualConfig"
+              />
+              <div class="rewrite-toolbar">
+                <span>切换改写版本：</span>
+                <div class="rewrite-buttons">
+                  <button class="rewrite-btn" @click="rewriteTarget('老人版')" :disabled="isRewriting">老人版</button>
+                  <button class="rewrite-btn" @click="rewriteTarget('学生版')" :disabled="isRewriting">学生版</button>
+                  <button class="rewrite-btn" @click="rewriteTarget('家属转述版')" :disabled="isRewriting">家属转述版</button>
+                  <button class="rewrite-btn" @click="rewriteTarget('极简版')" :disabled="isRewriting">极简版</button>
+                  <button class="rewrite-btn" @click="rewriteTarget('客服答复版')" :disabled="isRewriting">客服答复版</button>
                 </div>
-                <div class="right-panel">
-                  <div class="analysis-dashboard" v-if="aiResponse.chat_analysis">
-                    <div class="dashboard-item"><span class="label">语言复杂度: </span><span class="value text-only" :class="getComplexityClass(aiResponse.chat_analysis.language_complexity)">{{ aiResponse.chat_analysis.language_complexity || '未知' }}</span></div>
-                    <div class="dashboard-item"><span class="label">办理复杂度: </span><span class="value text-only" :class="getComplexityClass(aiResponse.chat_analysis.handling_complexity)">{{ aiResponse.chat_analysis.handling_complexity || '未知' }}</span></div>
-                    <div class="dashboard-item"><span class="label">风险等级: </span><span class="value text-only" :class="getComplexityClass(aiResponse.chat_analysis.risk_level)">{{ aiResponse.chat_analysis.risk_level || '未知' }}</span></div>
-                  </div>
-                  <div class="rewrite-toolbar">
-                    <span>切换改写版本：</span>
-                    <div class="rewrite-buttons">
-                      <button class="rewrite-btn" @click="rewriteTarget('老人版')" :disabled="isRewriting">老人版</button>
-                      <button class="rewrite-btn" @click="rewriteTarget('学生版')" :disabled="isRewriting">学生版</button>
-                      <button class="rewrite-btn" @click="rewriteTarget('家属转述版')" :disabled="isRewriting">家属转述版</button>
-                      <button class="rewrite-btn" @click="rewriteTarget('极简版')" :disabled="isRewriting">极简版</button>
-                      <button class="rewrite-btn" @click="rewriteTarget('客服答复版')" :disabled="isRewriting">客服答复版</button>
-                    </div>
-                    <span v-if="isRewriting" class="rewriting-status">正在生成...</span>
-                  </div>
-                  <div class="original-text-section" v-if="aiResponse.original_text">
-                    <h4>原文</h4>
-                    <div class="original-content">{{ aiResponse.original_text }}</div>
-                  </div>
-                  <div class="mapping-section" v-if="aiResponse.file_url">
-                    <h4>原文件参考</h4>
-                    <a :href="aiResponse.file_url" target="_blank" class="file-link">点击查看上传的原文件</a>
-                  </div>
-                  <div class="mapping-section" v-else-if="aiResponse.original_text_mapping">
-                    <h4>对应位置参考</h4>
-                    <p>{{ aiResponse.original_text_mapping }}</p>
-                  </div>
-                </div>
+                <span v-if="isRewriting" class="rewriting-status">正在生成...</span>
+              </div>
+              <div class="mapping-section" v-if="aiResponse.file_url">
+                <h4>原文件参考</h4>
+                <a :href="aiResponse.file_url" target="_blank" class="file-link">点击查看上传的原文件</a>
               </div>
             </div>
           </div>
@@ -376,6 +332,7 @@ import { getHotNews, getCentralDocs, getHotKeywords, getNewsWithImages } from '@
 import { useRouter } from 'vue-router';
 import { toggleSpeak, isSpeaking } from '@/utils/tts.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
+import KnowledgeGraphPanel from '@/components/Home/KnowledgeGraphPanel.vue';
 
 import ex1 from '@/assets/photos/main-examples/example1.png';
 import ex2 from '@/assets/photos/main-examples/example2.jpeg';
@@ -419,6 +376,68 @@ let wordCloudChart = null;
 
 // ── 热点资讯图片横条 ──────────────────────────────────────────────────────────
 const newsImages = ref([]);
+const isGenericTitle = (v) => /^(未知事项|未命名事项|unknown|payload|payload_root)$/i.test(String(v || '').trim());
+const firstLine = (text) =>
+  String(text || '')
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .find(Boolean) || '';
+const extractTitleFromPayload = (payload) => {
+  const seen = new Set();
+  const walk = (obj, depth = 0) => {
+    if (!obj || depth > 4 || seen.has(obj)) return '';
+    if (typeof obj === 'string') {
+      const t = obj.trim();
+      if (t && !isGenericTitle(t)) return t;
+      return '';
+    }
+    if (Array.isArray(obj)) {
+      for (const item of obj.slice(0, 20)) {
+        const hit = walk(item, depth + 1);
+        if (hit) return hit;
+      }
+      return '';
+    }
+    if (typeof obj === 'object') {
+      seen.add(obj);
+      for (const [, v] of Object.entries(obj).slice(0, 40)) {
+        if (typeof v === 'string' && v.trim() && !isGenericTitle(v)) return v.trim();
+        const hit = walk(v, depth + 1);
+        if (hit) return hit;
+      }
+    }
+    return '';
+  };
+  return walk(payload);
+};
+const getMessageTitle = (msg) => {
+  if (!msg) return '未命名文档';
+  if (msg.handling_matter && !isGenericTitle(msg.handling_matter)) return msg.handling_matter;
+  const analysis = msg.chat_analysis || {};
+  const nodes = msg.nodes || analysis.nodes || [];
+  const focus = (msg.visual_config || analysis.visual_config || {}).focus_node;
+  const root = nodes.find((n) => n?.id === focus) || [...nodes].sort((a, b) => Number(b?.importance || 0) - Number(a?.importance || 0))[0];
+  if (root?.label && !isGenericTitle(root.label)) return root.label;
+  const payload = msg.dynamic_payload || analysis.dynamic_payload || {};
+  const p = extractTitleFromPayload(payload);
+  if (p) return p.slice(0, 90);
+  const content = msg.content || analysis.content || msg.original_text || '';
+  const line = firstLine(content);
+  return line ? line.slice(0, 90) : '未命名文档';
+};
+const kgPayload = computed(() => {
+  const analysis = aiResponse.value?.chat_analysis || {};
+  const visual = aiResponse.value?.visual_config || analysis.visual_config || {};
+  const dynamicPayload = aiResponse.value?.dynamic_payload || analysis.dynamic_payload || {};
+  return {
+    content: aiResponse.value?.content || analysis.content || aiResponse.value?.original_text || '',
+    nodes: aiResponse.value?.nodes || analysis.nodes || [],
+    links: aiResponse.value?.links || analysis.links || [],
+    dynamicPayload,
+    visualConfig: visual,
+  };
+});
+const currentTitle = computed(() => getMessageTitle(aiResponse.value));
 
 // ── 示例数据 ──────────────────────────────────────────────────────────────────
 const examples = ref([

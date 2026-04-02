@@ -1,21 +1,16 @@
-import json
-import logging # Import logging
+﻿import json
+import logging
 import re
+from pathlib import Path
+from typing import Any
+
 from app.ai.request_llm import RequestLLM
 from app.models.chat_message import ChatMessageBase
-from pathlib import Path
-from app.services.ocr_service import perform_kimi_ocr # Import the new OCR service
+from app.services.ocr_service import perform_kimi_ocr
 
-logger = logging.getLogger(__name__) # Initialize logger
+logger = logging.getLogger(__name__)
 
 MAX_PARSE_CHARS = 6000
-
-_KEYWORD_PATTERNS = re.compile(
-    r"(通知|公告|办理|报名|申请|材料|提交|附件|时间|日期|截止|地点|地址|入口|方式|流程|步骤|注意|风险|对象|适用|资格|要求|条件)"
-)
-_DATE_PATTERNS = re.compile(
-    r"(\d{4}年\d{1,2}月\d{1,2}日|\d{1,2}月\d{1,2}日|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}:\d{2})"
-)
 
 
 def _normalize_text(text: str) -> str:
@@ -24,86 +19,8 @@ def _normalize_text(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text.replace("\r\n", "\n").replace("\r", "\n")).strip()
 
 
-def _split_lines(text: str) -> list[str]:
-    lines = [line.strip() for line in re.split(r"[\n]+", text) if line.strip()]
-    if len(lines) <= 1:
-        lines = [line.strip() for line in re.split(r"[。；;]+", text) if line.strip()]
-    return lines
-
-
-def _build_condensed_text(text: str) -> tuple[str, bool]:
-    normalized = _normalize_text(text)
-    if len(normalized) <= MAX_PARSE_CHARS:
-        return normalized, False
-
-    lines = _split_lines(normalized)
-    key_lines = []
-    seen = set()
-    for line in lines:
-        if _KEYWORD_PATTERNS.search(line) or _DATE_PATTERNS.search(line):
-            if line not in seen:
-                key_lines.append(line)
-                seen.add(line)
-        if len(key_lines) >= 30:
-            break
-
-    head = normalized[:2000]
-    tail = normalized[-1500:]
-    key_block = "\n".join(key_lines) if key_lines else "（未匹配到明显关键词，保留原文首尾内容）"
-    condensed = f"{head}\n\n【关键信息摘录】\n{key_block}\n\n【原文末段】\n{tail}"
-    if len(condensed) > MAX_PARSE_CHARS:
-        condensed = condensed[:MAX_PARSE_CHARS]
-    return condensed, True
-
-
-def _extract_title(text: str) -> str:
-    lines = _split_lines(text)
-    if lines:
-        title = lines[0]
-        return title if len(title) <= 60 else f"{title[:60]}..."
-    return text[:60] + ("..." if len(text) > 60 else "")
-
-
-def _fallback_parse(original_text: str, user_id: int) -> ChatMessageBase:
-    normalized = _normalize_text(original_text)
-    title = _extract_title(normalized)
-
-    time_match = _DATE_PATTERNS.search(normalized)
-    time_deadline = time_match.group(0) if time_match else None
-
-    location_line = None
-    for line in _split_lines(normalized):
-        if any(key in line for key in ["地点", "地址", "入口", "办理地点"]):
-            location_line = line
-            break
-
-    materials_lines = []
-    for line in _split_lines(normalized):
-        if any(key in line for key in ["材料", "提交", "附件", "携带"]):
-            materials_lines.append(line)
-        if len(materials_lines) >= 3:
-            break
-    required_materials = "；".join(materials_lines) if materials_lines else None
-
-    target_line = None
-    for line in _split_lines(normalized):
-        if any(key in line for key in ["对象", "适用", "资格", "范围"]):
-            target_line = line
-            break
-
-    return ChatMessageBase(
-        original_text=original_text,
-        target_audience=target_line,
-        handling_matter=title or "未识别到明确事项（已保留原文）",
-        time_deadline=time_deadline,
-        location_entrance=location_line,
-        required_materials=required_materials,
-        user_id=user_id,
-    )
-
 def _clean_json_response(response_text: str) -> dict:
-    """清理并解析 JSON 响应"""
-    response_text = response_text.strip()
+    response_text = (response_text or "").strip()
     if response_text.startswith("```json"):
         response_text = response_text[7:]
     if response_text.startswith("```"):
@@ -113,169 +30,434 @@ def _clean_json_response(response_text: str) -> dict:
     response_text = response_text.strip()
     return json.loads(response_text)
 
-def _convert_list_to_str(data: dict, key: str) -> None:
-    """如果字典中的某个键的值是列表，将其转换为逗号分隔的字符串"""
-    if key in data and isinstance(data[key], list):
-        data[key] = "，".join([str(item) for item in data[key]])
 
-def parse_document(original_text: str, user_id: int) -> tuple[ChatMessageBase, str]:
-    """
-    通用文档解析，传入文本或提取出的文件文本，调用大模型进行归纳和解析
-    """
-    kimi = RequestLLM()
-    
-    # 构造系统提示词，要求返回 JSON 格式
-    system_prompt = """
-    你是一个专业的文档解析助手。你的任务是从用户提供的官方通知或长文本中，精确提取出关键的业务信息。
-    请务必返回一个标准的 JSON 对象，且仅包含以下键名（如果文中未提及，请填入null）。
-    注意：所有键对应的值都必须是字符串（String）或 null，绝对不能是数组（Array）或列表（List）！如果是多个项目，请用逗号连接成一个长字符串。
-    - target_audience (适用对象)
-    - handling_matter (办理事项)
-    - time_deadline (时间/截止时间)
-    - location_entrance (地点/入口)
-    - required_materials (所需材料)
-    - handling_process (办理流程)
-    - precautions (注意事项)
-    - risk_warnings (风险提醒)
-    """
-    
-    system_prompt += f"\n\n原文长度提示：{len(original_text)}字。"
-    system_prompt += "\n要求：当原文较长时，\"办理时间、所需材料、办理流程、注意事项\"四项必须给出更完整、更细致的内容，避免过短。"
-    system_prompt += "\n可做概括性扩展，但不要编造具体日期、地点或特定材料名称。"
-    system_prompt += f"\n\n原文长度提示：{len(original_text)}字。"
-    system_prompt += "\n要求：当原文较长时，\"办理时间、所需材料、办理流程、注意事项\"四项必须给出更完整、更细致的内容，避免过短。"
-    system_prompt += "\n可做概括性扩展，但不要编造具体日期、地点或特定材料名称。"
-    kimi.system_prompt = system_prompt
-    
-    # 调用 Kimi 接口，开启 json_object 格式返回
-    response_text = kimi.get_response(
-        content=original_text,
-        model="moonshot-v1-32k",
-        response_format={"type": "json_object"},
-        temperature=0.3
-    )
-    
-    # 尝试解析返回的 JSON
+def _extract_first_json_object(text: str) -> str | None:
+    s = (text or "").strip()
+    if not s:
+        return None
+    start = s.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_str = False
+    esc = False
+    for i in range(start, len(s)):
+        ch = s[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return s[start : i + 1]
+    return None
+
+
+def _try_parse_json_loose(text: str) -> dict | None:
+    if not text:
+        return None
+    candidates = []
     try:
-        if response_text.strip().startswith("Error:"):
-            logger.error(f"Kimi parsing error: {response_text}")
-            return _fallback_parse(original_text, user_id), "fallback"
+        cleaned = _clean_json_response(text)
+        if isinstance(cleaned, dict):
+            return cleaned
+    except Exception:
+        pass
 
-        parsed_data = _clean_json_response(response_text)
-        
-        # 强制类型转换，防止大模型抽风返回了列表
-        _convert_list_to_str(parsed_data, "required_materials")
-        _convert_list_to_str(parsed_data, "handling_process")
-        _convert_list_to_str(parsed_data, "precautions")
-        _convert_list_to_str(parsed_data, "risk_warnings")
-        _convert_list_to_str(parsed_data, "target_audience")
-        _convert_list_to_str(parsed_data, "handling_matter")
-        _convert_list_to_str(parsed_data, "time_deadline")
-        _convert_list_to_str(parsed_data, "location_entrance")
+    frag = _extract_first_json_object(text)
+    if frag:
+        candidates.append(frag)
+        repaired = (
+            frag.replace("\u201c", '"')
+            .replace("\u201d", '"')
+            .replace("\u2018", "'")
+            .replace("\u2019", "'")
+        )
+        repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
+        candidates.append(repaired)
 
-        if not (parsed_data.get("handling_matter") or "").strip():
-            parsed_data["handling_matter"] = _extract_title(original_text)
+    for c in candidates:
+        try:
+            parsed = json.loads(c)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            continue
+    return None
 
-        if not any(
-            (parsed_data.get(key) or "").strip()
-            for key in [
-                "target_audience",
-                "handling_matter",
-                "time_deadline",
-                "location_entrance",
-                "required_materials",
-                "handling_process",
-                "precautions",
-                "risk_warnings",
-            ]
-        ):
-            logger.warning("Parsed data empty, fallback to heuristic parsing.")
-            return _fallback_parse(original_text, user_id), "fallback"
 
-        if not (parsed_data.get("handling_matter") or "").strip():
-            parsed_data["handling_matter"] = _extract_title(original_text)
+def _repair_json_via_llm(raw_text: str) -> dict | None:
+    """
+    DO NOT CHANGE:
+    This is a repair-only stage. It must preserve freeform semantics
+    and only make the output strict JSON-parseable.
+    """
+    snippet = (raw_text or "")[:12000]
+    if not snippet:
+        return None
+    try:
+        fixer = RequestLLM()
+        fixer.system_prompt = (
+            "你是JSON修复器。"
+            "输入可能是损坏的JSON。"
+            "你的任务是仅修复语法并返回严格JSON对象。"
+            "禁止增删语义字段，禁止套固定模板，禁止解释。"
+        )
+        fixed = fixer.get_response(
+            content=snippet,
+            model="moonshot-v1-32k",
+            response_format={"type": "json_object"},
+            temperature=0.0,
+        )
+        return _try_parse_json_loose(fixed)
+    except Exception:
+        return None
 
-        # 构建返回的模型
-        return ChatMessageBase(
-            original_text=original_text,
-            target_audience=parsed_data.get("target_audience"),
-            handling_matter=parsed_data.get("handling_matter"),
-            time_deadline=parsed_data.get("time_deadline"),
-            location_entrance=parsed_data.get("location_entrance"),
-            required_materials=parsed_data.get("required_materials"),
-            handling_process=parsed_data.get("handling_process"),
-            precautions=parsed_data.get("precautions"),
-            risk_warnings=parsed_data.get("risk_warnings"),
-            user_id=user_id
-        ), "ai"
-        
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON from Kimi response: {e}")
-        logger.error(f"Raw response: {response_text}")
-        return _fallback_parse(original_text, user_id), "fallback"
-        # 如果解析失败，进行基础的回退处理
-        return ChatMessageBase(
-            original_text=original_text,
-            handling_matter="解析失败，请检查输入或稍后重试",
-            user_id=user_id
+
+def _safe_nodes(raw: Any) -> list[dict]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    seen = set()
+    for idx, item in enumerate(raw):
+        if not isinstance(item, dict):
+            continue
+        nid = str(item.get("id") or f"node_{idx+1}").strip()
+        if not nid:
+            nid = f"node_{idx+1}"
+        if nid in seen:
+            nid = f"{nid}_{idx+1}"
+        seen.add(nid)
+        label = str(item.get("label") or nid).strip()
+        try:
+            importance = float(item.get("importance", 0.5))
+        except (TypeError, ValueError):
+            importance = 0.5
+        out.append(
+            {
+                "id": nid,
+                "label": label,
+                "type": str(item.get("type") or "实体"),
+                "importance": max(0.0, min(1.0, importance)),
+                "layer": item.get("layer"),
+                "group": item.get("group"),
+                "parent_id": item.get("parent_id"),
+                "properties": item.get("properties") if isinstance(item.get("properties"), dict) else {},
+            }
+        )
+    return out
+
+
+def _safe_links(raw: Any, node_ids: set[str]) -> list[dict]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        source = str(item.get("source") or "").strip()
+        target = str(item.get("target") or "").strip()
+        if source not in node_ids or target not in node_ids:
+            continue
+        try:
+            strength = float(item.get("strength", 0.6))
+        except (TypeError, ValueError):
+            strength = 0.6
+        logic_type = str(item.get("logic_type") or "positive").lower()
+        if logic_type not in {"positive", "negative"}:
+            logic_type = "positive"
+        out.append(
+            {
+                "source": source,
+                "target": target,
+                "relation": str(item.get("relation") or "关联"),
+                "logic_type": logic_type,
+                "strength": max(0.0, min(1.0, strength)),
+                "evidence": item.get("evidence"),
+            }
+        )
+    return out
+
+
+def _basic_visual_config(raw: Any, nodes: list[dict]) -> dict:
+    cfg = raw if isinstance(raw, dict) else {}
+    focus_node = cfg.get("focus_node")
+    node_ids = {n.get("id") for n in nodes}
+    if focus_node not in node_ids:
+        focus_node = nodes[0]["id"] if nodes else None
+    try:
+        initial_zoom = float(cfg.get("initial_zoom", 1.0))
+    except (TypeError, ValueError):
+        initial_zoom = 1.0
+    text_mapping = cfg.get("text_mapping") if isinstance(cfg.get("text_mapping"), dict) else {}
+    return {
+        "focus_node": focus_node,
+        "initial_zoom": initial_zoom,
+        "text_mapping": text_mapping,
+    }
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5]+", "_", str(text or "").strip()).strip("_") or "node"
+
+
+def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list[dict], list[dict]]:
+    """
+    核心原则（禁止动摇）：
+    仅按 JSON 结构生成图谱，不做任何固定业务字段推断。
+    """
+    if not isinstance(payload, dict) or not payload:
+        return [], []
+
+    nodes: list[dict] = []
+    links: list[dict] = []
+    seen_nodes: set[str] = set()
+    seen_edges: set[tuple[str, str, str]] = set()
+
+    def add_node(node_id: str, label: str, layer: int, importance: float) -> bool:
+        if node_id in seen_nodes or len(nodes) >= max_nodes:
+            return False
+        seen_nodes.add(node_id)
+        nodes.append(
+            {
+                "id": node_id,
+                "label": str(label)[:120],
+                "type": "实体",
+                "importance": max(0.2, min(1.0, importance)),
+                "layer": f"L{min(layer, 3)}",
+                "group": "payload",
+                "parent_id": None,
+                "properties": {},
+            }
+        )
+        return True
+
+    def add_edge(source: str, target: str, relation: str = "关联", strength: float = 0.6) -> None:
+        if source not in seen_nodes or target not in seen_nodes:
+            return
+        key = (source, target, relation)
+        if key in seen_edges:
+            return
+        seen_edges.add(key)
+        links.append(
+            {
+                "source": source,
+                "target": target,
+                "relation": relation,
+                "logic_type": "positive",
+                "strength": max(0.2, min(1.0, strength)),
+                "evidence": None,
+            }
         )
 
-def rewrite_document(original_text: str, target_audience: str, user_id: int) -> ChatMessageBase:
+    root_id = "payload_root"
+    root_label = "Payload"
+    add_node(root_id, root_label, 0, 0.98)
+
+    def walk(value: Any, parent_id: str, key_hint: str, depth: int) -> None:
+        if len(nodes) >= max_nodes or depth > 6:
+            return
+
+        if isinstance(value, dict):
+            for k, v in list(value.items())[:40]:
+                child_id = f"{parent_id}_{_slug(k)}_{depth}"
+                if add_node(child_id, str(k), depth, 0.82 - depth * 0.08):
+                    add_edge(parent_id, child_id, "展开", 0.7 - depth * 0.06)
+                walk(v, child_id, str(k), depth + 1)
+            return
+
+        if isinstance(value, list):
+            for idx, item in enumerate(value[:24], start=1):
+                title = f"{key_hint}#{idx}" if key_hint else f"item_{idx}"
+                child_id = f"{parent_id}_item_{idx}_{depth}"
+                if add_node(child_id, title, depth, 0.78 - depth * 0.08):
+                    add_edge(parent_id, child_id, "包含", 0.66 - depth * 0.06)
+                walk(item, child_id, key_hint, depth + 1)
+            return
+
+        text = str(value).strip()
+        if not text:
+            return
+        leaf_id = f"{parent_id}_{_slug(text[:36])}_{depth}"
+        if add_node(leaf_id, text[:120], depth, 0.72 - depth * 0.08):
+            add_edge(parent_id, leaf_id, "值", 0.6 - depth * 0.05)
+
+    walk(payload, root_id, "payload", 1)
+    for item in nodes:
+        if item["id"] != root_id:
+            item["parent_id"] = item["id"].rsplit("_", 2)[0] if "_" in item["id"] else root_id
+    return nodes, links
+
+
+def build_graph_from_dynamic_payload(payload: dict) -> tuple[list[dict], list[dict]]:
     """
-    根据目标群体，重新改写文档并提取对应信息
+    Public helper for callers that need structural graph generation
+    from freeform dynamic payload.
     """
+    return _build_graph_from_payload(payload)
+
+
+def _freeform_prompt() -> str:
+    # 核心原则（禁止动摇）：禁止预设任何内容结构字段，必须允许 LLM 自由生成字段与层级。
+    return (
+        "你是自由结构化引擎。"
+        "输入可能是任意类型文本。"
+        "请只返回一个JSON对象（禁止markdown）。"
+        "字段名、层级、分块方式完全由你根据内容自由决定。"
+        "不要套固定模板，不要强制出现任何预设业务字段。"
+        "如果你提供图谱，请放在 nodes/links；若没有也可仅输出 dynamic_payload。"
+    )
+
+
+def generate_dynamic_payload_freeform(original_text: str) -> dict:
+    """
+    核心原则（禁止动摇）：
+    必须保持 LLM 对 dynamic_payload 的自由生成能力；
+    严禁在此函数中预设任何与内容语义相关的固定字段或模板结构。
+    """
+    text = _normalize_text(original_text)
+    if not text:
+        return {}
     kimi = RequestLLM()
-    
-    system_prompt = f"""
-    你是一个专业的公文翻译和改写专家。现在有一篇官方通知，你需要根据目标受众【{target_audience}】，重新审视并改写这份通知，以便于他们理解。
-    
-    改写原则：
-    1. 如果目标受众是“老人版”，请使用大白话，极其精简，强调防骗和核心步骤。
-    2. 如果目标受众是“学生版”，请条理清晰，突出他们需要交的材料和截止日期。
-    3. 其他受众同理，确保用词符合他们的阅读习惯。
-    
-    你必须先在脑海中完成全文改写，然后将你改写后的内容，重新按照下面的 JSON 结构输出。
-    注意：所有键对应的值都必须是字符串（String）或 null，绝对不能是数组（Array）或列表（List）！如果是多个项目，请用换行或逗号连接成一个长字符串。
-    - target_audience (适用对象：写上这次的目标群体名称)
-    - handling_matter (办理事项：用最简单的话概括)
-    - time_deadline (时间节点)
-    - location_entrance (地点/入口)
-    - required_materials (所需材料：精简描述)
-    - handling_process (办理流程：步骤化，不要废话)
-    - precautions (注意事项：针对该人群的特别提醒)
-    - risk_warnings (风险提醒)
-    
-    必须且只能返回纯 JSON。
+    kimi.system_prompt = _freeform_prompt()
+    for _ in range(2):
+        try:
+            response = kimi.get_response(
+                content=text[:MAX_PARSE_CHARS],
+                model="moonshot-v1-32k",
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
+            if not response or str(response).strip().startswith("Error:"):
+                continue
+            payload = _try_parse_json_loose(response) or _repair_json_via_llm(response)
+            if isinstance(payload, dict) and payload:
+                return payload
+        except Exception:
+            continue
+    return {}
+
+
+def parse_document(original_text: str, user_id: int) -> tuple[dict, str]:
     """
-    
+    核心原则（禁止动摇）：
+    - 不做任何固定业务字段筛选/抽取。
+    - 所有内容结构由 LLM 自由生成。
+    """
+    text = _normalize_text(original_text)
+    kimi = RequestLLM()
+    kimi.system_prompt = _freeform_prompt()
+
+    try:
+        response = kimi.get_response(
+            content=text[:MAX_PARSE_CHARS],
+            model="moonshot-v1-32k",
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+        if not response or str(response).strip().startswith("Error:"):
+            raise ValueError(str(response))
+
+        raw = _try_parse_json_loose(response) or _repair_json_via_llm(response)
+        if not isinstance(raw, dict):
+            raise ValueError("LLM payload is not object")
+
+        content = _normalize_text(str(raw.get("content") or text))
+        nodes = _safe_nodes(raw.get("nodes"))
+        node_ids = {item["id"] for item in nodes}
+        links = _safe_links(raw.get("links"), node_ids)
+        top_level_keys = {"content", "nodes", "links", "dynamic_payload", "visual_config"}
+        dynamic_payload = raw.get("dynamic_payload") if isinstance(raw.get("dynamic_payload"), dict) else {
+            k: v for k, v in raw.items() if k not in top_level_keys
+        }
+        if not isinstance(dynamic_payload, dict):
+            dynamic_payload = {}
+
+        if not nodes and dynamic_payload:
+            nodes, links = _build_graph_from_payload(dynamic_payload)
+        visual_config = _basic_visual_config(raw.get("visual_config"), nodes)
+
+        return {
+            "original_text": original_text,
+            "user_id": user_id,
+            "content": content,
+            "nodes": nodes,
+            "links": links,
+            "dynamic_payload": dynamic_payload,
+            "visual_config": visual_config,
+        }, "ai"
+    except Exception as e:
+        logger.error(f"Freeform parse failed: {e}")
+        dynamic_payload = generate_dynamic_payload_freeform(text)
+        nodes, links = _build_graph_from_payload(dynamic_payload) if isinstance(dynamic_payload, dict) else ([], [])
+        return {
+            "original_text": original_text,
+            "user_id": user_id,
+            "content": text,
+            "nodes": nodes,
+            "links": links,
+            "dynamic_payload": dynamic_payload if isinstance(dynamic_payload, dict) else {},
+            "visual_config": {"focus_node": (nodes[0]["id"] if nodes else None), "initial_zoom": 1.0, "text_mapping": {}},
+        }, "fallback"
+
+
+def rewrite_document(original_text: str, target_audience: str, user_id: int) -> ChatMessageBase:
+    """保留兼容接口：按目标受众改写传统字段。"""
+    kimi = RequestLLM()
+
+    system_prompt = f"""
+你是专业改写助手。请面向目标受众：{target_audience}，把输入文本改写为更易读版本。
+只返回 JSON，禁止 Markdown，字段如下：
+- target_audience
+- handling_matter
+- time_deadline
+- location_entrance
+- required_materials
+- handling_process
+- precautions
+- risk_warnings
+所有字段必须是字符串或 null；如果有多个要点，请用“；”拼接为单个字符串。
+    """
+
     kimi.system_prompt = system_prompt
-    
+
     response_text = kimi.get_response(
         content=original_text,
         model="moonshot-v1-32k",
         response_format={"type": "json_object"},
-        temperature=0.4
+        temperature=0.4,
     )
-    
+
     try:
         if response_text.strip().startswith("Error:"):
             logger.error(f"Kimi rewrite error: {response_text}")
-            return _fallback_parse(original_text, user_id)
+            return ChatMessageBase(original_text=original_text, handling_matter=original_text[:60], user_id=user_id)
 
         parsed_data = _clean_json_response(response_text)
-        
-        # 强制类型转换，防止大模型抽风返回了列表
-        _convert_list_to_str(parsed_data, "required_materials")
-        _convert_list_to_str(parsed_data, "handling_process")
-        _convert_list_to_str(parsed_data, "precautions")
-        _convert_list_to_str(parsed_data, "risk_warnings")
-        _convert_list_to_str(parsed_data, "target_audience")
-        _convert_list_to_str(parsed_data, "handling_matter")
-        _convert_list_to_str(parsed_data, "time_deadline")
-        _convert_list_to_str(parsed_data, "location_entrance")
-        
+        for key in [
+            "required_materials",
+            "handling_process",
+            "precautions",
+            "risk_warnings",
+            "target_audience",
+            "handling_matter",
+            "time_deadline",
+            "location_entrance",
+        ]:
+            if key in parsed_data and isinstance(parsed_data[key], list):
+                parsed_data[key] = "；".join([str(item) for item in parsed_data[key]])
+
         return ChatMessageBase(
-            original_text=original_text, # 确保原文不丢失
+            original_text=original_text,
             target_audience=parsed_data.get("target_audience", target_audience),
             handling_matter=parsed_data.get("handling_matter"),
             time_deadline=parsed_data.get("time_deadline"),
@@ -284,23 +466,22 @@ def rewrite_document(original_text: str, target_audience: str, user_id: int) -> 
             handling_process=parsed_data.get("handling_process"),
             precautions=parsed_data.get("precautions"),
             risk_warnings=parsed_data.get("risk_warnings"),
-            user_id=user_id
+            user_id=user_id,
         )
     except Exception as e:
         logger.error(f"Failed to rewrite document: {e}")
-        return _fallback_parse(original_text, user_id)
+        return ChatMessageBase(original_text=original_text, handling_matter=original_text[:60], user_id=user_id)
 
 
-async def extract_pdf_with_ai(file_path: Path) -> str: # Make function async
+async def extract_pdf_with_ai(file_path: Path) -> str:
     """
-    使用 Kimi大模型(或其他支持文档上传的模型) 直接解析 PDF，包括扫描版。
-    首先尝试本地提取，如果失败，则调用 AI 多模态视觉模型进行深度文字识别（OCR）。
+    使用 Kimi 或 OCR 解析 PDF（含扫描件）。
     """
     import pdfplumber
-    
+
     full_text = []
     has_text = False
-    
+
     try:
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
@@ -308,29 +489,26 @@ async def extract_pdf_with_ai(file_path: Path) -> str: # Make function async
                 if text and text.strip():
                     full_text.append(text)
                     has_text = True
-                    
-        # 1. 正常PDF，成功提取文本
+
         if has_text:
             logger.info(f"Successfully extracted text from PDF {file_path} using pdfplumber.")
             return "\n".join(full_text)
-            
-        # 2. 如果全空，极大可能是扫描版 (全是图片)，触发 OCR 或多模态 AI
+
         logger.info(f"pdfplumber found no text in {file_path}. Attempting OCR via Kimi.")
-        
-        # Call perform_kimi_ocr for scanned PDFs
+
         extracted_text_from_ocr = await perform_kimi_ocr(
             file_path=file_path,
-            content_type="application/pdf", # For PDFs, content type is fixed
-            original_filename=file_path.name
+            content_type="application/pdf",
+            original_filename=file_path.name,
         )
-        
+
         if extracted_text_from_ocr and extracted_text_from_ocr.strip():
             logger.info(f"Successfully extracted text from {file_path} using Kimi OCR.")
             return extracted_text_from_ocr
-        else:
-            logger.warning(f"Kimi OCR also failed to extract text from {file_path}.")
-            return "提示：系统未能从该文件中提取到任何有效文字，这可能是一个扫描件或纯图片，且 AI OCR 识别也未能成功。请尝试上传清晰度更高的文件。"
-        
+
+        logger.warning(f"Kimi OCR also failed to extract text from {file_path}.")
+        return "提示：系统未能从该文件中提取到有效文字，可能是扫描件或纯图片，且 OCR 识别也未成功。请尝试上传更清晰的文件。"
+
     except Exception as e:
         logger.error(f"PDF parsing or OCR failed for {file_path}: {e}", exc_info=True)
         return f"PDF 解析失败: {str(e)}"

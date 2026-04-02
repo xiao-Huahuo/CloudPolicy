@@ -1,11 +1,14 @@
 from typing import List, Optional
-import json
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlmodel import Session
 
-from app.ai.document_parser import parse_document
+from app.ai.document_parser import (
+    parse_document,
+    generate_dynamic_payload_freeform,
+    build_graph_from_dynamic_payload,
+)
 from app.api.deps import get_current_user
 from app.core.database import get_session
 from app.models.user import User
@@ -16,28 +19,83 @@ from app.services import chat_message_service
 router = APIRouter()
 
 
+def _to_payload_dict(parsed_payload, original_text: str, user_id: int) -> dict:
+    """
+    关键兼容层（禁止随意删除/改写）：
+    parse_document 历史上既可能返回 dict，也可能返回 ChatMessageBase。
+    这里必须统一转成 dict，避免后续下标访问触发 500。
+    """
+    if isinstance(parsed_payload, dict):
+        payload = dict(parsed_payload)
+    elif hasattr(parsed_payload, "model_dump"):
+        payload = parsed_payload.model_dump()
+    elif hasattr(parsed_payload, "dict"):
+        payload = parsed_payload.dict()
+    else:
+        payload = {}
+
+    payload.setdefault("original_text", original_text)
+    payload.setdefault("user_id", user_id)
+    payload.setdefault("content", payload.get("original_text") or original_text or "")
+    # 核心原则（禁止改动）：禁止在这里按固定内容字段推断/补全语义，仅做通用类型兜底。
+    payload.setdefault("nodes", [])
+    payload.setdefault("links", [])
+    # 核心原则（禁止改动）：不得在这里预设任何与内容相关的 dynamic_payload 字段。
+    payload.setdefault("dynamic_payload", {})
+    payload.setdefault(
+        "visual_config",
+        {
+            "focus_node": None,
+            "initial_zoom": 1.0,
+            "text_mapping": {},
+        },
+    )
+    return payload
+
+
 @router.post("/", response_model=ChatMessageRead)
 def create_chat_message(
     chat_in: ChatMessageCreate,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    parsed_base, parse_mode = parse_document(chat_in.original_text, current_user.uid)
-    parsed_payload = parsed_base.model_dump()
-    parsed_payload["file_url"] = chat_in.file_url or parsed_payload.get("file_url")
-
-    analysis_json_str = chat_message_service.evaluate_notice_difficulty(
-        original_text=parsed_base.original_text,
-        handling_matter=parsed_base.handling_matter,
-        time_deadline=parsed_base.time_deadline,
-        required_materials=parsed_base.required_materials,
-        risk_warnings=parsed_base.risk_warnings,
-    )
     try:
-        analysis_payload = json.loads(analysis_json_str)
-    except (TypeError, json.JSONDecodeError):
-        analysis_payload = {}
-    analysis_payload["parse_mode"] = parse_mode
+        parsed_raw, parse_mode = parse_document(chat_in.original_text, current_user.uid)
+    except Exception:
+        # 核心原则（禁止改动）：异常时只保留最小通用载荷，禁止注入任何固定业务字段。
+        parsed_raw, parse_mode = {
+            "original_text": chat_in.original_text,
+            "content": chat_in.original_text,
+            "nodes": [],
+            "links": [],
+            "dynamic_payload": {},
+            "visual_config": {"focus_node": None, "initial_zoom": 1.0, "text_mapping": {}},
+        }, "fallback"
+
+    parsed_payload = _to_payload_dict(parsed_raw, chat_in.original_text, current_user.uid)
+    if not parsed_payload.get("dynamic_payload"):
+        # 核心原则（禁止改动）：当解析器未给出 dynamic_payload，只允许让 LLM 自由生成，不允许后端拼模板字段。
+        free_payload = generate_dynamic_payload_freeform(chat_in.original_text)
+        if isinstance(free_payload, dict) and free_payload:
+            parsed_payload["dynamic_payload"] = free_payload
+    if (not parsed_payload.get("nodes")) and isinstance(parsed_payload.get("dynamic_payload"), dict) and parsed_payload["dynamic_payload"]:
+        nodes, links = build_graph_from_dynamic_payload(parsed_payload["dynamic_payload"])
+        parsed_payload["nodes"] = nodes
+        parsed_payload["links"] = links
+        if not isinstance(parsed_payload.get("visual_config"), dict):
+            parsed_payload["visual_config"] = {}
+        parsed_payload["visual_config"].setdefault("focus_node", nodes[0]["id"] if nodes else None)
+        parsed_payload["visual_config"].setdefault("initial_zoom", 1.0)
+        parsed_payload["visual_config"].setdefault("text_mapping", {})
+    parsed_payload["file_url"] = chat_in.file_url or parsed_payload.get("file_url")
+    analysis_payload = chat_message_service.build_chat_analysis_payload(
+        parse_mode=parse_mode,
+        content=parsed_payload.get("content") or parsed_payload.get("original_text") or "",
+        nodes=parsed_payload.get("nodes") or [],
+        links=parsed_payload.get("links") or [],
+        dynamic_payload=parsed_payload.get("dynamic_payload") or {},
+        visual_config=parsed_payload.get("visual_config") or {},
+    )
     parsed_payload["chat_analysis"] = analysis_payload
 
     db_message = chat_message_service.create_message_from_payload(

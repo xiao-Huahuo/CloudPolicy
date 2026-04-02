@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
+from pydantic import Field
 from sqlmodel import SQLModel
 
 
@@ -9,11 +10,42 @@ class ChatMessageCreate(SQLModel):
     file_url: Optional[str] = None
 
 
+class KGNode(SQLModel):
+    id: str
+    label: str
+    type: str = "实体"
+    importance: float = Field(default=0.5, ge=0, le=1)
+    layer: Optional[str] = None
+    group: Optional[str] = None
+    parent_id: Optional[str] = None
+    properties: Dict[str, Any] = Field(default_factory=dict)
+
+
+class KGLink(SQLModel):
+    source: str
+    target: str
+    relation: str = "关联"
+    logic_type: str = "positive"
+    strength: float = Field(default=0.5, ge=0, le=1)
+    evidence: Optional[str] = None
+
+
+class VisualConfig(SQLModel):
+    focus_node: Optional[str] = None
+    initial_zoom: float = 1.0
+    text_mapping: Dict[str, List[int]] = Field(default_factory=dict)
+
+
 class ChatMessageRead(SQLModel):
     id: int
     created_time: datetime
     original_text: str
     file_url: Optional[str] = None
+    content: str = ""
+    nodes: List[KGNode] = Field(default_factory=list)
+    links: List[KGLink] = Field(default_factory=list)
+    dynamic_payload: Dict[str, Any] = Field(default_factory=dict)
+    visual_config: Optional[VisualConfig] = None
     target_audience: Optional[str] = None
     handling_matter: Optional[str] = None
     time_deadline: Optional[str] = None
@@ -23,7 +55,7 @@ class ChatMessageRead(SQLModel):
     precautions: Optional[str] = None
     risk_warnings: Optional[str] = None
     original_text_mapping: Optional[str] = None
-    chat_analysis: Dict[str, Any] = {}
+    chat_analysis: Dict[str, Any] = Field(default_factory=dict)
     user_id: int
     source_chat_id: Optional[int] = None
     session_json_path: Optional[str] = None

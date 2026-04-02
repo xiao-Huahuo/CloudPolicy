@@ -73,8 +73,15 @@ def run_agent_graph(
     @tool("extract_structured")
     def extract_structured(text: str) -> Dict[str, Any]:
         """从通知文本中抽取结构化字段。"""
-        parsed_base, parse_mode = parse_document(text, user_id)
-        parsed = parsed_base.model_dump()
+        parsed, parse_mode = parse_document(text, user_id)
+        # DO NOT REMOVE: force structured payload to dict to prevent runtime 500 errors.
+        if not isinstance(parsed, dict):
+            if hasattr(parsed, "model_dump"):
+                parsed = parsed.model_dump()
+            elif hasattr(parsed, "dict"):
+                parsed = parsed.dict()
+            else:
+                parsed = {"original_text": text}
         tool_state["structured"] = parsed
         tool_state["parse_mode"] = parse_mode
         _record_tool("extract_structured", text, f"字段数: {len(parsed.keys())}")
