@@ -56,7 +56,7 @@
     * **智能体 Agent**：基于 **LangChain** 封装，支持 **Chain-of-Thought (CoT)** 思考过程展示，具备逻辑拆解与自主决策能力。
     * **RAG 增强检索**：集成 **ChromaDB** 向量数据库，通过语义搜索政策法规原文，从根本上解决 AI 幻觉问题。
     * **模型路由**：统一适配层对接 Moonshot (Kimi)、GPT-4o 等主流大模型，支持按需动态切换。
-* **数据持久化**：使用 **SQLModel (SQLAlchemy)** 进行对象关系映射，配合 **SQLite** 或 **PostgreSQL** 存储结构化通知数据与用户记录。
+* **数据持久化**：使用 **SQLModel (SQLAlchemy)** 进行对象关系映射，配合 **SQLite** 存储结构化通知数据与用户记录。
 * **异步任务管理**：集成 **Redis** 作为消息代理，处理 **真实邮件系统 (SMTP)** 的异步发送（如权限申请通知、效率周报）及高频热点资讯缓存。
 
 #### **3. 安全与基础设施 (Security & Infrastructure)**

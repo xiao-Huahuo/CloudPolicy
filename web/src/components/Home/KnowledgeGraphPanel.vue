@@ -19,7 +19,7 @@
     <div class="kg-content" :class="{ 'json-open': showJson }">
       <div class="kg-main">
         <div v-show="activeView === '2d'" ref="graph2DRef" class="graph-2d"></div>
-        <canvas v-show="activeView === '3d'" ref="graph3DRef" class="graph-3d" @click="handle3DClick"></canvas>
+        <div v-show="activeView === '3d'" ref="graph3DRef" class="graph-3d"></div>
         <div v-show="activeView === 'text'" ref="textRef" class="graph-text" v-html="highlightedText"></div>
       </div>
 
@@ -44,6 +44,8 @@ import * as echarts from 'echarts/core';
 import { GraphChart } from 'echarts/charts';
 import { TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 echarts.use([GraphChart, TooltipComponent, CanvasRenderer]);
 
@@ -518,96 +520,296 @@ const render2DGraph = () => {
   });
 };
 
-const projectPoint = (point, width, height, angle) => {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const x = point.x * cos - point.z * sin;
-  const z = point.x * sin + point.z * cos;
-  const y = point.y;
-  const perspective = 1.35;
-  const scale = perspective / (perspective - z);
-  return {
-    x: x * scale * width * 0.22 + width / 2,
-    y: y * scale * height * 0.22 + height / 2,
-    z,
-  };
-};
+let threeRenderer = null;
+let threeScene = null;
+let threeCamera = null;
+let threeControls = null;
+let threeRaycaster = null;
+let threePointer = null;
+const threeNodeMeshes = new Map();
+const threeEdgeRefs = [];
+const threeNodeMeta = new Map();
 
-const spherePoints = ref([]);
-const projectedPoints = ref([]);
-const rotation = ref(0);
-
-const rebuildSphere = () => {
-  const count = Math.max(safeNodes.value.length, 1);
-  const points = [];
-  for (let i = 0; i < count; i += 1) {
-    const y = 1 - (i / (count - 1 || 1)) * 2;
-    const radius = Math.sqrt(Math.max(0, 1 - y * y));
-    const theta = Math.PI * (3 - Math.sqrt(5)) * i;
-    points.push({
-      x: Math.cos(theta) * radius,
-      y,
-      z: Math.sin(theta) * radius,
-    });
+const disposeThreeGraph = () => {
+  for (const mesh of threeNodeMeshes.values()) {
+    mesh.geometry?.dispose?.();
+    mesh.material?.dispose?.();
+    threeScene?.remove(mesh);
   }
-  spherePoints.value = points;
+  threeNodeMeshes.clear();
+  for (const edge of threeEdgeRefs.splice(0, threeEdgeRefs.length)) {
+    edge.line.geometry?.dispose?.();
+    edge.line.material?.dispose?.();
+    threeScene?.remove(edge.line);
+  }
+  threeNodeMeta.clear();
 };
 
-const render3D = () => {
-  const canvas = graph3DRef.value;
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+const ensureThreeScene = () => {
+  const container = graph3DRef.value;
+  if (!container) return false;
+  if (threeRenderer) return true;
 
-  const rect = canvas.getBoundingClientRect();
+  threeScene = new THREE.Scene();
+  threeCamera = new THREE.PerspectiveCamera(48, 1, 0.1, 5000);
+  threeCamera.position.set(0, 0, 760);
+
+  threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  threeRenderer.setClearColor(0x000000, 0);
+  threeRenderer.domElement.style.width = '100%';
+  threeRenderer.domElement.style.height = '100%';
+  threeRenderer.domElement.style.display = 'block';
+  container.innerHTML = '';
+  container.appendChild(threeRenderer.domElement);
+
+  threeControls = new OrbitControls(threeCamera, threeRenderer.domElement);
+  threeControls.enableDamping = true;
+  threeControls.dampingFactor = 0.07;
+  threeControls.rotateSpeed = 0.7;
+  threeControls.zoomSpeed = 0.85;
+  threeControls.enablePan = false;
+  threeControls.minDistance = 220;
+  threeControls.maxDistance = 1800;
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.65);
+  dir.position.set(160, 220, 260);
+  threeScene.add(ambient);
+  threeScene.add(dir);
+
+  threeRaycaster = new THREE.Raycaster();
+  threePointer = new THREE.Vector2();
+  threeRenderer.domElement.addEventListener('pointerdown', onThreePointerDown);
+  resizeThreeRenderer();
+  return true;
+};
+
+const resizeThreeRenderer = () => {
+  if (!threeRenderer || !threeCamera || !graph3DRef.value) return;
+  const rect = graph3DRef.value.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
+  threeRenderer.setSize(rect.width, rect.height, false);
+  threeCamera.aspect = rect.width / rect.height;
+  threeCamera.updateProjectionMatrix();
+};
 
-  canvas.width = rect.width * window.devicePixelRatio;
-  canvas.height = rect.height * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+const pick3DNodes = () => {
+  const MAX_3D = 120;
+  const rootId = rootNodeId.value;
+  const root = safeNodes.value.find((n) => n.id === rootId);
+  const others = safeNodes.value.filter((n) => n.id !== rootId).sort((a, b) => Number(b.importance || 0) - Number(a.importance || 0));
+  const picked = root ? [root, ...others.slice(0, MAX_3D - 1)] : others.slice(0, MAX_3D);
+  return picked;
+};
 
-  const dark = isDark();
-  ctx.clearRect(0, 0, rect.width, rect.height);
+const buildParentDepthMap = (nodes, links, rootId) => {
+  const ids = new Set(nodes.map((n) => n.id));
+  const parent = new Map();
+  parent.set(rootId, null);
 
-  projectedPoints.value = spherePoints.value.map((point, idx) => ({
-    ...projectPoint(point, rect.width, rect.height, rotation.value),
-    node: safeNodes.value[idx],
-  }));
-
-  for (const link of safeLinks.value) {
-    const from = projectedPoints.value.find((item) => item.node?.id === link.source);
-    const to = projectedPoints.value.find((item) => item.node?.id === link.target);
-    if (!from || !to) continue;
-    ctx.beginPath();
-    ctx.setLineDash(link.logic_type === 'negative' ? [5, 4] : []);
-    ctx.strokeStyle = link.logic_type === 'negative' ? '#e74c3c' : dark ? '#8c8f95' : '#9aa3ad';
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  const sorted = [...projectedPoints.value].sort((a, b) => a.z - b.z);
-  for (const item of sorted) {
-    const isRoot = item.node?.id === rootNodeId.value;
-    const imp = clamp(Number(item.node?.importance || 0.5), 0, 1);
-    const size = isRoot ? 14 : 4 + imp * 8;
-    ctx.beginPath();
-    ctx.arc(item.x, item.y, size, 0, Math.PI * 2);
-    const isActive = item.node?.id === activeNodeId.value;
-    ctx.fillStyle = isActive ? '#e74c3c' : typeColor(item.node?.type, dark);
-    ctx.fill();
-
-    if (isRoot || imp >= 0.75) {
-      ctx.font = isRoot ? 'bold 13px sans-serif' : '12px sans-serif';
-      ctx.fillStyle = dark ? '#f0f0f0' : '#333';
-      const label = shorten(item.node?.label || '', isRoot ? 30 : 16);
-      ctx.fillText(label, item.x + size + 3, item.y + 3);
+  for (const node of nodes) {
+    if (node.parent_id && ids.has(node.parent_id) && node.parent_id !== node.id) {
+      parent.set(node.id, node.parent_id);
     }
   }
+  for (const edge of links) {
+    if (!ids.has(edge.source) || !ids.has(edge.target)) continue;
+    if (!parent.has(edge.target) && edge.source !== edge.target) {
+      parent.set(edge.target, edge.source);
+    }
+  }
+  for (const node of nodes) {
+    if (!parent.has(node.id)) parent.set(node.id, rootId);
+  }
 
-  rotation.value += 0.0045;
-  animationFrame = requestAnimationFrame(render3D);
+  const depth = new Map();
+  const visit = (id, seen = new Set()) => {
+    if (depth.has(id)) return depth.get(id);
+    if (id === rootId) {
+      depth.set(id, 0);
+      return 0;
+    }
+    if (seen.has(id)) return 1;
+    seen.add(id);
+    const p = parent.get(id);
+    const d = p ? visit(p, seen) + 1 : 1;
+    depth.set(id, d);
+    return d;
+  };
+  for (const node of nodes) visit(node.id);
+  return { parent, depth };
+};
+
+const rebuildThreeGraph = () => {
+  if (!ensureThreeScene()) return;
+  disposeThreeGraph();
+
+  const rootId = rootNodeId.value;
+  if (!rootId) return;
+  const nodes = pick3DNodes();
+  const idSet = new Set(nodes.map((n) => n.id));
+  const links = safeLinks.value.filter((e) => idSet.has(e.source) && idSet.has(e.target));
+  const posMap = buildTreeLayout(nodes, links, rootId);
+  const { parent, depth } = buildParentDepthMap(nodes, links, rootId);
+  const dark = isDark();
+
+  for (const node of nodes) {
+    const id = node.id;
+    const d = Number(depth.get(id) || 0);
+    const isRoot = id === rootId;
+    const anchor2D = posMap.get(id) || { x: 0, y: 0 };
+    const seed = hashSeed(id);
+    const parentId = parent.get(id);
+    const parentAnchor = parentId && posMap.get(parentId) ? posMap.get(parentId) : { x: 0, y: 0 };
+    const angle = ((seed % 360) * Math.PI) / 180;
+    const ring = 36 + d * 20;
+
+    const ax = isRoot ? 0 : parentAnchor.x * 0.7 + Math.cos(angle) * ring;
+    const ay = isRoot ? 0 : parentAnchor.y * 0.7 + Math.sin(angle) * ring;
+    const az = isRoot ? 0 : ((seed % 140) - 70) * 0.85 + d * 24;
+    const anchor = new THREE.Vector3(ax || anchor2D.x * 0.6, ay || anchor2D.y * 0.6, az);
+
+    const imp = clamp(Number(node.importance || 0.5), 0, 1);
+    const radius = isRoot ? 22 : 5 + imp * 9;
+    const geometry = new THREE.SphereGeometry(radius, 18, 18);
+    const baseColor = new THREE.Color(typeColor(node.type, dark));
+    const material = new THREE.MeshStandardMaterial({
+      color: baseColor,
+      metalness: 0.12,
+      roughness: 0.42,
+      emissive: 0x000000,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(anchor);
+    mesh.userData = { id, baseColor };
+    threeScene.add(mesh);
+    threeNodeMeshes.set(id, mesh);
+    threeNodeMeta.set(id, {
+      parentId: parentId || null,
+      depth: d,
+      anchor: anchor.clone(),
+      velocity: new THREE.Vector3(),
+      isRoot,
+      importance: imp,
+    });
+  }
+
+  for (const link of links) {
+    const source = threeNodeMeshes.get(link.source);
+    const target = threeNodeMeshes.get(link.target);
+    if (!source || !target) continue;
+    const geometry = new THREE.BufferGeometry().setFromPoints([source.position.clone(), target.position.clone()]);
+    const material = new THREE.LineBasicMaterial({
+      color: link.logic_type === 'negative' ? 0xe74c3c : (dark ? 0x95a0ad : 0x7f8c8d),
+      transparent: true,
+      opacity: 0.75,
+    });
+    const line = new THREE.Line(geometry, material);
+    threeScene.add(line);
+    threeEdgeRefs.push({ line, sourceId: link.source, targetId: link.target });
+  }
+  refreshThreeStyles();
+  resizeThreeRenderer();
+};
+
+const refreshThreeStyles = () => {
+  const dark = isDark();
+  for (const [id, mesh] of threeNodeMeshes.entries()) {
+    const node = safeNodes.value.find((n) => n.id === id);
+    const mat = mesh.material;
+    if (!node || !mat) continue;
+    const base = new THREE.Color(typeColor(node.type, dark));
+    mat.color.copy(base);
+    const isActive = id === activeNodeId.value;
+    mat.emissive = new THREE.Color(isActive ? '#e74c3c' : '#000000');
+    mat.emissiveIntensity = isActive ? 0.8 : 0.0;
+  }
+};
+
+const stepThreePhysics = () => {
+  const ids = [...threeNodeMeshes.keys()];
+  if (ids.length <= 1) return;
+  const dt = 0.95;
+  const repulseK = 2200;
+  const anchorK = 0.03;
+  const parentSpringK = 0.055;
+  const damping = 0.88;
+
+  for (let i = 0; i < ids.length; i += 1) {
+    const idA = ids[i];
+    const meshA = threeNodeMeshes.get(idA);
+    const metaA = threeNodeMeta.get(idA);
+    if (!meshA || !metaA || metaA.isRoot) continue;
+    const force = new THREE.Vector3();
+
+    const toAnchor = metaA.anchor.clone().sub(meshA.position).multiplyScalar(anchorK);
+    force.add(toAnchor);
+    force.add(meshA.position.clone().multiplyScalar(-0.0028));
+
+    if (metaA.parentId && threeNodeMeshes.has(metaA.parentId)) {
+      const parentMesh = threeNodeMeshes.get(metaA.parentId);
+      const delta = parentMesh.position.clone().sub(meshA.position);
+      const dist = Math.max(delta.length(), 1);
+      const targetLen = 48 + metaA.depth * 18;
+      const spring = delta.normalize().multiplyScalar((dist - targetLen) * parentSpringK);
+      force.add(spring);
+    }
+
+    for (let j = 0; j < ids.length; j += 1) {
+      if (i === j) continue;
+      const meshB = threeNodeMeshes.get(ids[j]);
+      if (!meshB) continue;
+      const delta = meshA.position.clone().sub(meshB.position);
+      const distSq = Math.max(delta.lengthSq(), 64);
+      force.add(delta.normalize().multiplyScalar(repulseK / distSq));
+    }
+
+    metaA.velocity.add(force.multiplyScalar(dt));
+    metaA.velocity.multiplyScalar(damping);
+    const speed = metaA.velocity.length();
+    if (speed > 8) metaA.velocity.multiplyScalar(8 / speed);
+    meshA.position.add(metaA.velocity);
+  }
+
+  for (const edge of threeEdgeRefs) {
+    const s = threeNodeMeshes.get(edge.sourceId);
+    const t = threeNodeMeshes.get(edge.targetId);
+    if (!s || !t) continue;
+    edge.line.geometry.setFromPoints([s.position, t.position]);
+  }
+};
+
+const onThreePointerDown = (event) => {
+  if (!threeRenderer || !threeCamera || !threeRaycaster || !threePointer) return;
+  const rect = threeRenderer.domElement.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  threePointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  threePointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  threeRaycaster.setFromCamera(threePointer, threeCamera);
+  const intersects = threeRaycaster.intersectObjects([...threeNodeMeshes.values()], false);
+  if (intersects?.length) {
+    const hit = intersects[0].object?.userData?.id;
+    if (hit) setActiveNode(hit);
+  }
+};
+
+const startThreeAnimation = () => {
+  if (animationFrame || !threeRenderer || !threeScene || !threeCamera) return;
+  const tick = () => {
+    animationFrame = requestAnimationFrame(tick);
+    if (activeView.value !== '3d') return;
+    stepThreePhysics();
+    threeControls?.update();
+    threeRenderer.render(threeScene, threeCamera);
+  };
+  tick();
+};
+
+const stopThreeAnimation = () => {
+  if (!animationFrame) return;
+  cancelAnimationFrame(animationFrame);
+  animationFrame = null;
 };
 
 const setActiveNode = (nodeId) => {
@@ -618,23 +820,7 @@ const setActiveNode = (nodeId) => {
     });
   }
   refresh2DStyles();
-};
-
-const handle3DClick = (event) => {
-  const rect = graph3DRef.value?.getBoundingClientRect();
-  if (!rect) return;
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  let hit = null;
-  let minDist = 14;
-  for (const point of projectedPoints.value) {
-    const dist = Math.hypot(point.x - x, point.y - y);
-    if (dist < minDist) {
-      minDist = dist;
-      hit = point;
-    }
-  }
-  if (hit?.node?.id) setActiveNode(hit.node.id);
+  refreshThreeStyles();
 };
 
 watch(
@@ -645,15 +831,19 @@ watch(
     if (!activeNodeId.value) {
       activeNodeId.value = props.visualConfig?.focus_node || rootNodeId.value || safeNodes.value[0].id;
     }
-    rebuildSphere();
     nextTick(() => {
       render2DGraph();
+      rebuildThreeGraph();
+      if (activeView.value === '3d') startThreeAnimation();
     });
   },
   { immediate: true, deep: true }
 );
 
 watch(activeView, (view) => {
+  if (view !== '3d') {
+    stopThreeAnimation();
+  }
   if (view === 'text' && activeNodeId.value) {
     nextTick(() => {
       document.getElementById(`kg-anchor-${activeNodeId.value}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -665,11 +855,18 @@ watch(activeView, (view) => {
       chart2D?.resize();
     });
   }
+  if (view === '3d') {
+    nextTick(() => {
+      rebuildThreeGraph();
+      startThreeAnimation();
+    });
+  }
 });
 
 watch(showJson, () => {
   nextTick(() => {
     chart2D?.resize();
+    resizeThreeRenderer();
   });
 });
 
@@ -677,12 +874,13 @@ onMounted(() => {
   if (safeNodes.value.length) {
     activeNodeId.value = props.visualConfig?.focus_node || rootNodeId.value || safeNodes.value[0].id;
   }
-  rebuildSphere();
   render2DGraph();
-  render3D();
+  rebuildThreeGraph();
+  if (activeView.value === '3d') startThreeAnimation();
 
   themeObserver = new MutationObserver(() => {
     render2DGraph();
+    refreshThreeStyles();
   });
   themeObserver.observe(document.documentElement, {
     attributes: true,
@@ -692,13 +890,25 @@ onMounted(() => {
   if (graph2DRef.value) {
     resizeObserver = new ResizeObserver(() => {
       chart2D?.resize();
+      resizeThreeRenderer();
     });
     resizeObserver.observe(graph2DRef.value);
+    if (graph3DRef.value) resizeObserver.observe(graph3DRef.value);
   }
 });
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(animationFrame);
+  stopThreeAnimation();
+  if (threeRenderer?.domElement) {
+    threeRenderer.domElement.removeEventListener('pointerdown', onThreePointerDown);
+  }
+  disposeThreeGraph();
+  threeControls?.dispose?.();
+  threeRenderer?.dispose?.();
+  threeScene = null;
+  threeCamera = null;
+  threeControls = null;
+  threeRenderer = null;
   chart2D?.dispose();
   themeObserver?.disconnect();
   resizeObserver?.disconnect();

@@ -249,11 +249,9 @@ def _as_displayable_fallback_payload(response_text: str, source_text: str) -> di
     src = str(response_text or source_text or "").strip()
     if not src:
         return {}
-    lines = [ln.strip() for ln in src.splitlines() if ln.strip()]
-    blocks = lines[:48] if lines else [src[:MAX_PARSE_CHARS]]
     return {
-        "text_blocks": blocks,
-        "raw_text_preview": src[:MAX_PARSE_CHARS],
+        "parse_warning": "llm_output_not_valid_json_object",
+        "raw_excerpt": src[:MAX_PARSE_CHARS],
     }
 
 
@@ -466,6 +464,8 @@ def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list
 
         if isinstance(value, dict):
             for k, v in list(value.items())[:40]:
+                if str(k) in {"text_blocks", "raw_text_preview"}:
+                    continue
                 child_id = f"{parent_id}_{_slug(k)}_{depth}"
                 if add_node(child_id, str(k), depth, 0.82 - depth * 0.08):
                     add_edge(parent_id, child_id, "", 0.7 - depth * 0.06)
@@ -511,7 +511,8 @@ def _freeform_prompt() -> str:
         "请只返回一个JSON对象（禁止markdown）。"
         "字段名、层级、分块方式完全由你根据内容自由决定。"
         "不要套固定模板，不要强制出现任何预设业务字段。"
-        "请保持精炼，不要大段复制原文，以避免输出被截断。"
+        "请保持精炼：禁止大段复制原文。"
+        "总字段数建议不超过 40；数组项建议不超过 12；单个字符串建议不超过 160 字。"
         "必须保证输出是闭合的合法 JSON 对象。"
         "如果你提供图谱，请放在 nodes/links；若没有也可仅输出 dynamic_payload。"
     )
@@ -637,9 +638,11 @@ def parse_document(original_text: str, user_id: int, progress_cb=None) -> tuple[
                 pass
         dynamic_payload = generate_dynamic_payload_freeform(text) if text else {}
         if not isinstance(dynamic_payload, dict) or not dynamic_payload:
-            dynamic_payload = {"text": text[:MAX_PARSE_CHARS]} if text else {}
+            dynamic_payload = _as_displayable_fallback_payload("", text) if text else {}
         nodes, links = _build_graph_from_payload(dynamic_payload) if dynamic_payload else ([], [])
-        parse_mode = "fallback_recovered" if dynamic_payload and "text" not in dynamic_payload else "fallback_fast"
+        low_quality_keys = {"parse_warning", "raw_excerpt", "text"}
+        recovered = bool(dynamic_payload) and not set(dynamic_payload.keys()).issubset(low_quality_keys)
+        parse_mode = "fallback_recovered" if recovered else "fallback_fast"
         return {
             "original_text": original_text,
             "user_id": user_id,
