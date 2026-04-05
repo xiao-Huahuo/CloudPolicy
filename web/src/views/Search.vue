@@ -1,5 +1,6 @@
 <template>
   <div class="search-page">
+    <PolicyTitle class="policy-page-header" title="搜索中心" />
 
     <!-- 搜索栏 -->
     <div class="search-bar-wrap">
@@ -148,6 +149,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { searchNews, getHotNews, getCentralDocs } from '@/api/news';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 
 const route = useRoute();
 const router = useRouter();

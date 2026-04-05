@@ -1,7 +1,7 @@
 <template>
   <div class="todo-page">
     <div class="todo-header">
-      <h1 class="page-title">办事进度中心</h1>
+      <PolicyTitle title="办事进度中心" />
       <button class="add-btn" @click="showAdd = true">+ 新建待办</button>
     </div>
 
@@ -71,6 +71,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 
 const todos = ref([]);
@@ -237,3 +238,4 @@ async function createTodo() {
 .modal-textarea { height: 80px; resize: vertical; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 </style>
+

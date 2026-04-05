@@ -19,6 +19,22 @@ const headerTags = ref([]);
 const isStandalonePage = computed(() => route.meta?.standalone === true);
 
 const openAuthModal = () => { showAuthModal.value = true; };
+const normalizeTagLabel = (rawTag) => {
+  if (rawTag == null) return '';
+  if (typeof rawTag === 'string') {
+    const trimmed = rawTag.trim();
+    if (!trimmed) return '';
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object') return String(parsed.name || parsed.label || parsed.value || '').trim();
+    } catch (_) {}
+    return trimmed;
+  }
+  if (typeof rawTag === 'object') {
+    return String(rawTag.name || rawTag.label || rawTag.value || '').trim();
+  }
+  return String(rawTag).trim();
+};
 
 onMounted(async () => {
   settingsStore.initAppearance();
@@ -29,7 +45,9 @@ onMounted(async () => {
   }
   try {
     const res = await getHotTags(6);
-    headerTags.value = res.data?.items?.map(t => t.name || t) || [];
+    headerTags.value = (res.data?.items || [])
+      .map(normalizeTagLabel)
+      .filter(Boolean);
   } catch (_) {}
 });
 
@@ -46,7 +64,7 @@ onUnmounted(() => {
     </div>
   </template>
   <template v-else>
-    <div class="app-layout">
+    <div class="app-layout" :class="{ 'icon-mode': isIconMode }">
       <Sidebar ref="sidebarRef" :is-icon-mode="isIconMode" />
       <div class="content-wrapper">
         <Header
@@ -54,7 +72,7 @@ onUnmounted(() => {
           :header-tags="headerTags"
           :sidebar-ref="sidebarRef"
         />
-        <div class="main-content">
+        <div class="main-content" :class="{ 'main-content-icon-mode': isIconMode }">
           <router-view />
         </div>
       </div>
@@ -85,6 +103,19 @@ body {
   overflow-y: auto;
   background-color: var(--content-bg);
   padding: 20px;
+}
+.app-layout.icon-mode .sidebar {
+  position: fixed;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: auto;
+  max-height: calc(100vh - 24px);
+  z-index: 40;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+.main-content.main-content-icon-mode {
+  padding-left: 92px;
 }
 .standalone-page {
   width: 100vw;

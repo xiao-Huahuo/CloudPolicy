@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-container">
     <div class="header-section">
-      <h1 class="page-title">数据分析</h1>
+      <PolicyTitle title="数据分析" />
     </div>
 
     <!-- 加载状态 -->
@@ -179,6 +179,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes';
 import TimeSavedChart from '@/components/Analysis/TimeSavedChart.vue';
@@ -640,3 +641,4 @@ onMounted(async () => {
   font-size: 11px;
 }
 </style>
+

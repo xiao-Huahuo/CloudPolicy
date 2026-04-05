@@ -1,7 +1,7 @@
 <template>
   <div class="settings-container">
     <div class="settings-header">
-      <h1 class="page-title">系统设置</h1>
+      <PolicyTitle title="系统设置" />
     </div>
 
     <!-- 加载状态 -->
@@ -204,6 +204,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
 import { useSettingsStore } from '@/stores/settings';
@@ -627,3 +628,4 @@ input:checked + .slider:before {
 }
 
 </style>
+

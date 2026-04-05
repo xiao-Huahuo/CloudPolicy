@@ -2,7 +2,7 @@
   <div class="history-container">
     <div class="fixed-header-area">
       <div class="header-section">
-        <h1 class="page-title">会话历史</h1>
+        <PolicyTitle title="会话历史" />
         <div class="header-actions">
           <button class="import-btn" @click="triggerImport">导入会话</button>
           <input ref="importInput" type="file" accept=".json,application/json" hidden @change="handleImport" />
@@ -133,6 +133,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import { useRouter } from 'vue-router';
 import {
   batchDeleteChatMessages,
@@ -687,3 +688,4 @@ onMounted(() => {
   font-size: 14px;
 }
 </style>
+

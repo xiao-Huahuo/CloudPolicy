@@ -1,7 +1,7 @@
 <template>
   <div class="favorites-container">
     <div class="header-section">
-      <h1 class="page-title">我的收藏</h1>
+      <PolicyTitle title="我的收藏" />
     </div>
 
     <div v-if="loading" class="empty-state">加载中...</div>
@@ -33,6 +33,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import { useRouter } from 'vue-router';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
@@ -234,3 +235,4 @@ onMounted(fetchFavorites);
   animation: star-pop 0.4s ease forwards;
 }
 </style>
+

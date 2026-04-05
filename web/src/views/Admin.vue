@@ -2,7 +2,7 @@
   <div class="admin-page">
     <div class="admin-header">
       <div class="header-left">
-        <h1 class="page-title">管理员控制台</h1>
+        <PolicyTitle title="管理员控制台" />
         <span class="live-badge" :class="{ connected: streamConnected }">
           {{ streamConnected ? '实时监测中' : '实时连接断开' }}
         </span>
@@ -158,6 +158,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components';
@@ -477,3 +478,4 @@ onUnmounted(() => {
 .bar-fill { height: 100%; background: linear-gradient(to right, #c0392b, #e67e22); transition: width 0.4s; }
 .bar-count { font-size: 12px; color: #333; width: 30px; text-align: right; flex-shrink: 0; }
 </style>
+

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="home-container">
     <!-- 查看原文 Modal -->
     <div v-if="showOriginalModal" class="modal-overlay" @click.self="showOriginalModal = false">
@@ -75,58 +75,16 @@
         </div>
       </div>
 
-      <!-- ── 时事热点栏 ──────────────────────────────────────────── -->
-      <aside class="news-col panel-card news-panel">
-        <div class="panel-header">
-          <span class="panel-dot dot-blue"></span>
-          <h3 class="panel-title">时事热点</h3>
-          <span class="panel-badge">实时</span>
-        </div>
-        <div class="carousel-wrap">
-          <transition name="carousel-fade" mode="out-in">
-            <div class="carousel-slide" :key="carouselIndex">
-              <div class="carousel-content">
-                <span class="carousel-num">{{ String(carouselIndex + 1).padStart(2, '0') }}</span>
-                <p class="carousel-text">{{ hotNews[carouselIndex]?.title || '加载中...' }}</p>
-              </div>
-              <div class="carousel-dots">
-                <span
-                  v-for="(_, i) in Math.min(hotNews.length, 5)"
-                  :key="i"
-                  class="dot"
-                  :class="{ active: i === carouselIndex % Math.min(hotNews.length, 5) }"
-                  @click="carouselIndex = i"
-                ></span>
-              </div>
-            </div>
-          </transition>
-        </div>
-        <div class="news-list">
-          <div
-            v-for="(item, idx) in hotNews"
-            :key="idx"
-            class="news-item"
-            @click="openLink(item.link)"
-          >
-            <span class="news-rank" :class="idx < 3 ? 'rank-top' : ''">{{ idx + 1 }}</span>
-            <span class="news-title">{{ item.title }}</span>
-            <svg class="news-arrow" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
-          </div>
-          <div v-if="newsLoading" class="loading-placeholder">
-            <div v-for="i in 5" :key="i" class="skeleton-line"></div>
-          </div>
-        </div>
-      </aside>
-
       <!-- ── 中栏：文件处理 ────────────────────────────────────── -->
       <main class="center-panel">
         <!-- 标题区域 -->
         <div class="hero-section" v-if="!showResult">
           <div class="hero-header-row">
-            <div class="hero-title-block">
-              <h1 class="main-title">看见政策</h1>
-              <p class="sub-title">多模态 · 可视化 · 富呈现</p>
-            </div>
+            <PolicyTitle
+              class="hero-title-block"
+              title="看见政策"
+              subtitle="多模态 · 可视化 · 富呈现"
+            />
             <div class="hero-actions">
               <button class="hero-action-btn" @click="triggerImportConversation">导入会话</button>
             </div>
@@ -144,9 +102,9 @@
             :class="{ 'disabled': loading }"
           >
             <div class="upload-buttons">
-              <button class="action-btn capsule-btn" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
-              <button class="action-btn capsule-btn" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
-              <button class="action-btn capsule-btn" @click.stop="handleScreenshot" :disabled="loading">截图</button>
+              <button class="action-btn upload-round-btn" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
+              <button class="action-btn upload-round-btn" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
+              <button class="action-btn upload-round-btn" @click.stop="handleScreenshot" :disabled="loading">截图</button>
             </div>
             <p class="upload-hint">点击或拖拽上传 (支持文档、图片、PDF)</p>
             <div v-if="showUrlInput" class="url-float" @click.stop>
@@ -299,50 +257,89 @@
       <!-- ── 右栏：红头文件 ─────────────────────────────────────── -->
       <aside class="right-panel-col panel-card">
         <div class="panel-header">
-          <span class="panel-dot dot-red"></span>
-          <h3 class="panel-title">中央文件</h3>
-          <span class="panel-badge badge-red">最新</span>
-        </div>
-
-        <!-- 最新文件标题列表（卷轴顶部） -->
-        <div class="doc-titles-scroll">
-          <div
-            v-for="(doc, idx) in centralDocs"
-            :key="idx"
-            class="doc-title-item"
-            :class="{ active: selectedDocIdx === idx }"
-            @click="selectedDocIdx = idx"
-          >
-            <span class="doc-index">{{ String(idx + 1).padStart(2, '0') }}</span>
-            <span class="doc-title-text">{{ doc.title }}</span>
-          </div>
-          <div v-if="docsLoading" class="loading-placeholder">
-            <div v-for="i in 3" :key="i" class="skeleton-line"></div>
+          <span class="panel-dot" :class="rightPanelMode === 'docs' ? 'dot-red' : 'dot-blue'"></span>
+          <h3 class="panel-title">{{ rightPanelMode === 'docs' ? '中央文件' : '时事热点' }}</h3>
+          <div class="right-panel-switch">
+            <button class="switch-btn" :class="{ active: rightPanelMode === 'docs' }" @click="rightPanelMode = 'docs'">中央文件</button>
+            <button class="switch-btn" :class="{ active: rightPanelMode === 'news' }" @click="rightPanelMode = 'news'">时事热点</button>
           </div>
         </div>
 
-        <!-- 热点聚类点云图 -->
-        <div class="cloud-section">
-          <div class="cloud-label">热点聚类分析</div>
-          <div ref="wordCloudRef" class="word-cloud-chart"></div>
-        </div>
-
-        <!-- 选中文件内容展示 -->
-        <div class="doc-content-section" v-if="centralDocs[selectedDocIdx]">
-          <div class="doc-content-header">
-            <div class="red-header-bar">
-              <span class="red-star">★</span>
-              <span>中华人民共和国国务院</span>
-              <span class="red-star">★</span>
+        <template v-if="rightPanelMode === 'docs'">
+          <div class="doc-titles-scroll">
+            <div
+              v-for="(doc, idx) in centralDocs"
+              :key="idx"
+              class="doc-title-item"
+              :class="{ active: selectedDocIdx === idx }"
+              @click="selectedDocIdx = idx"
+            >
+              <span class="doc-index">{{ String(idx + 1).padStart(2, '0') }}</span>
+              <span class="doc-title-text">{{ doc.title }}</span>
             </div>
-            <h4 class="doc-content-title">{{ centralDocs[selectedDocIdx].title }}</h4>
-            <span class="doc-date" v-if="centralDocs[selectedDocIdx].pubDate">{{ centralDocs[selectedDocIdx].pubDate }}</span>
+            <div v-if="docsLoading" class="loading-placeholder">
+              <div v-for="i in 3" :key="i" class="skeleton-line"></div>
+            </div>
           </div>
-          <div class="doc-content-body">
-            <span v-html="stripHtml(centralDocs[selectedDocIdx].description) || '暂无摘要内容'"></span>
-            <a v-if="centralDocs[selectedDocIdx].link" :href="centralDocs[selectedDocIdx].link" target="_blank" class="doc-read-more">阅读全文 →</a>
+
+          <div class="cloud-section">
+            <div class="cloud-label">热点聚类分析</div>
+            <div ref="wordCloudRef" class="word-cloud-chart"></div>
           </div>
-        </div>
+
+          <div class="doc-content-section" v-if="centralDocs[selectedDocIdx]">
+            <div class="doc-content-header">
+              <div class="red-header-bar">
+                <span class="red-star">★</span>
+                <span>中华人民共和国国务院</span>
+                <span class="red-star">★</span>
+              </div>
+              <h4 class="doc-content-title">{{ centralDocs[selectedDocIdx].title }}</h4>
+              <span class="doc-date" v-if="centralDocs[selectedDocIdx].pubDate">{{ centralDocs[selectedDocIdx].pubDate }}</span>
+            </div>
+            <div class="doc-content-body">
+              <span v-html="stripHtml(centralDocs[selectedDocIdx].description) || '暂无摘要内容'"></span>
+              <a v-if="centralDocs[selectedDocIdx].link" :href="centralDocs[selectedDocIdx].link" target="_blank" class="doc-read-more">阅读全文 →</a>
+            </div>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="carousel-wrap">
+            <transition name="carousel-fade" mode="out-in">
+              <div class="carousel-slide" :key="carouselIndex">
+                <div class="carousel-content">
+                  <span class="carousel-num">{{ String(carouselIndex + 1).padStart(2, '0') }}</span>
+                  <p class="carousel-text">{{ hotNews[carouselIndex]?.title || '加载中...' }}</p>
+                </div>
+                <div class="carousel-dots">
+                  <span
+                    v-for="(_, i) in Math.min(hotNews.length, 5)"
+                    :key="i"
+                    class="dot"
+                    :class="{ active: i === carouselIndex % Math.min(hotNews.length, 5) }"
+                    @click="carouselIndex = i"
+                  ></span>
+                </div>
+              </div>
+            </transition>
+          </div>
+          <div class="news-list">
+            <div
+              v-for="(item, idx) in hotNews"
+              :key="idx"
+              class="news-item"
+              @click="openLink(item.link)"
+            >
+              <span class="news-rank" :class="idx < 3 ? 'rank-top' : ''">{{ idx + 1 }}</span>
+              <span class="news-title">{{ item.title }}</span>
+              <svg class="news-arrow" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div v-if="newsLoading" class="loading-placeholder">
+              <div v-for="i in 5" :key="i" class="skeleton-line"></div>
+            </div>
+          </div>
+        </template>
       </aside>
 
     </div><!-- end three-col-layout -->
@@ -361,6 +358,7 @@ import { useRouter } from 'vue-router';
 import { toggleSpeak, isSpeaking } from '@/utils/tts.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import KnowledgeGraphPanel from '@/components/Home/KnowledgeGraphPanel.vue';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 
 import ex1 from '@/assets/photos/main-examples/example1.png';
 import ex2 from '@/assets/photos/main-examples/example2.jpeg';
@@ -394,6 +392,7 @@ const hotNews = ref([]);
 const newsLoading = ref(true);
 const carouselIndex = ref(0);
 let carouselTimer = null;
+const rightPanelMode = ref('docs');
 
 // 最近解析记录
 const recentMessages = ref([]);
@@ -1067,7 +1066,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 
 .three-col-layout {
   display: grid;
-  grid-template-columns: 40px 220px 1fr 260px;
+  grid-template-columns: 40px 1fr 300px;
   gap: 16px;
   padding: 16px;
   flex: 1;
@@ -1077,7 +1076,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .three-col-layout.focus-mode {
-  grid-template-columns: 0 0 1fr 0;
+  grid-template-columns: 0 1fr 0;
   gap: 0;
   padding: 0;
 }
@@ -1092,8 +1091,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   position: relative;
 }
 
-.three-col-layout.focus-mode .left-stack,
-.three-col-layout.focus-mode .news-col {
+.three-col-layout.focus-mode .left-stack {
   transform: translateX(-120%);
   opacity: 0;
   pointer-events: none;
@@ -1159,6 +1157,29 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   color: #fff;
 }
 
+.right-panel-switch {
+  display: flex;
+  gap: 6px;
+}
+
+.switch-btn {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.switch-btn.active {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+
 .left-stack {
   display: flex;
   flex-direction: column;
@@ -1218,20 +1239,6 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 
 .history-drawer.open .drawer-panel {
   transform: translateX(0);
-}
-
-/* ── 时事热点独立列 ───────────────────────────────────────── */
-.news-col {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-  transition: transform 0.4s ease, opacity 0.4s ease;
-}
-
-.news-panel {
-  flex: 1;
-  min-height: 0;
 }
 
 .history-section {
@@ -1587,6 +1594,17 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   transition: all 0.2s;
 }
 .action-btn:hover { background: #e74c3c; }
+
+.upload-round-btn {
+  width: 98px;
+  height: 98px;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 0 #922b21;
+  padding: 0 !important;
+}
 
 /* Capsule button style (shared) */
 .capsule-btn {
@@ -2149,4 +2167,3 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 </style>
-

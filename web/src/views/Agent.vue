@@ -25,8 +25,7 @@
     <main class="agent-main" :class="{ shifted: drawerOpen }">
       <div class="agent-header">
         <div>
-          <h1>ClearFlow 智能体</h1>
-          <p>简洁、可执行、可追溯。</p>
+          <PolicyTitle title="智能体中心" subtitle="简洁、可执行、可追溯。" :center="false" />
         </div>
       </div>
 
@@ -200,6 +199,7 @@ import MarkdownIt from 'markdown-it';
 import { useRoute } from 'vue-router';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
+import PolicyTitle from '@/components/common/PolicyTitle.vue';
 
 const userStore = useUserStore();
 const route = useRoute();
@@ -1003,7 +1003,6 @@ onBeforeUnmount(() => {
   }
 }
 </style>
-
 
 
 

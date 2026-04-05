@@ -80,22 +80,16 @@
     </div>
   </div>
 
-  <!-- Icon mode narrow capsule -->
+    <!-- Icon mode narrow capsule -->
   <div v-if="isIconMode" class="sidebar sidebar-icon-mode">
-    <div class="icon-logo" @click="goHome" title="主页" style="cursor:pointer">
-      <img src="@/assets/photos/main-icon.png" alt="icon" class="logo-icon" v-if="hasIcon" @error="hasIcon = false" />
-      <svg v-else viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-    </div>
     <nav class="icon-nav">
       <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to" class="icon-nav-item" active-class="active" :title="item.label">
         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
       </router-link>
-    </nav>
-    <div class="icon-footer">
       <router-link to="/settings" class="icon-nav-item" title="设置">
         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </router-link>
-    </div>
+    </nav>
   </div>
 
   <!-- Dialogs -->
@@ -193,10 +187,11 @@ defineExpose({ openDrawer });
 
 /* ── Icon mode (narrow capsule) ── */
 .sidebar-icon-mode {
-  width: 60px;
+  width: 68px;
   align-items: center;
-  border-radius: 0 16px 16px 0;
-  padding: 8px 0;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 14px 0;
   transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 
@@ -213,20 +208,6 @@ defineExpose({ openDrawer });
   flex-shrink: 0;
 }
 .logo-icon { width: 24px; height: 24px; filter: brightness(0) invert(1); }
-
-.icon-logo {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-  border-radius: 50%;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-.icon-logo:hover { background: rgba(255,255,255,0.15); }
-.icon-logo .logo-icon { width: 24px; height: 24px; }
 
 /* ── Nav list (preview + drawer) ── */
 .nav-list {
@@ -253,11 +234,11 @@ defineExpose({ openDrawer });
 
 /* ── Icon nav (icon mode) ── */
 .icon-nav {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 0 8px;
 }
@@ -274,13 +255,6 @@ defineExpose({ openDrawer });
 }
 .icon-nav-item:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .icon-nav-item.active { background: rgba(255,255,255,0.25); color: #fff; }
-
-.icon-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 0;
-}
 
 /* ── Sidebar footer (preview + drawer) ── */
 .sidebar-footer {
@@ -457,3 +431,4 @@ defineExpose({ openDrawer });
 }
 .dialog-close:hover { opacity: 0.85; }
 </style>
+
