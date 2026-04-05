@@ -16,14 +16,6 @@
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
       </div>
-      <div class="tag-chips" v-if="headerTags.length">
-        <button
-          v-for="tag in headerTags"
-          :key="tag"
-          class="tag-chip"
-          @click="searchQuery = tag; handleSearch()"
-        >{{ tag }}</button>
-      </div>
     </div>
     <div class="spacer" v-else></div>
 
@@ -114,9 +106,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
 import { useSettingsStore } from '@/stores/settings';
 
-const props = defineProps({
+defineProps({
   isIconMode: { type: Boolean, default: true },
-  headerTags: { type: Array, default: () => [] },
   sidebarRef: { type: Object, default: null },
 });
 

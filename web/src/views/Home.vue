@@ -16,16 +16,17 @@
       </div>
     </div>
 
-    <div class="three-col-layout" :class="{ 'focus-mode': focusMode }">
+    <div class="three-col-layout" :class="{ 'focus-mode': focusMode, 'right-collapsed': !rightDrawerOpen }">
 
       <!-- ── 左栏：历史抽屉 toggle ─────────────────────────────── -->
       <div class="left-stack">
         <!-- 历史抽屉 -->
         <div class="history-drawer" :class="{ open: historyDrawerOpen }">
-          <div class="drawer-tab" @click="historyDrawerOpen = !historyDrawerOpen">
-            <span class="drawer-tab-text">{{ historyDrawerOpen ? '◀' : '▶' }} 最近解析</span>
-          </div>
-          <aside class="panel-card history-panel drawer-panel">
+          <div class="history-drawer-shell">
+            <div class="drawer-tab" @click="historyDrawerOpen = !historyDrawerOpen">
+              <span class="drawer-tab-text">{{ historyDrawerOpen ? '◀' : '▶' }} 最近解析</span>
+            </div>
+            <aside class="panel-card history-panel drawer-panel">
             <div class="panel-header">
               <span class="panel-dot dot-blue"></span>
               <h3 class="panel-title">最近解析</h3>
@@ -71,7 +72,8 @@
               </div>
               <div v-else-if="userStore.token && !historyLoading" class="history-empty">暂无记录</div>
             </div>
-          </aside>
+            </aside>
+          </div>
         </div>
       </div>
 
@@ -255,7 +257,12 @@
       </main>
 
       <!-- ── 右栏：红头文件 ─────────────────────────────────────── -->
-      <aside class="right-panel-col panel-card">
+      <div class="right-stack" :class="{ open: rightDrawerOpen }">
+        <div class="right-drawer-shell">
+          <div class="drawer-tab right-drawer-tab" @click="rightDrawerOpen = !rightDrawerOpen">
+            <span class="drawer-tab-text">{{ rightDrawerOpen ? '▶' : '◀' }} 中央文件</span>
+          </div>
+          <aside class="right-panel-col panel-card">
         <div class="panel-header">
           <span class="panel-dot" :class="rightPanelMode === 'docs' ? 'dot-red' : 'dot-blue'"></span>
           <h3 class="panel-title">{{ rightPanelMode === 'docs' ? '中央文件' : '时事热点' }}</h3>
@@ -340,7 +347,9 @@
             </div>
           </div>
         </template>
-      </aside>
+          </aside>
+        </div>
+      </div>
 
     </div><!-- end three-col-layout -->
 
@@ -393,6 +402,7 @@ const newsLoading = ref(true);
 const carouselIndex = ref(0);
 let carouselTimer = null;
 const rightPanelMode = ref('docs');
+const rightDrawerOpen = ref(true);
 
 // 最近解析记录
 const recentMessages = ref([]);
@@ -1075,6 +1085,10 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   transition: grid-template-columns 0.4s ease, gap 0.4s ease, padding 0.4s ease;
 }
 
+.three-col-layout.right-collapsed {
+  grid-template-columns: 40px 1fr 40px;
+}
+
 .three-col-layout.focus-mode {
   grid-template-columns: 0 1fr 0;
   gap: 0;
@@ -1082,7 +1096,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .left-panel,
-.right-panel-col {
+.right-stack {
   transition: transform 0.4s ease, opacity 0.4s ease;
 }
 
@@ -1097,7 +1111,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   pointer-events: none;
 }
 
-.three-col-layout.focus-mode .right-panel-col {
+.three-col-layout.focus-mode .right-stack {
   transform: translateX(120%);
   opacity: 0;
   pointer-events: none;
@@ -1186,17 +1200,34 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   min-height: 0;
   overflow: visible;
   position: relative;
+  z-index: 30;
 }
 
 /* ── 历史抽屉 ─────────────────────────────────────────────── */
 .history-drawer {
   position: relative;
   height: 100%;
+  overflow: visible;
+}
+
+.history-drawer-shell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100%;
+  transform: translateX(-240px);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index: 31;
+}
+
+.history-drawer.open .history-drawer-shell {
+  transform: translateX(0);
 }
 
 .drawer-tab {
   position: absolute;
-  left: 0;
+  left: 220px;
   top: 50%;
   transform: translateY(-50%);
   width: 40px;
@@ -1227,18 +1258,12 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 
 .drawer-panel {
   position: absolute;
-  left: 40px;
+  left: 0;
   top: 0;
   width: 220px;
   height: 100%;
-  transform: translateX(-260px);
-  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
   z-index: 15;
   box-shadow: 4px 0 16px rgba(0,0,0,0.1);
-}
-
-.history-drawer.open .drawer-panel {
-  transform: translateX(0);
 }
 
 .history-section {
@@ -1957,6 +1982,32 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.right-stack {
+  position: relative;
+  height: 100%;
+  overflow: visible;
+}
+
+.right-drawer-shell {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  transform: translateX(0);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+.right-stack:not(.open) .right-drawer-shell {
+  transform: translateX(260px);
+}
+
+.right-drawer-tab {
+  left: -40px;
+  border-radius: 8px 0 0 8px;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.12);
 }
 
 /* 文件标题列表 */

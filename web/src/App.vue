@@ -6,7 +6,6 @@ import { useSettingsStore } from '@/stores/settings';
 import Sidebar from '@/components/common/Sidebar.vue';
 import Header from '@/components/common/Header.vue';
 import AuthModal from '@/components/common/AuthModal.vue';
-import { getHotTags } from '@/api/news';
 
 const userStore = useUserStore();
 const settingsStore = useSettingsStore();
@@ -14,28 +13,10 @@ const route = useRoute();
 const showAuthModal = ref(false);
 const isIconMode = ref(true);
 const sidebarRef = ref(null);
-const headerTags = ref([]);
 
 const isStandalonePage = computed(() => route.meta?.standalone === true);
 
 const openAuthModal = () => { showAuthModal.value = true; };
-const normalizeTagLabel = (rawTag) => {
-  if (rawTag == null) return '';
-  if (typeof rawTag === 'string') {
-    const trimmed = rawTag.trim();
-    if (!trimmed) return '';
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (parsed && typeof parsed === 'object') return String(parsed.name || parsed.label || parsed.value || '').trim();
-    } catch (_) {}
-    return trimmed;
-  }
-  if (typeof rawTag === 'object') {
-    return String(rawTag.name || rawTag.label || rawTag.value || '').trim();
-  }
-  return String(rawTag).trim();
-};
-
 onMounted(async () => {
   settingsStore.initAppearance();
   window.addEventListener('open-login-modal', openAuthModal);
@@ -43,12 +24,6 @@ onMounted(async () => {
     await userStore.fetchUser();
     await settingsStore.fetchSettings();
   }
-  try {
-    const res = await getHotTags(6);
-    headerTags.value = (res.data?.items || [])
-      .map(normalizeTagLabel)
-      .filter(Boolean);
-  } catch (_) {}
 });
 
 onUnmounted(() => {
@@ -69,7 +44,6 @@ onUnmounted(() => {
       <div class="content-wrapper">
         <Header
           v-model:is-icon-mode="isIconMode"
-          :header-tags="headerTags"
           :sidebar-ref="sidebarRef"
         />
         <div class="main-content" :class="{ 'main-content-icon-mode': isIconMode }">
