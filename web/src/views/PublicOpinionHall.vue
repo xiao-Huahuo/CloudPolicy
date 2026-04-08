@@ -191,8 +191,8 @@ const buildWordCloud = (opinions) => {
   const max = sorted[0]?.[1] || 1
   cloudWords.value = sorted.map(([text, count], i) => {
     const ratio = count / max
-    const size = 12 + ratio * 22
-    const dim = size * text.length * 0.65 + 24
+    const size = 10 + ratio * 12
+    const dim = size * text.length * 0.52 + 14
     return {
       text,
       bubbleStyle: {
@@ -278,9 +278,9 @@ onUnmounted(() => {
 
 <style scoped>
 .opinion-hall {
-  padding: 30px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 20px 18px;
+  max-width: none;
+  margin: 0;
 }
 
 .hall-header { margin-bottom: 24px; }
@@ -400,8 +400,10 @@ onUnmounted(() => {
 .wordcloud-section {
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e8e8e8);
-  border-radius: 4px;
-  padding: 20px;
+  border-radius: 0;
+  padding: 14px 24px;
+  margin-left: -18px;
+  margin-right: -18px;
   margin-bottom: 24px;
   min-height: 140px;
 }
@@ -410,8 +412,8 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .bubble-word {
@@ -420,7 +422,7 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 50%;
   background: color-mix(in srgb, var(--bubble-color) 15%, white);
-  border: 2px solid color-mix(in srgb, var(--bubble-color) 40%, white);
+  border: 1px solid color-mix(in srgb, var(--bubble-color) 40%, white);
   color: var(--bubble-color);
   font-weight: 700;
   cursor: pointer;
@@ -429,7 +431,7 @@ onUnmounted(() => {
   animation-delay: var(--float-delay, 0s);
   transition: transform 0.2s, box-shadow 0.2s;
   text-align: center;
-  padding: 4px;
+  padding: 2px;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--bubble-color) 20%, transparent);
 }
 

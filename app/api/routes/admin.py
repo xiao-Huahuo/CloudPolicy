@@ -92,6 +92,7 @@ def set_user_role(
     return {"uid": user.uid, "role": user.role}
 
 
+@router.patch("/users/{uid}/toggle-admin", response_model=dict)
 def toggle_admin(
     uid: int,
     session: Session = Depends(get_session),

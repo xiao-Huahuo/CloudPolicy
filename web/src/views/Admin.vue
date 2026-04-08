@@ -234,7 +234,7 @@ import { useUserStore } from '@/stores/auth.js';
 echarts.use([LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer]);
 
 const userStore = useUserStore();
-const isAdmin = computed(() => userStore.user?.is_admin);
+const isAdmin = computed(() => userStore.isAdmin);
 const selfUid = computed(() => userStore.user?.uid);
 
 const users = ref([]);
@@ -554,7 +554,7 @@ function renderOpinionCharts() {
 
 async function toggleAdmin(uid) {
   try {
-    const res = await apiClient.patch(`${API_ROUTES.ADMIN_USERS}/${uid}/toggle-admin`);
+    const res = await apiClient.patch(API_ROUTES.ADMIN_TOGGLE_ADMIN(uid));
     const user = users.value.find((item) => item.uid === uid);
     if (user) user.role = res.data.role;
   } catch (e) {
@@ -577,6 +577,12 @@ const barWidth = (count) => `${Math.round((count / maxCount.value) * 100)}%`;
 
 onMounted(() => {
   if (isAdmin.value) loadAll();
+});
+
+watch(isAdmin, (val) => {
+  if (val && !users.value.length) {
+    loadAll();
+  }
 });
 
 onUnmounted(() => {
@@ -682,4 +688,3 @@ onUnmounted(() => {
 
 .china-map-area { width: 100%; height: 480px; }
 </style>
-

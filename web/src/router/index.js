@@ -24,6 +24,10 @@ import ShowcaseScreen from '../views/showcase/ShowcaseScreen.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0, left: 0 }
+  },
   routes: [
     { path: '/', name: 'home', component: Home },
     { path: '/discovery-home', name: 'discovery-home', component: DiscoveryHome, meta: { standalone: true } },
@@ -34,8 +38,8 @@ const router = createRouter({
     { path: '/settings', name: 'settings', component: Settings },
     { path: '/search', name: 'search', component: Search },
     { path: '/rewrite', name: 'rewrite', component: Rewrite },
-    { path: '/login', name: 'login', component: Login },
-    { path: '/register', name: 'register', component: Register },
+    { path: '/login', name: 'login', component: Login, meta: { standalone: true } },
+    { path: '/register', name: 'register', component: Register, meta: { standalone: true } },
     { path: '/todo', name: 'todo', component: TodoList },
     { path: '/admin', name: 'admin', component: Admin, meta: { requiresAdmin: true } },
     { path: '/agent', name: 'agent', component: Agent },
@@ -49,9 +53,12 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresAdmin) {
     const userStore = useUserStore()
+    if (userStore.token && !userStore.user) {
+      await userStore.fetchUser()
+    }
     if (!userStore.isAdmin) return next('/')
   }
   next()

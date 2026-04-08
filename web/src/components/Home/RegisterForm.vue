@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="form-container">
     <div class="logo-area">
       <img src="@/assets/photos/main-icon.png" alt="icon" class="main-icon" v-if="hasIcon" @error="hasIcon = false" />
       <h1 class="logo-text">
-        <span v-for="(ch, i) in 'ClearNotify'" :key="i" class="letter" :style="{ animationDelay: `${i * 0.06}s` }">{{ ch }}</span>
+        <span v-for="(ch, i) in '云上观策'" :key="i" class="letter" :style="{ animationDelay: `${i * 0.06}s` }">{{ ch }}</span>
       </h1>
     </div>
   <form class="form" @submit.prevent="handleRegister">
@@ -257,3 +257,5 @@ const handleRegister = async () => {
   font-weight: 500;
 }
 </style>
+
+

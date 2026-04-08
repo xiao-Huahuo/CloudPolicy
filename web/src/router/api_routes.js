@@ -27,6 +27,7 @@ export const API_ROUTES = {
   TODO_FROM_CHAT: '/todo/from-chat',
   FAVORITE: '/favorite/',
   ADMIN_SET_ROLE: (uid) => `/admin/users/${uid}/set-role`,
+  ADMIN_TOGGLE_ADMIN: (uid) => `/admin/users/${uid}/toggle-admin`,
   ADMIN_USERS: '/admin/users',
   ADMIN_STATS: '/admin/stats',
   ADMIN_STATS_STREAM: '/admin/stats/stream',

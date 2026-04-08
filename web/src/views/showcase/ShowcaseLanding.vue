@@ -30,10 +30,15 @@
       <div class="section-inner">
         <div class="section-tag" :class="{ visible: visibleSections.features }">核心功能</div>
         <h2 class="section-title" :class="{ visible: visibleSections.features }">一站式政策智能服务</h2>
+
         <div class="features-grid">
-          <div class="feat-card" v-for="(f, i) in features" :key="i"
-            :class="{ visible: visibleSections.features }" :style="{ transitionDelay: i * 80 + 'ms' }"
-            ref="featRefs">
+          <div
+            class="feat-card"
+            v-for="(f, i) in features"
+            :key="i"
+            :class="{ visible: visibleSections.features }"
+            :style="{ transitionDelay: i * 80 + 'ms' }"
+          >
             <div class="feat-icon" :style="{ background: f.color + '18', color: f.color }">
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" v-html="f.icon"></svg>
             </div>
@@ -50,8 +55,13 @@
         <div class="section-tag">使用流程</div>
         <h2 class="section-title">三步开始智能政策分析</h2>
         <div class="flow-steps">
-          <div class="flow-step" v-for="(s, i) in flowSteps" :key="i"
-            :class="{ visible: visibleSections.flow }" :style="{ transitionDelay: i * 120 + 'ms' }">
+          <div
+            class="flow-step"
+            v-for="(s, i) in flowSteps"
+            :key="i"
+            :class="{ visible: visibleSections.flow }"
+            :style="{ transitionDelay: i * 120 + 'ms' }"
+          >
             <div class="fs-num">{{ i + 1 }}</div>
             <div class="fs-body">
               <h3>{{ s.title }}</h3>
@@ -98,18 +108,48 @@ const heroStats = [
 ]
 
 const features = [
-  { title: '智能解析', desc: 'AI驱动的政策文件自动解析，提取关键信息，节省阅读时间', color: '#c0392b', icon: '<rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21h10"/>' },
-  { title: '全景政策广场', desc: '汇聚各方认证主体上传的最新政务文件，实时更新', color: '#2980b9', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' },
-  { title: '民意评议大厅', desc: '真实透明的社会反馈信息流，让政策落地有据可查', color: '#27ae60', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
-  { title: '数据可视化', desc: '多维度数据图表，直观呈现政策触达效果与用户反馈', color: '#8e44ad', icon: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>' },
-  { title: 'ClearFlow智能体', desc: '专属AI助手，随时解答政策疑问，辅助办事流程', color: '#e67e22', icon: '<path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/>' },
-  { title: '认证主体服务', desc: '为政府机构提供专属发布渠道和数据追踪分析服务', color: '#16a085', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+  {
+    title: '智能解析',
+    desc: 'AI 驱动的政策文件自动解析，提取关键信息，节省阅读时间',
+    color: '#c0392b',
+    icon: '<rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 21h10"/>'
+  },
+  {
+    title: '全景政策广场',
+    desc: '汇聚各方认证主体上传的最新政务文件，实时更新',
+    color: '#2980b9',
+    icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
+  },
+  {
+    title: '民意评论大厅',
+    desc: '真实透明的社会反馈信息流，让政策落地有据可查',
+    color: '#27ae60',
+    icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+  },
+  {
+    title: '数据可视化',
+    desc: '多维度数据图表，直观呈现政策触达效果与用户反馈',
+    color: '#8e44ad',
+    icon: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'
+  },
+  {
+    title: 'ClearFlow 智能体',
+    desc: '专属 AI 助手，随时解答政策疑问，辅助办事流程',
+    color: '#e67e22',
+    icon: '<path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/>'
+  },
+  {
+    title: '认证主体服务',
+    desc: '为政府机构提供专属发布渠道和数据追踪分析服务',
+    color: '#16a085',
+    icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+  },
 ]
 
 const flowSteps = [
-  { title: '注册账号', desc: '免费注册，邮箱验证即可使用' },
+  { title: '注册账号', desc: '免费注册，邮箱验证后即可使用' },
   { title: '浏览政策', desc: '在政策广场发现最新政务文件' },
-  { title: '智能分析', desc: 'AI自动解析，获取关键摘要' },
+  { title: '智能分析', desc: 'AI 自动解析，获取关键摘要' },
 ]
 
 const visibleSections = reactive({ hero: false, features: false, flow: false, cta: false })
@@ -121,7 +161,7 @@ const ctaRef = ref(null)
 let observer
 onMounted(() => {
   observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
+    entries.forEach((e) => {
       if (e.isIntersecting) {
         if (e.target === heroRef.value) visibleSections.hero = true
         if (e.target === featuresRef.value) visibleSections.features = true
@@ -130,18 +170,19 @@ onMounted(() => {
       }
     })
   }, { threshold: 0.1 })
+
   if (heroRef.value) observer.observe(heroRef.value)
   if (featuresRef.value) observer.observe(featuresRef.value)
   if (flowRef.value) observer.observe(flowRef.value)
   if (ctaRef.value) observer.observe(ctaRef.value)
 })
+
 onUnmounted(() => observer?.disconnect())
 </script>
 
 <style scoped>
 .landing { min-height: 100vh; background: var(--content-bg, #f4f5f7); }
 
-/* Hero */
 .hero { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .hero-bg {
   position: absolute; inset: 0;
@@ -174,19 +215,19 @@ onUnmounted(() => observer?.disconnect())
 .scroll-dot { width: 6px; height: 6px; background: rgba(255,255,255,0.6); border-radius: 50%; animation: bounce 1.6s ease-in-out infinite; }
 @keyframes bounce { 0%,100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(10px); opacity: 0.4; } }
 
-/* Sections */
-.section-inner { max-width: 1100px; margin: 0 auto; padding: 80px 24px; }
+.section-inner { max-width: 1120px; margin: 0 auto; padding: 80px 24px; }
 .section-tag { display: inline-block; background: rgba(192,57,43,0.1); color: #c0392b; padding: 4px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-bottom: 12px; opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
 .section-tag.visible { opacity: 1; transform: translateY(0); }
 .section-title { font-size: 32px; font-weight: 800; margin: 0 0 40px; color: var(--text-primary, #111); opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s; }
 .section-title.visible { opacity: 1; transform: translateY(0); }
 
-/* Features */
 .features-section { background: var(--card-bg, #fff); }
 .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .feat-card {
-  padding: 28px; border: 1px solid var(--border-color, #eee);
-  opacity: 0; transform: translateY(24px);
+  padding: 28px;
+  border: 1px solid var(--border-color, #eee);
+  opacity: 0;
+  transform: translateY(24px);
   transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.25s;
 }
 .feat-card.visible { opacity: 1; transform: translateY(0); }
@@ -195,12 +236,16 @@ onUnmounted(() => observer?.disconnect())
 .feat-title { font-size: 16px; font-weight: 700; margin: 0 0 8px; color: var(--text-primary, #111); }
 .feat-desc { font-size: 13px; color: var(--text-secondary, #666); line-height: 1.6; margin: 0; }
 
-/* Flow */
 .flow-section { background: var(--content-bg, #f4f5f7); }
 .flow-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
 .flow-step {
-  display: flex; align-items: center; gap: 16px; flex: 1; min-width: 200px;
-  opacity: 0; transform: translateX(-20px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 200px;
+  opacity: 0;
+  transform: translateX(-20px);
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 .flow-step.visible { opacity: 1; transform: translateX(0); }
@@ -209,11 +254,13 @@ onUnmounted(() => observer?.disconnect())
 .fs-body p { font-size: 13px; color: var(--text-secondary, #666); margin: 0; }
 .fs-arrow { font-size: 24px; color: #ccc; padding: 0 16px; flex-shrink: 0; }
 
-/* CTA */
 .cta-section {
   background: linear-gradient(135deg, #c0392b, #2980b9);
-  text-align: center; padding: 80px 24px; color: #fff;
-  opacity: 0; transform: translateY(30px);
+  text-align: center;
+  padding: 80px 24px;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(30px);
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
 .cta-section.visible { opacity: 1; transform: translateY(0); }
@@ -221,7 +268,6 @@ onUnmounted(() => observer?.disconnect())
 .cta-section p { font-size: 16px; color: rgba(255,255,255,0.8); margin: 0 0 32px; }
 .cta-section .btn-primary { background: #fff; color: #c0392b; }
 
-/* Footer */
 .sc-footer { background: #111; color: rgba(255,255,255,0.6); padding: 40px 24px; }
 .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
 .footer-brand { font-size: 18px; font-weight: 800; color: #fff; flex: 1; }
@@ -229,4 +275,12 @@ onUnmounted(() => observer?.disconnect())
 .footer-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13px; transition: color 0.2s; }
 .footer-links a:hover { color: #fff; }
 .footer-copy { font-size: 12px; }
+
+@media (max-width: 960px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .features-grid { grid-template-columns: 1fr; }
+}
 </style>

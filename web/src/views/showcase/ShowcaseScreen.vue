@@ -1,6 +1,6 @@
 <template>
   <div class="screen">
-    <ShowcaseHeader />
+    <ShowcaseHeader :transparent-top="true" top-text="light" />
     <div class="screen-body">
       <div class="screen-header">
         <div class="sh-title">云上观策 · 公共数据大屏</div>
