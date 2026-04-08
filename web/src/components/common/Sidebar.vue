@@ -1,61 +1,28 @@
 <template>
-  <!-- Drawer overlay (icon mode only) -->
-  <transition name="drawer-slide">
-    <div v-if="isIconMode && drawerOpen" class="sidebar-drawer" @click.self="drawerOpen = false">
-      <div class="sidebar-inner">
-        <div class="logo" @click="goHome" style="cursor:pointer">
-          <button class="hamburger-btn" @click.stop="drawerOpen = false" title="收起">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-          <img src="@/assets/photos/main-icon.png" alt="icon" class="logo-icon" v-if="hasIcon" @error="hasIcon = false" />
-          云上观策
-        </div>
-        <nav class="nav-list">
-          <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to" class="nav-item" active-class="active" @click="drawerOpen = false">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
-            <span>{{ item.label }}</span>
-          </router-link>
-        </nav>
-        <div class="sidebar-footer">
-          <div v-if="!userStore.token" class="login-btn" @click="emitLogin">登录</div>
-          <div v-else class="user-info">
-            <img v-if="displayAvatar" :src="displayAvatar" class="avatar" alt="avatar" />
-            <div v-else class="avatar-placeholder">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <span class="username">{{ userStore.user?.username }}</span>
-          </div>
-          <div class="footer-actions">
-            <router-link to="/settings" class="footer-icon-btn" title="设置" @click="drawerOpen = false">
-              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </router-link>
-            <button class="footer-icon-btn" @click="showMore = !showMore" title="更多">
-              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-            </button>
-          </div>
-          <div v-if="showMore" class="more-menu">
-            <div class="more-item" @click="showAbout = true; showMore = false">关于</div>
-            <div class="more-item" @click="showPermission = true; showMore = false">权限说明</div>
-            <div class="more-item" @click="showFaq = true; showMore = false">常见问题</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </transition>
-
-  <!-- Preview mode sidebar -->
-  <div v-if="!isIconMode" class="sidebar sidebar-preview">
-    <div class="logo" @click="goHome" style="cursor:pointer">
+  <!-- Unified morphing sidebar -->
+  <div class="sidebar" :class="isIconMode ? 'sidebar-icon-mode' : 'sidebar-preview'">
+    <!-- Logo row: shown in preview mode -->
+    <div class="logo" @click="goHome" v-show="!isIconMode">
       <img src="@/assets/photos/main-icon.png" alt="icon" class="logo-icon" v-if="hasIcon" @error="hasIcon = false" />
-      云上观策
+      <span class="logo-text">云上观策</span>
     </div>
+
+    <!-- Nav: preview mode shows icons + labels, icon mode shows icons only -->
     <nav class="nav-list">
-      <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to" class="nav-item" active-class="active">
+      <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to"
+        class="nav-item" active-class="active" :title="item.label">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
-        <span>{{ item.label }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+      </router-link>
+      <!-- Settings always visible in icon mode -->
+      <router-link to="/settings" class="nav-item" title="设置" v-show="isIconMode">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="nav-label">设置</span>
       </router-link>
     </nav>
-    <div class="sidebar-footer">
+
+    <!-- Footer: only in preview mode -->
+    <div class="sidebar-footer" v-show="!isIconMode">
       <div v-if="!userStore.token" class="login-btn" @click="emitLogin">登录</div>
       <div v-else class="user-info">
         <img v-if="displayAvatar" :src="displayAvatar" class="avatar" alt="avatar" />
@@ -78,18 +45,6 @@
         <div class="more-item" @click="showFaq = true; showMore = false">常见问题</div>
       </div>
     </div>
-  </div>
-
-    <!-- Icon mode narrow capsule -->
-  <div v-if="isIconMode" class="sidebar sidebar-icon-mode">
-    <nav class="icon-nav">
-      <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to" class="icon-nav-item" active-class="active" :title="item.label">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
-      </router-link>
-      <router-link to="/settings" class="icon-nav-item" title="设置">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </router-link>
-    </nav>
   </div>
 
   <!-- Dialogs -->
@@ -120,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineExpose } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
 
@@ -131,7 +86,6 @@ const props = defineProps({
 const userStore = useUserStore();
 const router = useRouter();
 const hasIcon = ref(true);
-const drawerOpen = ref(false);
 const showMore = ref(false);
 const showAbout = ref(false);
 const showPermission = ref(false);
@@ -145,12 +99,20 @@ const navItems = [
   { to: '/history', label: '会话历史', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
   { to: '/favorites', label: '我的收藏', icon: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
   { to: '/todo', label: '办事进度', icon: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
+  { to: '/public-opinion-hall', label: '民意大厅', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
+  { to: '/policy-swipe', label: '政策推荐', icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' },
+  { to: '/policy-publish-center', label: '政策发布', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', certifiedOnly: true },
+  { to: '/certified-analysis', label: '发布追踪', icon: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', certifiedOnly: true },
   { to: '/profile', label: '我的', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
   { to: '/admin', label: '管理员', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', adminOnly: true },
 ];
 
 const visibleNavItems = computed(() =>
-  navItems.filter(item => !item.adminOnly || userStore.user?.is_admin)
+  navItems.filter(item => {
+    if (item.adminOnly && userStore.user?.role !== 'admin') return false
+    if (item.certifiedOnly && !['certified', 'admin'].includes(userStore.user?.role)) return false
+    return true
+  })
 );
 
 const displayAvatar = computed(() => {
@@ -160,11 +122,8 @@ const displayAvatar = computed(() => {
   return url;
 });
 
-const goHome = () => router.push('/');
+const goHome = () => router.push('/showcase');
 const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal'));
-const openDrawer = () => { drawerOpen.value = true; };
-
-defineExpose({ openDrawer });
 </script>
 
 <style scoped>
@@ -176,13 +135,21 @@ defineExpose({ openDrawer });
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  overflow: hidden;
+  /* Liquid morph transition */
+  transition:
+    width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-radius 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    padding 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.45s ease;
 }
 
 /* ── Preview mode ── */
 .sidebar-preview {
   width: 200px;
-  overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 /* ── Icon mode (narrow capsule) ── */
@@ -192,7 +159,22 @@ defineExpose({ openDrawer });
   justify-content: center;
   border-radius: 999px;
   padding: 14px 0;
-  transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+/* Nav label fade */
+.nav-label {
+  transition: opacity 0.25s ease, max-width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.sidebar-icon-mode .nav-label {
+  opacity: 0;
+  max-width: 0;
+}
+.sidebar-preview .nav-label {
+  opacity: 1;
+  max-width: 160px;
 }
 
 /* ── Logo ── */
@@ -209,7 +191,7 @@ defineExpose({ openDrawer });
 }
 .logo-icon { width: 24px; height: 24px; filter: brightness(0) invert(1); }
 
-/* ── Nav list (preview + drawer) ── */
+/* ── Nav list ── */
 .nav-list {
   flex: 1;
   display: flex;
@@ -217,6 +199,11 @@ defineExpose({ openDrawer });
   padding: 8px 12px;
   gap: 2px;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar-icon-mode .nav-list {
+  padding: 8px 4px;
+  align-items: center;
 }
 .nav-item {
   display: flex;
@@ -227,34 +214,17 @@ defineExpose({ openDrawer });
   color: rgba(255,255,255,0.8);
   text-decoration: none;
   font-size: 14px;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s, border-radius 0.45s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sidebar-icon-mode .nav-item {
+  padding: 10px;
+  border-radius: 12px;
+  justify-content: center;
 }
 .nav-item:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .nav-item.active { background: rgba(255,255,255,0.25); color: #fff; }
-
-/* ── Icon nav (icon mode) ── */
-.icon-nav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 0 8px;
-}
-.icon-nav-item {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  color: rgba(255,255,255,0.75);
-  text-decoration: none;
-  transition: all 0.2s;
-}
-.icon-nav-item:hover { background: rgba(255,255,255,0.15); color: #fff; }
-.icon-nav-item.active { background: rgba(255,255,255,0.25); color: #fff; }
 
 /* ── Sidebar footer (preview + drawer) ── */
 .sidebar-footer {
@@ -345,49 +315,6 @@ defineExpose({ openDrawer });
   transition: background 0.15s;
 }
 .more-item:hover { background: rgba(0,0,0,0.06); }
-
-/* ── Drawer ── */
-.sidebar-drawer {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(0,0,0,0.35);
-  display: flex;
-}
-.sidebar-inner {
-  width: 200px;
-  background: var(--sidebar-bg-gradient);
-  color: #fff;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.drawer-slide-enter-active,
-.drawer-slide-leave-active { transition: opacity 0.3s ease; }
-.drawer-slide-enter-active .sidebar-inner,
-.drawer-slide-leave-active .sidebar-inner { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
-.drawer-slide-enter-from { opacity: 0; }
-.drawer-slide-enter-from .sidebar-inner { transform: translateX(-100%); }
-.drawer-slide-leave-to { opacity: 0; }
-.drawer-slide-leave-to .sidebar-inner { transform: translateX(-100%); }
-
-/* ── Hamburger ── */
-.hamburger-btn {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.85);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 6px;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-.hamburger-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
 /* ── Dialogs ── */
 .dialog-overlay {

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 from app.core.database import get_session
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.user import *
 from app.core.security import get_password_hash
 from app.api.deps import get_current_user
@@ -221,11 +221,10 @@ def request_permission_upgrade(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """普通用户申请提升为管理员权限（向所有管理员发送通知）"""
-    if current_user.is_admin:
+    """普通用户申请升级为认证主体，认证主体申请升级为管理员（向所有管理员发送通知）"""
+    if current_user.role == UserRole.admin:
         raise HTTPException(status_code=400, detail="您已经是管理员")
-    # 查找所有管理员
-    admins = session.exec(select(User).where(User.is_admin == True)).all()
+    admins = session.exec(select(User).where(User.role == UserRole.admin)).all()
     if not admins:
         raise HTTPException(status_code=404, detail="暂无管理员可处理申请")
     email_service.send_upgrade_request_email(current_user, admins)
@@ -237,10 +236,10 @@ def request_permission_downgrade(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """管理员申请降级为普通用户"""
-    if not current_user.is_admin:
-        raise HTTPException(status_code=400, detail="您不是管理员")
-    current_user.is_admin = False
+    """认证主体或管理员申请降级为普通用户"""
+    if current_user.role == UserRole.normal:
+        raise HTTPException(status_code=400, detail="您已经是普通用户")
+    current_user.role = UserRole.normal
     session.add(current_user)
     session.commit()
     session.refresh(current_user)

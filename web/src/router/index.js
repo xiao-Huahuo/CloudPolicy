@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/auth.js'
 import Home from '../views/Home.vue'
 import DiscoveryHome from '../views/DiscoveryHome.vue'
 import DataAnalysisAndVisualization from '../views/DataAnalysisAndVisualization.vue'
@@ -13,6 +14,13 @@ import Settings from '../views/Settings.vue'
 import TodoList from '../views/TodoList.vue'
 import Admin from '../views/Admin.vue'
 import Agent from '../views/Agent.vue'
+import PublicOpinionHall from '../views/PublicOpinionHall.vue'
+import CertifiedAnalysis from '../views/CertifiedAnalysis.vue'
+import PolicyPublishCenter from '../views/PolicyPublishCenter.vue'
+import PolicySwipe from '../views/PolicySwipe.vue'
+import ShowcaseLanding from '../views/showcase/ShowcaseLanding.vue'
+import ShowcaseDiscovery from '../views/showcase/ShowcaseDiscovery.vue'
+import ShowcaseScreen from '../views/showcase/ShowcaseScreen.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,9 +37,24 @@ const router = createRouter({
     { path: '/login', name: 'login', component: Login },
     { path: '/register', name: 'register', component: Register },
     { path: '/todo', name: 'todo', component: TodoList },
-    { path: '/admin', name: 'admin', component: Admin },
+    { path: '/admin', name: 'admin', component: Admin, meta: { requiresAdmin: true } },
     { path: '/agent', name: 'agent', component: Agent },
+    { path: '/public-opinion-hall', name: 'public-opinion-hall', component: PublicOpinionHall },
+    { path: '/certified-analysis', name: 'certified-analysis', component: CertifiedAnalysis },
+    { path: '/policy-publish-center', name: 'policy-publish-center', component: PolicyPublishCenter },
+    { path: '/policy-swipe', name: 'policy-swipe', component: PolicySwipe },
+    { path: '/showcase', name: 'showcase', component: ShowcaseLanding, meta: { showcase: true } },
+    { path: '/showcase/discovery', name: 'showcase-discovery', component: ShowcaseDiscovery, meta: { showcase: true } },
+    { path: '/showcase/screen', name: 'showcase-screen', component: ShowcaseScreen, meta: { showcase: true } },
   ],
+})
+
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAdmin) {
+    const userStore = useUserStore()
+    if (!userStore.isAdmin) return next('/')
+  }
+  next()
 })
 
 export default router

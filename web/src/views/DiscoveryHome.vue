@@ -127,6 +127,62 @@
       </div>
     </div>
 
+    <!-- ══ 全景政策广场：认证主体上传的真实政务文件 ══ -->
+    <div class="policy-square">
+      <div class="ps-header">
+        <div class="ps-title-row">
+          <span class="ps-dot"></span>
+          <h3 class="section-label" style="margin:0">全景政策广场</h3>
+          <span class="ps-sub">认证主体发布的最新政务文件</span>
+        </div>
+        <div class="ps-controls">
+          <button class="ps-mode-btn" :class="{ active: policyDocViewMode === 'list' }" @click="policyDocViewMode = 'list'">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            条形
+          </button>
+          <button class="ps-mode-btn" :class="{ active: policyDocViewMode === 'grid' }" @click="policyDocViewMode = 'grid'">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            砖块
+          </button>
+          <router-link to="/public-opinion-hall" class="ps-hall-link">民意评议大厅 →</router-link>
+        </div>
+      </div>
+
+      <div v-if="policyDocsLoading" class="ps-skeleton">
+        <div v-for="i in 4" :key="i" class="skeleton-card"></div>
+      </div>
+      <div v-else-if="!policyDocs.length" class="ps-empty">
+        暂无已审核的政务文件，认证主体上传后经管理员审核即可展示
+      </div>
+      <div v-else class="ps-list" :class="policyDocViewMode">
+        <div v-for="(doc, i) in policyDocs" :key="doc.id" class="ps-card">
+          <div class="ps-card-accent" :style="{ background: POLICY_COLORS[i % POLICY_COLORS.length] }"></div>
+          <div class="ps-card-body">
+            <div class="ps-card-meta">
+              <span class="ps-category" v-if="doc.category">{{ doc.category }}</span>
+              <span class="ps-uploader">{{ doc.uploader_name }}</span>
+              <span class="ps-date">{{ formatDate(doc.created_time) }}</span>
+            </div>
+            <p class="ps-card-title">{{ doc.title }}</p>
+            <p class="ps-card-content">{{ doc.content?.slice(0, 80) }}{{ doc.content?.length > 80 ? '...' : '' }}</p>
+            <div class="ps-card-tags" v-if="doc.tags">
+              <span v-for="tag in doc.tags.split(',')" :key="tag" class="ps-tag">{{ tag.trim() }}</span>
+            </div>
+          </div>
+          <div class="ps-card-footer">
+            <span class="ps-stat">
+              <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              {{ doc.view_count }}
+            </span>
+            <button class="ps-like-btn" @click.stop="likeDoc(doc)">
+              <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"></path><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+              {{ doc.like_count }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ 下部：新闻列表 + 右侧热点文件 ══ -->
     <div class="bottom-section">
       <!-- 新闻列表 -->
@@ -239,11 +295,14 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getHotNews, getCentralDocs, getDailySummary } from '@/api/news';
+import { apiClient, API_ROUTES } from '@/router/api_routes';
+import { useUserStore } from '@/stores/auth.js';
 import slide1Img from '@/assets/photos/discover/slide1.jpg';
 import slide2Img from '@/assets/photos/discover/slide2.jpg';
 import slide3Img from '@/assets/photos/discover/slide3.jpg';
 
 const router = useRouter();
+const userStore = useUserStore();
 let slideTimer = null;
 // ── 轮播 ──────────────────────────────────────────────────────────────────────
 const slideIdx = ref(0);
@@ -336,6 +395,30 @@ const bricks = [
   },
 ];
 
+// ── 全景政策广场（认证主体上传的真实政务文件）────────────────────────────────
+const policyDocs = ref([]);
+const policyDocsLoading = ref(true);
+const policyDocViewMode = ref('list');
+const POLICY_COLORS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#e67e22'];
+
+async function loadPolicyDocs() {
+  try {
+    const res = await apiClient.get(API_ROUTES.POLICY_DOCS_APPROVED, { params: { limit: 20 } });
+    policyDocs.value = res.data;
+  } catch (e) {
+    console.warn('政务文件加载失败', e);
+  } finally {
+    policyDocsLoading.value = false;
+  }
+}
+
+const likeDoc = async (doc) => {
+  try {
+    const res = await apiClient.post(API_ROUTES.POLICY_DOC_LIKE(doc.id));
+    doc.like_count = res.data.like_count;
+  } catch (e) { console.error(e); }
+};
+
 // ── 新闻列表 ──────────────────────────────────────────────────────────────────
 const newsList = ref([]);
 const newsLoading = ref(true);
@@ -349,10 +432,10 @@ const docsLoading = ref(true);
 // ── 生命周期 ──────────────────────────────────────────────────────────────────
 onMounted(() => {
   slideTimer = setInterval(nextSlide, 4000);
-  // 各数据源独立加载，互不阻塞
   loadSummary();
   loadNews();
   loadDocs();
+  loadPolicyDocs();
 });
 
 onUnmounted(() => { clearInterval(slideTimer); });
@@ -427,6 +510,66 @@ const getComplexityClass = (item) => {
 </script>
 
 <style scoped>
+/* ── 全景政策广场 ── */
+.policy-square {
+  background: var(--color-bg-card, #fff);
+  border: 1px solid var(--color-border, #e8e8e8);
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.ps-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.ps-title-row { display: flex; align-items: center; gap: 8px; }
+.ps-dot { width: 8px; height: 8px; border-radius: 50%; background: #c0392b; }
+.ps-sub { font-size: 12px; color: #999; }
+.ps-controls { display: flex; align-items: center; gap: 8px; }
+.ps-mode-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: 1px solid var(--color-border, #e8e8e8);
+  padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; color: #666;
+  transition: all 0.2s;
+}
+.ps-mode-btn.active, .ps-mode-btn:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
+.ps-hall-link { font-size: 12px; color: #c0392b; text-decoration: none; white-space: nowrap; }
+.ps-empty { text-align: center; color: #999; font-size: 13px; padding: 30px; }
+.ps-skeleton { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+.ps-list { display: flex; flex-direction: column; gap: 10px; }
+.ps-list.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+.ps-card {
+  display: flex; border: 1px solid var(--color-border, #e8e8e8);
+  border-radius: 4px; overflow: hidden; transition: box-shadow 0.2s;
+}
+.ps-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+.ps-list.grid .ps-card { flex-direction: column; }
+
+.ps-card-accent { width: 4px; flex-shrink: 0; }
+.ps-list.grid .ps-card-accent { width: 100%; height: 4px; }
+
+.ps-card-body { flex: 1; padding: 12px 14px; }
+.ps-card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.ps-category { font-size: 11px; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; }
+.ps-uploader { font-size: 12px; font-weight: 600; }
+.ps-date { font-size: 11px; color: #999; margin-left: auto; }
+.ps-card-title { font-size: 14px; font-weight: 700; margin: 0 0 6px; line-height: 1.4; }
+.ps-card-content { font-size: 13px; color: #666; margin: 0 0 8px; line-height: 1.5; }
+.ps-card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.ps-tag { font-size: 11px; background: #fce4e4; color: #c0392b; padding: 2px 7px; border-radius: 10px; }
+
+.ps-card-footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-top: 1px solid var(--color-border, #f0f0f0);
+  font-size: 12px; color: #999;
+}
+.ps-stat { display: flex; align-items: center; gap: 4px; }
+.ps-like-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer; color: #999; font-size: 12px;
+  transition: color 0.2s;
+}
+.ps-like-btn:hover { color: #c0392b; }
+
 .discover-page {
   height: 100%;
   overflow-y: auto;

@@ -11,7 +11,7 @@ from app.api.deps import get_current_user, get_current_user_from_token_value
 from app.core.config import GlobalConfig
 from app.core.database import get_session
 from app.models.chat_message import ChatMessage
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services import email_service, rag_service, stats_service
 
 
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if not current_user.is_admin:
+    if current_user.role != UserRole.admin:
         raise HTTPException(status_code=403, detail="Admin only")
     return current_user
 
@@ -35,7 +35,7 @@ def list_users(
             "uid": u.uid,
             "uname": u.uname,
             "email": u.email,
-            "is_admin": u.is_admin,
+            "role": u.role,
             "created_time": str(u.created_time),
             "last_login": str(u.last_login),
             "avatar_url": u.avatar_url,
@@ -72,7 +72,26 @@ def admin_stats(
     }
 
 
-@router.patch("/users/{uid}/toggle-admin", response_model=dict)
+@router.patch("/users/{uid}/set-role", response_model=dict)
+def set_user_role(
+    uid: int,
+    role: UserRole,
+    session: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+):
+    user = session.get(User, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.uid == admin.uid:
+        raise HTTPException(status_code=400, detail="Cannot modify yourself")
+    user.role = role
+    session.add(user)
+    session.commit()
+    role_names = {UserRole.normal: "普通用户", UserRole.certified: "认证主体", UserRole.admin: "管理员"}
+    email_service.send_role_change_email(user, role_names[role])
+    return {"uid": user.uid, "role": user.role}
+
+
 def toggle_admin(
     uid: int,
     session: Session = Depends(get_session),
@@ -83,11 +102,11 @@ def toggle_admin(
         raise HTTPException(status_code=404, detail="User not found")
     if user.uid == admin.uid:
         raise HTTPException(status_code=400, detail="Cannot modify yourself")
-    user.is_admin = not user.is_admin
+    user.role = UserRole.admin if user.role != UserRole.admin else UserRole.normal
     session.add(user)
     session.commit()
-    email_service.send_role_change_email(user, "管理员" if user.is_admin else "普通用户")
-    return {"uid": user.uid, "is_admin": user.is_admin}
+    email_service.send_role_change_email(user, "管理员" if user.role == UserRole.admin else "普通用户")
+    return {"uid": user.uid, "role": user.role}
 
 
 @router.delete("/users/{uid}")
@@ -120,7 +139,7 @@ async def admin_stats_stream(
     session: Session = Depends(get_session),
 ):
     admin = get_current_user_from_token_value(session, token)
-    if not admin.is_admin:
+    if admin.role != UserRole.admin:
         raise HTTPException(status_code=403, detail="Admin only")
 
     async def event_generator():
@@ -164,6 +183,85 @@ def rag_search(
             source="admin_search",
         )
     }
+
+
+@router.get("/user-geo")
+def admin_user_geo(
+    session: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+):
+    import ipaddress
+    users = session.exec(select(User)).all()
+    # Simple heuristic: map last octet mod to provinces for demo
+    provinces = [
+        "广东", "北京", "上海", "浙江", "江苏", "四川", "湖北", "湖南",
+        "山东", "河南", "福建", "陕西", "辽宁", "河北", "安徽", "重庆",
+        "云南", "贵州", "江西", "黑龙江", "吉林", "内蒙古", "广西", "新疆",
+        "甘肃", "山西", "天津", "海南", "宁夏", "青海", "西藏"
+    ]
+    dist = {}
+    for u in users:
+        ip = u.last_ip
+        if not ip:
+            continue
+        try:
+            addr = ipaddress.ip_address(ip)
+            if addr.is_private or addr.is_loopback:
+                # assign based on uid for demo variety
+                prov = provinces[u.uid % len(provinces)]
+            else:
+                prov = provinces[int(ip.split(".")[-1]) % len(provinces)]
+        except Exception:
+            continue
+        dist[prov] = dist.get(prov, 0) + 1
+    return {"geo_dist": [{"name": k, "value": v} for k, v in dist.items()]}
+
+
+@router.get("/opinion-stats")
+def admin_opinion_stats(
+    session: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+):
+    from app.models.opinion import Opinion
+    from app.models.policy_document import PolicyDocument
+    opinions = session.exec(select(Opinion)).all()
+    type_dist = {}
+    rating_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    word_freq = {}
+    for op in opinions:
+        type_dist[op.opinion_type] = type_dist.get(op.opinion_type, 0) + 1
+        if op.rating:
+            r = max(1, min(5, int(op.rating)))
+            rating_dist[r] = rating_dist.get(r, 0) + 1
+        for word in (op.content or "").split():
+            if len(word) >= 2:
+                word_freq[word] = word_freq.get(word, 0) + 1
+    hot_words = sorted(word_freq.items(), key=lambda x: -x[1])[:30]
+    total_docs = session.exec(select(func.count(PolicyDocument.id))).one()
+    from app.models.policy_document import DocStatus
+    approved_docs = session.exec(select(func.count(PolicyDocument.id)).where(PolicyDocument.status == DocStatus.approved)).one()
+    pending_docs = session.exec(select(func.count(PolicyDocument.id)).where(PolicyDocument.status == DocStatus.pending)).one()
+    return {
+        "total_opinions": len(opinions),
+        "type_dist": type_dist,
+        "rating_dist": {str(k): v for k, v in rating_dist.items()},
+        "hot_words": [{"word": w, "count": c} for w, c in hot_words],
+        "total_docs": total_docs,
+        "approved_docs": approved_docs,
+        "pending_docs": pending_docs,
+    }
+
+
+@router.get("/user-role-dist")
+def admin_user_role_dist(
+    session: Session = Depends(get_session),
+    admin: User = Depends(require_admin),
+):
+    users = session.exec(select(User)).all()
+    dist = {}
+    for u in users:
+        dist[u.role] = dist.get(u.role, 0) + 1
+    return {"role_dist": dist}
 
 
 @router.get("/users/{uid}/avatar")

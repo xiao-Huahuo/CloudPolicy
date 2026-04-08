@@ -26,6 +26,7 @@
             <h2 class="username">{{ userStore.user?.uname || '加载中...' }}</h2>
             <p class="user-email">{{ userStore.user?.email || '暂无邮箱' }}</p>
             <span class="status-badge">账号状态：正常</span>
+            <span class="role-badge" :class="roleBadgeClass">{{ roleLabel }}</span>
           </div>
         </div>
         <div class="user-card-actions">
@@ -96,6 +97,17 @@ const userStore = useUserStore();
 
 const statsData = ref(null);
 const showAvatarEditor = ref(false);
+
+const roleLabel = computed(() => {
+  const map = { admin: '管理员', certified: '认证主体', normal: '普通用户' };
+  return map[userStore.user?.role] || '普通用户';
+});
+
+const roleBadgeClass = computed(() => ({
+  'role-admin': userStore.user?.role === 'admin',
+  'role-certified': userStore.user?.role === 'certified',
+  'role-normal': !userStore.user?.role || userStore.user?.role === 'normal',
+}));
 
 const displayAvatar = computed(() => {
     if (!userStore.user?.avatar_url) return null;
@@ -279,6 +291,18 @@ const openLoginModal = () => {
   color: #666;
   font-size: 14px;
 }
+
+.role-badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+  width: max-content;
+}
+.role-admin { background-color: #fce4e4; color: #c0392b; }
+.role-certified { background-color: #e8f0fe; color: #1a56db; }
+.role-normal { background-color: #f5f5f5; color: #666; }
 
 .status-badge {
   display: inline-block;

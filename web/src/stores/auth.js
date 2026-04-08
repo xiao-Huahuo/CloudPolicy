@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { login as loginApi, getMe } from '@/api/user';
 
 export const useUserStore = defineStore('user', () => {
@@ -38,5 +38,8 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('token');
   };
 
-  return { token, user, login, logout, fetchUser };
+  const isAdmin = computed(() => user.value?.role === 'admin');
+  const isCertified = computed(() => user.value?.role === 'certified');
+
+  return { token, user, isAdmin, isCertified, login, logout, fetchUser };
 });

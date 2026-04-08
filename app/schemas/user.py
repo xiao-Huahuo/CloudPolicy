@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlmodel import SQLModel
 
-from app.models.user import UserBase
+from app.models.user import UserBase, UserRole
 
 
 class UserCreate(UserBase):
@@ -14,7 +14,7 @@ class UserRead(UserBase):
     uid: int
     created_time: datetime
     last_login: datetime
-    is_admin: bool = False
+    role: UserRole = UserRole.normal
     email_verified: bool = False
 
 

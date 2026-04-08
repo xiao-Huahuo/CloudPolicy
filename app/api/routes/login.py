@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
@@ -14,15 +14,12 @@ from app.schemas.token import Token
 router = APIRouter()
 
 
-# 用户登录
 @router.post("/", response_model=Token)
 def login_access_token(
+        request: Request,
         session: Session = Depends(get_session),
         form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Any:
-    """
-    OAuth2兼容的access-token验证登录接口
-    """
     statement = select(User).where(User.uname == form_data.username)
     user = session.exec(statement).first()
 
@@ -32,12 +29,12 @@ def login_access_token(
         raise HTTPException(status_code=403, detail="邮箱未验证，请先完成邮箱验证")
 
     user.last_login = datetime.now()
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else None)
+    if client_ip:
+        user.last_ip = client_ip.split(",")[0].strip()
     session.add(user)
     session.commit()
 
     access_token_expires = timedelta(days=GlobalConfig.ACCESS_TOKEN_EXPIRE_DAYS)
-    access_token = create_access_token(
-        subject=user.uid, expires_delta=access_token_expires
-    )
-
+    access_token = create_access_token(subject=user.uid, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")

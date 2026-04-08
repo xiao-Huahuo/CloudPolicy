@@ -15,6 +15,7 @@ const isIconMode = ref(true);
 const sidebarRef = ref(null);
 
 const isStandalonePage = computed(() => route.meta?.standalone === true);
+const isShowcasePage = computed(() => route.meta?.showcase === true);
 
 const openAuthModal = () => { showAuthModal.value = true; };
 onMounted(async () => {
@@ -34,6 +35,12 @@ onUnmounted(() => {
 <template>
   <template v-if="isStandalonePage">
     <div class="standalone-page">
+      <router-view />
+      <AuthModal :is-open="showAuthModal" @close="showAuthModal = false" />
+    </div>
+  </template>
+  <template v-else-if="isShowcasePage">
+    <div class="showcase-layout">
       <router-view />
       <AuthModal :is-open="showAuthModal" @close="showAuthModal = false" />
     </div>
@@ -77,6 +84,7 @@ body {
   overflow-y: auto;
   background-color: var(--content-bg);
   padding: 20px;
+  transition: padding-left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .app-layout.icon-mode .sidebar {
   position: fixed;
@@ -86,7 +94,6 @@ body {
   height: auto;
   max-height: calc(100vh - 24px);
   z-index: 40;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 .main-content.main-content-icon-mode {
   padding-left: 92px;
@@ -95,5 +102,10 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+}
+.showcase-layout {
+  width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 </style>

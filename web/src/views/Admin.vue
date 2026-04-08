@@ -125,13 +125,13 @@
               <td>{{ u.email_verified ? '已验证' : '未验证' }}</td>
               <td>{{ u.created_time?.slice(0, 10) }}</td>
               <td>
-                <span :class="u.is_admin ? 'badge-admin' : 'badge-user'">
-                  {{ u.is_admin ? '管理员' : '普通用户' }}
+                <span :class="u.role === 'admin' ? 'badge-admin' : u.role === 'certified' ? 'badge-certified' : 'badge-user'">
+                  {{ u.role === 'admin' ? '管理员' : u.role === 'certified' ? '认证主体' : '普通用户' }}
                 </span>
               </td>
               <td class="action-cell">
                 <button class="tbl-btn" @click="toggleAdmin(u.uid)" :disabled="u.uid === selfUid">
-                  {{ u.is_admin ? '撤销管理员' : '设为管理员' }}
+                  {{ u.role === 'admin' ? '撤销管理员' : '设为管理员' }}
                 </button>
                 <button class="tbl-btn danger" @click="deleteUser(u.uid)" :disabled="u.uid === selfUid">删除</button>
               </td>
@@ -151,6 +151,71 @@
             <span class="bar-count">{{ item.count }}</span>
           </div>
         </div>
+      </div>
+
+      <!-- 民意评议分析 -->
+      <div class="section">
+        <div class="section-label-row">
+          <span class="section-label">民意评议分析</span>
+        </div>
+        <div class="opinion-overview">
+          <div class="ov-mini" v-for="card in opinionCards" :key="card.label" :style="{'--ac': card.color}">
+            <span class="ov-mini-val">{{ card.value }}</span>
+            <span class="ov-mini-label">{{ card.label }}</span>
+          </div>
+        </div>
+        <div class="dist-grid">
+          <div>
+            <div class="chart-sub-label">评议类型分布</div>
+            <div ref="opTypePieRef" class="chart-area-sm"></div>
+          </div>
+          <div>
+            <div class="chart-sub-label">评分分布</div>
+            <div ref="opRatingBarRef" class="chart-area-sm"></div>
+          </div>
+          <div>
+            <div class="chart-sub-label">用户角色分布</div>
+            <div ref="rolePieRef" class="chart-area-sm"></div>
+          </div>
+          <div>
+            <div class="chart-sub-label">热词 Top20</div>
+            <div class="hot-words">
+              <span v-for="w in (opinionStats?.hot_words || []).slice(0,20)" :key="w.word"
+                class="hot-word" :style="{ fontSize: Math.max(11, Math.min(20, 11 + w.count)) + 'px' }">
+                {{ w.word }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 政务文件状态 -->
+      <div class="section">
+        <div class="section-label-row">
+          <span class="section-label">政务文件状态</span>
+        </div>
+        <div class="doc-status-row">
+          <div class="ds-card" style="--ac:#27ae60">
+            <span class="ds-val">{{ opinionStats?.approved_docs ?? '-' }}</span>
+            <span class="ds-label">已通过</span>
+          </div>
+          <div class="ds-card" style="--ac:#e67e22">
+            <span class="ds-val">{{ opinionStats?.pending_docs ?? '-' }}</span>
+            <span class="ds-label">待审核</span>
+          </div>
+          <div class="ds-card" style="--ac:#2980b9">
+            <span class="ds-val">{{ opinionStats?.total_docs ?? '-' }}</span>
+            <span class="ds-label">总文件数</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用户IP地理分布 -->
+      <div class="section">
+        <div class="section-label-row">
+          <span class="section-label">用户IP地理分布</span>
+        </div>
+        <div ref="chinaMapRef" class="china-map-area"></div>
       </div>
     </template>
   </div>
@@ -186,12 +251,24 @@ const roseChartRef = ref(null);
 const materialsComboChartRef = ref(null);
 const barChartRef = ref(null);
 const diffChartRef = ref(null);
+const opTypePieRef = ref(null);
+const opRatingBarRef = ref(null);
+const rolePieRef = ref(null);
+const chinaMapRef = ref(null);
+
+const opinionStats = ref(null);
+const roleDist = ref(null);
+const geoData = ref([]);
 
 let timeChart = null;
 let roseChart = null;
 let materialsComboChart = null;
 let barChart = null;
 let diffChart = null;
+let opTypePieChart = null;
+let opRatingBarChart = null;
+let rolePieChart = null;
+let chinaMapChart = null;
 let statsEventSource = null;
 
 const getDistData = () => (distScope.value === 'personal' ? myStats.value : allStats.value);
@@ -199,16 +276,22 @@ const getDistData = () => (distScope.value === 'personal' ? myStats.value : allS
 async function loadAll() {
   usersLoading.value = true;
   try {
-    const [usersRes, statsRes, myRes, allRes] = await Promise.all([
+    const [usersRes, statsRes, myRes, allRes, opRes, roleRes, geoRes] = await Promise.all([
       apiClient.get(API_ROUTES.ADMIN_USERS),
       apiClient.get(API_ROUTES.ADMIN_STATS),
       apiClient.get(API_ROUTES.ANALYSIS_ME),
       apiClient.get(API_ROUTES.ADMIN_ANALYSIS_ALL),
+      apiClient.get(API_ROUTES.ADMIN_OPINION_STATS),
+      apiClient.get(API_ROUTES.ADMIN_USER_ROLE_DIST),
+      apiClient.get(API_ROUTES.ADMIN_USER_GEO),
     ]);
     users.value = usersRes.data;
     stats.value = statsRes.data;
     myStats.value = myRes.data;
     allStats.value = allRes.data;
+    opinionStats.value = opRes.data;
+    roleDist.value = roleRes.data;
+    geoData.value = geoRes.data.geo_dist || [];
     await nextTick();
     renderAllCharts();
     connectRealtimeStream();
@@ -244,6 +327,8 @@ function connectRealtimeStream() {
 function renderAllCharts() {
   renderTimeChart();
   renderDistributionCharts();
+  renderOpinionCharts();
+  renderChinaMap();
 }
 
 function renderTimeChart() {
@@ -378,14 +463,100 @@ function renderDistributionCharts() {
   }
 }
 
-watch(timeChartType, () => renderTimeChart());
-watch(distScope, () => renderDistributionCharts());
+async function renderChinaMap() {
+  if (!chinaMapRef.value) return;
+  if (!echarts.getMap('china')) {
+    try {
+      const res = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+      const geoJson = await res.json();
+      echarts.registerMap('china', geoJson);
+    } catch (e) { console.warn('China map load failed', e); return; }
+  }
+  if (!chinaMapChart) chinaMapChart = echarts.init(chinaMapRef.value);
+  const data = geoData.value;
+  const max = Math.max(...data.map(d => d.value), 1);
+  chinaMapChart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} 人' },
+    visualMap: {
+      min: 0, max,
+      left: 'left', bottom: 20,
+      text: ['多', '少'],
+      inRange: { color: ['#fde8e8', '#c0392b'] },
+      textStyle: { fontSize: 11 },
+    },
+    series: [{
+      type: 'map', map: 'china',
+      roam: true,
+      emphasis: { itemStyle: { areaColor: '#e74c3c' }, label: { show: true } },
+      data,
+      itemStyle: { borderColor: '#fff', borderWidth: 0.5 },
+    }],
+  }, true);
+}
+
+const opinionCards = computed(() => [
+  { label: '总评议数', value: opinionStats.value?.total_opinions ?? '-', color: '#8e44ad' },
+  { label: '总文件数', value: opinionStats.value?.total_docs ?? '-', color: '#2980b9' },
+  { label: '已通过文件', value: opinionStats.value?.approved_docs ?? '-', color: '#27ae60' },
+  { label: '待审核文件', value: opinionStats.value?.pending_docs ?? '-', color: '#e67e22' },
+]);
+
+function renderOpinionCharts() {
+  const typeMap = { review: '落地评价', correction: '解析纠错', message: '办事留言' };
+  const typeDist = opinionStats.value?.type_dist || {};
+  if (opTypePieRef.value) {
+    if (!opTypePieChart) opTypePieChart = echarts.init(opTypePieRef.value);
+    opTypePieChart.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      color: ['#c0392b', '#2980b9', '#27ae60'],
+      series: [{
+        type: 'pie', radius: ['35%', '68%'],
+        data: Object.entries(typeDist).map(([k, v]) => ({ name: typeMap[k] || k, value: v })),
+        label: { fontSize: 11 },
+        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.2)' } },
+      }],
+    }, true);
+  }
+  const ratingDist = opinionStats.value?.rating_dist || {};
+  if (opRatingBarRef.value) {
+    if (!opRatingBarChart) opRatingBarChart = echarts.init(opRatingBarRef.value);
+    opRatingBarChart.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { top: 10, bottom: 30, left: 36, right: 10 },
+      xAxis: { type: 'category', data: ['1星','2星','3星','4星','5星'] },
+      yAxis: { type: 'value', minInterval: 1 },
+      series: [{
+        type: 'bar', barWidth: '50%',
+        data: [1,2,3,4,5].map(n => ratingDist[String(n)] || 0),
+        itemStyle: {
+          color: p => ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#27ae60'][p.dataIndex],
+          borderRadius: [4,4,0,0],
+        },
+      }],
+    }, true);
+  }
+  const roleLabels = { normal: '普通用户', certified: '认证主体', admin: '管理员' };
+  const rd = roleDist.value?.role_dist || {};
+  if (rolePieRef.value) {
+    if (!rolePieChart) rolePieChart = echarts.init(rolePieRef.value);
+    rolePieChart.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      color: ['#bdc3c7', '#c0392b', '#2980b9'],
+      series: [{
+        type: 'pie', radius: ['35%', '68%'],
+        data: Object.entries(rd).map(([k, v]) => ({ name: roleLabels[k] || k, value: v })),
+        label: { fontSize: 11 },
+        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.2)' } },
+      }],
+    }, true);
+  }
+}
 
 async function toggleAdmin(uid) {
   try {
     const res = await apiClient.patch(`${API_ROUTES.ADMIN_USERS}/${uid}/toggle-admin`);
     const user = users.value.find((item) => item.uid === uid);
-    if (user) user.is_admin = res.data.is_admin;
+    if (user) user.role = res.data.role;
   } catch (e) {
     console.warn(e);
   }
@@ -409,7 +580,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  [timeChart, roseChart, materialsComboChart, barChart, diffChart].forEach((chart) => chart?.dispose());
+  [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart, chinaMapChart].forEach((chart) => chart?.dispose());
   statsEventSource?.close();
 });
 </script>
@@ -461,6 +632,7 @@ onUnmounted(() => {
 .user-table th { text-align: left; padding: 8px 10px; background: #f9f9f9; color: #666; font-weight: 600; border-bottom: 1px solid #eee; }
 .user-table td { padding: 8px 10px; border-bottom: 1px solid #f5f5f5; color: #333; vertical-align: middle; }
 .badge-admin { background: #c0392b; color: #fff; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+.badge-certified { background: #2980b9; color: #fff; padding: 2px 8px; font-size: 11px; font-weight: 700; }
 .badge-user { background: #f0f0f0; color: #666; padding: 2px 8px; font-size: 11px; }
 .action-cell { display: flex; gap: 6px; }
 .tbl-btn { background: #f5f5f5; border: none; padding: 4px 10px; font-size: 11px; cursor: pointer; transition: background 0.2s; }
@@ -477,5 +649,37 @@ onUnmounted(() => {
 .bar-track { flex: 1; background: #f5f5f5; height: 12px; }
 .bar-fill { height: 100%; background: linear-gradient(to right, #c0392b, #e67e22); transition: width 0.4s; }
 .bar-count { font-size: 12px; color: #333; width: 30px; text-align: right; flex-shrink: 0; }
+
+.opinion-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.ov-mini {
+  border-left: 3px solid var(--ac);
+  background: var(--card-bg, #fff);
+  border: 1px solid #eee;
+  border-left: 3px solid var(--ac);
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ov-mini-val { font-size: 24px; font-weight: 800; color: var(--ac); line-height: 1; }
+.ov-mini-label { font-size: 11px; color: #888; }
+
+.hot-words { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; align-content: flex-start; height: 180px; overflow: hidden; }
+.hot-word {
+  padding: 2px 8px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(192,57,43,0.08), rgba(41,128,185,0.08));
+  color: var(--text-primary, #333); cursor: default;
+  transition: transform 0.2s, background 0.2s;
+}
+.hot-word:hover { transform: scale(1.1); background: rgba(192,57,43,0.15); }
+
+.doc-status-row { display: flex; gap: 12px; }
+.ds-card {
+  flex: 1; padding: 16px 20px;
+  border: 1px solid #eee; border-top: 3px solid var(--ac);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ds-val { font-size: 28px; font-weight: 800; color: var(--ac); line-height: 1; }
+.ds-label { font-size: 12px; color: #888; }
+
+.china-map-area { width: 100%; height: 480px; }
 </style>
 

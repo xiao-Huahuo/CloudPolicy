@@ -7,7 +7,7 @@ import threading
 import logging
 
 from app.core.config import GlobalConfig
-from app.api.routes import user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin, agent
+from app.api.routes import user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin, agent, policy_document, opinion
 from app.services.init_db import init_db_and_admin
 from app.services.worker import start_worker, stop_worker # 导入 worker 的启动和停止函数
 from app.core.cors import CorsMiddleWare
@@ -91,6 +91,8 @@ app.include_router(todo.router, prefix="/todo", tags=["todo"])
 app.include_router(favorite.router, prefix="/favorite", tags=["favorite"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(agent.router, prefix="/agent", tags=["agent"])
+app.include_router(policy_document.router, prefix="/policy-documents", tags=["policy_document"])
+app.include_router(opinion.router, prefix="/opinions", tags=["opinion"])
 
 @app.get("/")
 async def root():

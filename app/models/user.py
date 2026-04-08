@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 from typing import List, Optional
 
@@ -10,12 +11,29 @@ if TYPE_CHECKING:
     from app.models.favorite import Favorite
     from app.models.todo import TodoItem
 
+
+class UserRole(str, Enum):
+    normal = "normal"        # 普通用户
+    certified = "certified"  # 认证主体
+    admin = "admin"          # 管理员
+
+
 class UserBase(SQLModel):
     uname: str = Field(index=True)
     email: str = Field(unique=True, index=True)
     phone: Optional[str] = Field(default=None)
     avatar_url: Optional[str] = Field(default=None)
-    is_admin: bool = Field(default=False)
+    role: UserRole = Field(default=UserRole.normal)
+    profession: Optional[str] = Field(default=None)
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == UserRole.admin
+
+    @property
+    def is_certified(self) -> bool:
+        return self.role == UserRole.certified
+
 
 class User(UserBase, table=True):
     uid: Optional[int] = Field(default=None, primary_key=True)
@@ -25,6 +43,7 @@ class User(UserBase, table=True):
     email_verified: bool = Field(default=False)
     email_verification_code: Optional[str] = Field(default=None)
     email_verification_sent_at: Optional[datetime] = Field(default=None)
+    last_ip: Optional[str] = Field(default=None)
 
     chat_messages: List["ChatMessage"] = Relationship(back_populates="user")
     stats_analyses: List["StatsAnalysis"] = Relationship(back_populates="user")

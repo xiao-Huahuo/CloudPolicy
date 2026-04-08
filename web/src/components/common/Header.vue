@@ -1,7 +1,7 @@
 <template>
   <header class="app-header">
     <!-- Hamburger button: only visible in icon mode -->
-    <button v-if="isIconMode" class="icon-btn hamburger-btn" @click="sidebarRef?.openDrawer()" title="打开侧边栏">
+    <button v-if="isIconMode" class="icon-btn hamburger-btn" @click="$emit('update:isIconMode', false)" title="展开侧边栏">
       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="6" x2="21" y2="6"></line>
         <line x1="3" y1="12" x2="21" y2="12"></line>

@@ -56,7 +56,7 @@
               <div v-if="msg.content" class="bubble" :class="msg.role">
                 <div
                   v-if="msg.role === 'assistant' || msg.role === 'trace'"
-                  class="bubble-content"
+                  class="bubble-content markdown-body"
                   v-html="renderMarkdown(msg.content)"
                 ></div>
                 <div v-else-if="msg.content" class="bubble-content">{{ msg.content }}</div>
@@ -196,6 +196,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import MarkdownIt from 'markdown-it';
+import 'github-markdown-css/github-markdown-light.css';
 import { useRoute } from 'vue-router';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
