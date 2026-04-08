@@ -1,44 +1,11 @@
 <template>
   <div class="discover-page">
 
-    <!-- ══ 顶部区域：轮播图(左) + 搜索/推荐(中) + 今日政务概况(右) ══ -->
+    <!-- ══ 顶部区域：全景滚动栏 + 今日政务概况(右) ══ -->
     <div class="top-section">
-      <!-- 左：轮播图 -->
-      <div class="carousel-area">
-        <transition name="slide-fade" mode="out-in">
-          <div class="carousel-slide" :key="slideIdx" :style="slides[slideIdx].img ? { backgroundImage: `url(${slides[slideIdx].img})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: slides[slideIdx].bg }">
-            <div class="slide-overlay"></div>
-            <div class="slide-inner">
-              <span class="slide-tag">{{ slides[slideIdx].tag }}</span>
-              <h2 class="slide-title">{{ slides[slideIdx].title }}</h2>
-              <p class="slide-desc">{{ slides[slideIdx].desc }}</p>
-              <button class="slide-btn" @click="slides[slideIdx].action && slides[slideIdx].action()">
-                {{ slides[slideIdx].btnText }}
-              </button>
-            </div>
-            <div class="slide-deco">
-              <div class="deco-circle c1"></div>
-              <div class="deco-circle c2"></div>
-            </div>
-          </div>
-        </transition>
-        <div class="slide-dots">
-          <span
-            v-for="(s, i) in slides" :key="i"
-            class="sdot" :class="{ active: i === slideIdx }"
-            @click="slideIdx = i"
-          ></span>
-        </div>
-        <button class="arrow-btn left-btn" @click="prevSlide">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        </button>
-        <button class="arrow-btn right-btn" @click="nextSlide">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-      </div>
-
-      <!-- 中间：搜索框 + 推荐栏 -->
-      <div class="mid-search-col">
+      <!-- 左+中：滚动栏区域 -->
+      <div class="panorama-col">
+        <!-- 搜索栏 -->
         <div class="tsb-input-wrap">
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <input v-model="searchInput" placeholder="搜索政策文件、时事热点..." @keydown.enter="goSearch" />
@@ -47,6 +14,26 @@
           </button>
           <button class="tsb-btn" @click="goSearch">搜索</button>
         </div>
+
+        <!-- 全景无缝滚动栏 -->
+        <div class="panorama-track">
+          <div class="panorama-belt">
+            <div
+              v-for="(s, i) in [...slides, ...slides, ...slides]" :key="i"
+              class="panorama-card"
+              :style="s.img ? { backgroundImage: `url(${s.img})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: s.bg }"
+              @click="s.action && s.action()"
+            >
+              <div class="panorama-overlay"></div>
+              <div class="panorama-inner">
+                <span class="panorama-tag">{{ s.tag }}</span>
+                <p class="panorama-title">{{ s.title }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 推荐栏 -->
         <div class="mid-rec-strip">
           <div class="rec-col">
             <span class="rec-col-title">热门</span>
@@ -101,28 +88,28 @@
       </div>
     </div>
 
-    <!-- ══ 中部：砖块传送带 ══ -->
+    <!-- ══ 中部：砖块墙 ══ -->
     <div class="bricks-section">
       <h3 class="section-label">功能中心</h3>
-      <div class="conveyor-track">
-        <div class="conveyor-belt">
-          <div
-            v-for="brick in [...bricks, ...bricks]" :key="brick.id + '_f'"
-            class="brick-item"
-            :class="[brick.size, brick.disabled ? 'disabled' : '']"
-            :style="{ '--brick-color': brick.color }"
-            @click="!brick.disabled && brick.action && brick.action()"
-          >
-            <div class="brick-icon">
-              <component :is="'svg'" v-bind="brick.iconProps" v-html="brick.iconPath"></component>
-            </div>
-            <div class="brick-info">
-              <span class="brick-name">{{ brick.name }}</span>
-              <span class="brick-desc">{{ brick.desc }}</span>
-            </div>
-            <span v-if="brick.disabled" class="brick-badge">即将上线</span>
-            <span v-if="brick.hot" class="brick-badge hot">热门</span>
+      <div class="masonry-wall">
+        <div
+          v-for="(brick, idx) in bricks" :key="brick.id"
+          class="brick-item"
+          :class="[brick.size, brick.disabled ? 'disabled' : '', `brick-row-${idx % 3}`]"
+          :style="{ '--brick-color': brick.color }"
+          @click="!brick.disabled && brick.action && brick.action()"
+        >
+          <div class="brick-shine"></div>
+          <div class="brick-edge"></div>
+          <div class="brick-icon">
+            <component :is="'svg'" v-bind="brick.iconProps" v-html="brick.iconPath"></component>
           </div>
+          <div class="brick-info">
+            <span class="brick-name">{{ brick.name }}</span>
+            <span class="brick-desc">{{ brick.desc }}</span>
+          </div>
+          <span v-if="brick.disabled" class="brick-badge">即将上线</span>
+          <span v-if="brick.hot" class="brick-badge hot">热门</span>
         </div>
       </div>
     </div>
@@ -574,7 +561,7 @@ const getComplexityClass = (item) => {
   height: 100%;
   overflow-y: auto;
   padding: 16px 20px;
-  background: var(--content-bg, #f4f5f7);
+  background: linear-gradient(135deg, #1a0a09 0%, #c0392b 40%, #2980b9 100%);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -599,156 +586,106 @@ const getComplexityClass = (item) => {
 }
 .rec-item-text:hover { color: #c0392b; }
 
-/* ── 中部轮播+概况区域 ────────────────────────────────────────────────────── */
+/* ── 顶部区域布局 ─────────────────────────────────────────────────────────── */
 .top-section {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 1fr 280px;
   gap: 14px;
   flex-shrink: 0;
 }
 
-/* 中间搜索列 */
-.mid-search-col {
+/* 左侧全景列 */
+.panorama-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.mid-search-col .tsb-input-wrap {
+
+/* 搜索框 */
+.tsb-input-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border: 1.5px solid #e0e0e0;
+  background: rgba(255,255,255,0.95);
+  border: 1.5px solid rgba(255,255,255,0.4);
   border-radius: 999px;
   padding: 8px 12px;
   color: #aaa;
   transition: border-color 0.2s;
   flex-shrink: 0;
 }
-.mid-search-col .tsb-input-wrap:focus-within { border-color: #c0392b; color: #c0392b; }
-.mid-search-col .tsb-input-wrap input {
+.tsb-input-wrap:focus-within { border-color: #c0392b; color: #c0392b; }
+.tsb-input-wrap input {
   border: none; outline: none; flex: 1;
   font-size: 13px; color: #222; background: transparent;
 }
-.mid-search-col .tsb-input-wrap input::placeholder { color: #bbb; }
-.mid-search-col .tsb-btn {
+.tsb-input-wrap input::placeholder { color: #bbb; }
+.tsb-clear {
+  background: none; border: none; cursor: pointer; color: #bbb; padding: 0; display: flex;
+}
+.tsb-btn {
   background: #c0392b; color: #fff; border: none;
   border-bottom: 3px solid #922b21; border-radius: 999px; padding: 5px 14px;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+  font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
-.mid-search-col .tsb-btn:hover { background: #e74c3c; border-bottom-color: #c0392b; }
-.mid-rec-strip {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 10px 14px;
-  overflow: hidden;
-}
+.tsb-btn:hover { background: #e74c3c; }
 
-/* 轮播 */
-.carousel-area {
-  border-radius: 16px;
+/* 全景无缝滚动栏 */
+.panorama-track {
   overflow: hidden;
+  border-radius: 10px;
+  height: 160px;
+  flex-shrink: 0;
   position: relative;
-  height: 200px;
 }
-.carousel-slide {
-  position: absolute;
-  inset: 0;
+.panorama-belt {
   display: flex;
-  align-items: center;
-  padding: 0 60px;
-  overflow: hidden;
+  height: 100%;
+  animation: panoramaScroll 30s linear infinite;
 }
-.slide-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 100%);
+.panorama-belt:hover { animation-play-state: paused; }
+@keyframes panoramaScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+.panorama-card {
+  flex-shrink: 0;
+  width: 260px;
+  height: 100%;
+  border-radius: 8px;
+  margin-right: 10px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.panorama-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 100%);
+}
+.panorama-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 14px;
   z-index: 1;
 }
-.slide-inner {
-  position: relative;
-  z-index: 2;
-  color: #fff;
+.panorama-tag {
+  font-size: 10px; color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.15); padding: 2px 8px;
+  border-radius: 10px; align-self: flex-start; margin-bottom: 6px;
 }
-.slide-tag {
-  font-size: 11px;
-  background: rgba(255,255,255,0.2);
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: 1px;
-  font-weight: 600;
+.panorama-title {
+  margin: 0; font-size: 15px; font-weight: 700; color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
-.slide-title {
-  margin: 10px 0 6px;
-  font-size: 26px;
-  font-weight: 800;
-  color: #fff;
+.mid-rec-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 8px;
+  padding: 10px 14px;
 }
-.slide-desc {
-  margin: 0 0 16px;
-  font-size: 13px;
-  color: rgba(255,255,255,0.8);
-}
-.slide-btn {
-  background: rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.4);
-  color: #fff;
-  padding: 7px 20px;
-  border-radius: 20px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.slide-btn:hover { background: rgba(255,255,255,0.35); }
-.deco-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-}
-.c1 { width: 200px; height: 200px; right: -40px; top: -60px; }
-.c2 { width: 120px; height: 120px; right: 80px; bottom: -40px; }
-.slide-dots {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  z-index: 3;
-}
-.sdot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.4);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.sdot.active { background: #fff; width: 16px; border-radius: 3px; }
-.arrow-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255,255,255,0.15);
-  border: none;
-  border-radius: 50%;
-  width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  color: #fff;
-  z-index: 3;
-  transition: background 0.2s;
-}
-.arrow-btn:hover { background: rgba(255,255,255,0.3); }
-.left-btn { left: 14px; }
-.right-btn { right: 14px; }
-.slide-fade-enter-active, .slide-fade-leave-active { transition: opacity 0.4s; }
-.slide-fade-enter-from, .slide-fade-leave-to { opacity: 0; }
+
 
 /* 今日政务概况 */
 .gov-summary-card {
@@ -797,43 +734,21 @@ const getComplexityClass = (item) => {
 .section-label {
   font-size: 14px;
   font-weight: 700;
-  color: #111;
+  color: rgba(255,255,255,0.9);
   margin: 0 0 8px;
 }
 
-/* 传送带 */
-.conveyor-track {
-  overflow: hidden;
-  position: relative;
-}
-.conveyor-track::before, .conveyor-track::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0;
-  width: 60px;
-  z-index: 2;
-  pointer-events: none;
-}
-.conveyor-track::before { left: 0; background: linear-gradient(to right, var(--content-bg, #f4f5f7), transparent); }
-.conveyor-track::after  { right: 0; background: linear-gradient(to left, var(--content-bg, #f4f5f7), transparent); }
-
-.conveyor-belt {
+/* 砖块墙 */
+.masonry-wall {
   display: flex;
-  gap: 6px;
-  padding: 4px 0;
-  width: max-content;
-  animation: conveyor-scroll 28s linear infinite;
-}
-.conveyor-track:hover .conveyor-belt { animation-play-state: paused; }
-
-@keyframes conveyor-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .brick-item {
   background: var(--brick-color, #1565c0);
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px 16px;
   cursor: pointer;
   display: flex;
@@ -841,15 +756,48 @@ const getComplexityClass = (item) => {
   gap: 10px;
   position: relative;
   overflow: hidden;
-  transition: filter 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
   height: 72px;
+  min-width: 150px;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15);
 }
+
+/* 参差错落：每3个一组偏移 */
+.brick-row-1 { margin-top: 12px; }
+.brick-row-2 { margin-top: -6px; }
+
 .brick-item.brick-lg { min-width: 200px; height: 90px; }
 .brick-item.brick-md { min-width: 150px; }
 .brick-item.brick-sm { min-width: 120px; height: 60px; }
-.brick-item:not(.disabled):hover { filter: brightness(1.15); }
+
+.brick-item:not(.disabled):hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+}
 .brick-item.disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* 反光效果 */
+.brick-shine {
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+  pointer-events: none;
+  transition: left 0.4s ease;
+}
+.brick-item:not(.disabled):hover .brick-shine { left: 120%; }
+
+/* 边缘高光 */
+.brick-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  pointer-events: none;
+}
 .brick-icon {
   flex-shrink: 0;
   display: flex;

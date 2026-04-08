@@ -51,8 +51,8 @@
       </div>
     </div>
 
-    <div class="table-container scrollable-area">
-      <div v-if="loading" class="empty-state-centered">
+    <div class="table-container scrollable-area" ref="scrollContainer" @scroll="handleScroll">
+      <div v-if="loading && messages.length === 0" class="empty-state-centered">
         <span>加载中...</span>
       </div>
       <div v-else-if="historyMode === 'document' && messages.length === 0" class="empty-state-centered">
@@ -64,9 +64,10 @@
 
       <div v-else-if="historyMode === 'document'" class="table-body">
         <div
-          v-for="msg in messages"
+          v-for="(msg, index) in messages"
           :key="msg.id"
-          class="table-row"
+          class="table-row slide-in"
+          :style="{ animationDelay: `${Math.min(index, 29) * 40}ms` }"
           :class="{ 'row-selected': selectedIds.includes(msg.id) }"
           @click="handleRowClick(msg.id)"
         >
@@ -149,6 +150,11 @@ import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 const router = useRouter();
 const messages = ref([]);
 const loading = ref(false);
+const loadingMore = ref(false);
+const hasMore = ref(true);
+const page = ref(0);
+const PAGE_SIZE = 30;
+const scrollContainer = ref(null);
 const isSelectMode = ref(false);
 const selectedIds = ref([]);
 const sortBy = ref('created_time');
@@ -193,19 +199,45 @@ const getDifficultyLabel = (msg) => {
   return values[0] || '低';
 };
 
-const fetchMessages = async () => {
-  loading.value = true;
+const fetchMessages = async (reset = true) => {
+  if (reset) {
+    loading.value = true;
+    page.value = 0;
+    hasMore.value = true;
+    messages.value = [];
+  } else {
+    if (loadingMore.value || !hasMore.value) return;
+    loadingMore.value = true;
+  }
   try {
     const res = await getChatMessages({
       sort_by: sortBy.value,
       sort_order: sortOrder.value,
       handling_only: handlingOnly.value,
+      limit: PAGE_SIZE,
+      offset: page.value * PAGE_SIZE,
     });
-    messages.value = res.data;
+    const newItems = res.data || [];
+    if (reset) {
+      messages.value = newItems;
+    } else {
+      messages.value.push(...newItems);
+    }
+    if (newItems.length < PAGE_SIZE) hasMore.value = false;
+    page.value++;
   } catch (error) {
     console.error('获取历史记录失败:', error);
   } finally {
     loading.value = false;
+    loadingMore.value = false;
+  }
+};
+
+const handleScroll = () => {
+  const el = scrollContainer.value;
+  if (!el) return;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+    fetchMessages(false);
   }
 };
 
@@ -257,12 +289,12 @@ const toggleFavorite = async (msg) => {
 const applySort = (nextSortBy, nextOrder) => {
   sortBy.value = nextSortBy;
   sortOrder.value = nextOrder;
-  fetchMessages();
+  fetchMessages(true);
 };
 
 const toggleHandlingOnly = () => {
   handlingOnly.value = !handlingOnly.value;
-  fetchMessages();
+  fetchMessages(true);
 };
 
 const switchMode = (mode) => {
@@ -272,7 +304,7 @@ const switchMode = (mode) => {
   if (mode === 'agent') {
     fetchAgentConversations();
   } else {
-    fetchMessages();
+    fetchMessages(true);
   }
 };
 
@@ -686,6 +718,15 @@ onMounted(() => {
   transform: translate(-50%, -50%);
   color: #999;
   font-size: 14px;
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+  animation: slideInDown 0.35s ease both;
 }
 </style>
 

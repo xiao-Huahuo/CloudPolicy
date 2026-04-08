@@ -8,7 +8,7 @@
     <div v-else-if="items.length === 0" class="empty-state">暂无收藏</div>
 
     <div v-else class="favorites-grid">
-      <div v-for="item in items" :key="item.fav.id" class="favorite-card">
+      <div v-for="(item, index) in items" :key="item.fav.id" class="favorite-card fade-in-up" :style="{ animationDelay: `${index * 60}ms` }">
         <div class="card-header">
           <h3 class="card-title">{{ item.message?.handling_matter || formatName(item.message?.original_text) }}</h3>
           <span class="card-time">{{ formatDate(item.fav.created_time) }}</span>
@@ -146,6 +146,16 @@ onMounted(fetchFavorites);
   display: flex;
   flex-direction: column;
   gap: 10px;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease both;
 }
 
 .card-header {

@@ -48,15 +48,15 @@
       </div>
     </div>
 
-    <!-- 词云区域 -->
+    <!-- 词云气泡区域 -->
     <div class="wordcloud-section">
       <div class="wordcloud-container" ref="wordcloudRef">
-        <span
+        <div
           v-for="word in cloudWords" :key="word.text"
-          class="cloud-word"
-          :style="word.style"
+          class="bubble-word"
+          :style="word.bubbleStyle"
           @click="searchByWord(word.text)"
-        >{{ word.text }}</span>
+        >{{ word.text }}</div>
       </div>
     </div>
 
@@ -187,18 +187,25 @@ const buildWordCloud = (opinions) => {
       freq[w] = (freq[w] || 0) + 1
     })
   })
-  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 30)
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 28)
   const max = sorted[0]?.[1] || 1
-  cloudWords.value = sorted.map(([text, count], i) => ({
-    text,
-    style: {
-      fontSize: `${12 + (count / max) * 24}px`,
-      color: SLIDE_COLORS[i % SLIDE_COLORS.length],
-      opacity: 0.6 + (count / max) * 0.4,
-      animation: `float ${3 + (i % 4)}s ease-in-out infinite`,
-      animationDelay: `${(i * 0.3) % 3}s`,
+  cloudWords.value = sorted.map(([text, count], i) => {
+    const ratio = count / max
+    const size = 12 + ratio * 22
+    const dim = size * text.length * 0.65 + 24
+    return {
+      text,
+      bubbleStyle: {
+        '--bubble-color': SLIDE_COLORS[i % SLIDE_COLORS.length],
+        '--float-dur': `${3.5 + (i % 5) * 0.7}s`,
+        '--float-delay': `${(i * 0.4) % 4}s`,
+        fontSize: `${size}px`,
+        width: `${dim}px`,
+        height: `${dim}px`,
+        opacity: 0.72 + ratio * 0.28,
+      }
     }
-  }))
+  })
 }
 
 const loadFeed = async () => {
@@ -389,32 +396,53 @@ onUnmounted(() => {
 .hot-doc-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
 .hot-doc-meta { font-size: 11px; color: #999; }
 
-/* 词云 */
+/* 词云气泡 */
 .wordcloud-section {
   background: var(--color-bg-card, #fff);
   border: 1px solid var(--color-border, #e8e8e8);
   border-radius: 4px;
-  padding: 24px;
+  padding: 20px;
   margin-bottom: 24px;
-  min-height: 120px;
+  min-height: 140px;
 }
 
 .wordcloud-container {
-  display: flex; flex-wrap: wrap;
-  align-items: center; justify-content: center;
-  gap: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.cloud-word {
-  cursor: pointer; font-weight: bold;
-  transition: transform 0.2s;
-  display: inline-block;
+.bubble-word {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bubble-color) 15%, white);
+  border: 2px solid color-mix(in srgb, var(--bubble-color) 40%, white);
+  color: var(--bubble-color);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  animation: bubbleFloat var(--float-dur, 4s) ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
+  padding: 4px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--bubble-color) 20%, transparent);
 }
-.cloud-word:hover { transform: scale(1.15); }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+.bubble-word:hover {
+  transform: scale(1.18);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--bubble-color) 35%, transparent);
+  z-index: 1;
+}
+
+@keyframes bubbleFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  33%       { transform: translateY(-8px) rotate(1deg); }
+  66%       { transform: translateY(-4px) rotate(-0.5deg); }
 }
 
 /* 认证主体专属 */

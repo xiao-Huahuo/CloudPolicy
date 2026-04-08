@@ -160,25 +160,7 @@
           </div>
 
           <!-- 热点资讯图片横条 -->
-          <div class="news-image-strip" v-if="newsImages.length > 0">
-            <h2 class="section-title">当下热点</h2>
-            <div class="news-image-list">
-              <div
-                v-for="(item, idx) in newsImages"
-                :key="idx"
-                class="news-image-item"
-                @click="openLink(item.link)"
-              >
-                <div class="news-img-block" :style="{ background: item.image_color || '#c0392b' }">
-                  <span class="news-img-label">{{ item.category || '时事' }}</span>
-                </div>
-                <div class="news-img-text">
-                  <p class="news-img-title">{{ item.title }}</p>
-                  <span class="news-img-date">{{ item.pubDate || '最新' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 当下热点栏已移除 -->
         </div>
 
         <!-- 结果视图 -->
@@ -1576,6 +1558,8 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .hero-title-block {
   flex: 1;
   text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 .initial-view {
@@ -1583,6 +1567,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .upload-area {
@@ -1590,11 +1575,13 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   border: 2px dashed #e0e0e0;
   border-radius: 0;
   border-left: 4px solid #c0392b;
-  padding: 28px 40px;
+  padding: 36px 40px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
+  max-width: 680px;
+  width: 100%;
   flex-shrink: 0;
   position: relative;
 }
@@ -1607,6 +1594,14 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   gap: 20px;
   margin-bottom: 14px;
 }
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.upload-round-btn:nth-child(1) { animation: fadeInLeft 0.4s ease 0.05s both; }
+.upload-round-btn:nth-child(2) { animation: fadeInLeft 0.4s ease 0.15s both; }
+.upload-round-btn:nth-child(3) { animation: fadeInLeft 0.4s ease 0.25s both; }
 .action-btn {
   background: #c0392b;
   border: none;

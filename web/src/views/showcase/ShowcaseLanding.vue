@@ -5,7 +5,7 @@
     <!-- Hero -->
     <section class="hero">
       <div class="hero-bg"></div>
-      <div class="hero-content" ref="heroRef">
+      <div class="hero-content" ref="heroRef" :class="{ visible: visibleSections.hero }">
         <div class="hero-badge">智能政策分析平台</div>
         <h1 class="hero-title">云上观策</h1>
         <p class="hero-sub">汇聚政策资讯 · 智能解析分析 · 民意实时反馈</p>
@@ -26,10 +26,10 @@
     </section>
 
     <!-- Features -->
-    <section class="features-section">
+    <section class="features-section" ref="featuresRef">
       <div class="section-inner">
-        <div class="section-tag">核心功能</div>
-        <h2 class="section-title">一站式政策智能服务</h2>
+        <div class="section-tag" :class="{ visible: visibleSections.features }">核心功能</div>
+        <h2 class="section-title" :class="{ visible: visibleSections.features }">一站式政策智能服务</h2>
         <div class="features-grid">
           <div class="feat-card" v-for="(f, i) in features" :key="i"
             :class="{ visible: visibleSections.features }" :style="{ transitionDelay: i * 80 + 'ms' }"
@@ -112,7 +112,9 @@ const flowSteps = [
   { title: '智能分析', desc: 'AI自动解析，获取关键摘要' },
 ]
 
-const visibleSections = reactive({ features: false, flow: false, cta: false })
+const visibleSections = reactive({ hero: false, features: false, flow: false, cta: false })
+const heroRef = ref(null)
+const featuresRef = ref(null)
 const flowRef = ref(null)
 const ctaRef = ref(null)
 
@@ -121,14 +123,17 @@ onMounted(() => {
   observer = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (e.isIntersecting) {
+        if (e.target === heroRef.value) visibleSections.hero = true
+        if (e.target === featuresRef.value) visibleSections.features = true
         if (e.target === flowRef.value) visibleSections.flow = true
         if (e.target === ctaRef.value) visibleSections.cta = true
       }
     })
-  }, { threshold: 0.15 })
+  }, { threshold: 0.1 })
+  if (heroRef.value) observer.observe(heroRef.value)
+  if (featuresRef.value) observer.observe(featuresRef.value)
   if (flowRef.value) observer.observe(flowRef.value)
   if (ctaRef.value) observer.observe(ctaRef.value)
-  setTimeout(() => { visibleSections.features = true }, 200)
 })
 onUnmounted(() => observer?.disconnect())
 </script>
@@ -146,7 +151,12 @@ onUnmounted(() => observer?.disconnect())
   content: ''; position: absolute; inset: 0;
   background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.08) 0%, transparent 60%);
 }
-.hero-content { position: relative; text-align: center; color: #fff; padding: 80px 20px 40px; max-width: 800px; }
+.hero-content {
+  position: relative; text-align: center; color: #fff; padding: 80px 20px 40px; max-width: 800px;
+  opacity: 0; transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.hero-content.visible { opacity: 1; transform: translateY(0); }
 .hero-badge { display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); padding: 6px 18px; border-radius: 20px; font-size: 13px; margin-bottom: 24px; backdrop-filter: blur(8px); }
 .hero-title { font-size: clamp(48px, 8vw, 88px); font-weight: 900; margin: 0 0 16px; letter-spacing: -2px; text-shadow: 0 4px 24px rgba(0,0,0,0.3); }
 .hero-sub { font-size: 18px; color: rgba(255,255,255,0.8); margin: 0 0 36px; line-height: 1.6; }
@@ -166,8 +176,10 @@ onUnmounted(() => observer?.disconnect())
 
 /* Sections */
 .section-inner { max-width: 1100px; margin: 0 auto; padding: 80px 24px; }
-.section-tag { display: inline-block; background: rgba(192,57,43,0.1); color: #c0392b; padding: 4px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-bottom: 12px; }
-.section-title { font-size: 32px; font-weight: 800; margin: 0 0 40px; color: var(--text-primary, #111); }
+.section-tag { display: inline-block; background: rgba(192,57,43,0.1); color: #c0392b; padding: 4px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-bottom: 12px; opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.section-tag.visible { opacity: 1; transform: translateY(0); }
+.section-title { font-size: 32px; font-weight: 800; margin: 0 0 40px; color: var(--text-primary, #111); opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s; }
+.section-title.visible { opacity: 1; transform: translateY(0); }
 
 /* Features */
 .features-section { background: var(--card-bg, #fff); }

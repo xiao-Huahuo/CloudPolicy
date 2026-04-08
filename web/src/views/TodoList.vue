@@ -36,7 +36,7 @@
       <div v-if="loading" class="todo-loading">加载中...</div>
       <div v-else-if="filteredTodos.length === 0" class="todo-empty">暂无待办事项</div>
       <div v-else class="todo-list">
-        <div v-for="todo in filteredTodos" :key="todo.id" class="todo-item" :class="{ done: todo.is_done }">
+        <div v-for="(todo, index) in filteredTodos" :key="todo.id" class="todo-item fade-in-up" :style="{ animationDelay: `${index * 50}ms` }" :class="{ done: todo.is_done }">
           <div class="todo-check" @click="toggleTodo(todo.id)">
             <svg v-if="todo.is_done" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#c0392b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <div v-else class="check-empty"></div>
@@ -187,6 +187,16 @@ async function createTodo() {
   display: flex; align-items: flex-start; gap: 12px;
   background: #fff; border: 1px solid #eee; border-left: 3px solid #c0392b;
   padding: 10px 14px; transition: opacity 0.2s;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.35s ease both;
 }
 .todo-item.done { opacity: 0.5; border-left-color: #bbb; }
 .todo-check { cursor: pointer; flex-shrink: 0; margin-top: 2px; }

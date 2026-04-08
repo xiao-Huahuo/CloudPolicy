@@ -496,7 +496,8 @@ onMounted(async () => {
 .time-cards-container {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: 200px;
+  min-height: 200px;
 }
 
 .time-cards-grid {

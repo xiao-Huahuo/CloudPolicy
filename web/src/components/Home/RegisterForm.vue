@@ -1,4 +1,11 @@
 <template>
+  <div class="form-container">
+    <div class="logo-area">
+      <img src="@/assets/photos/main-icon.png" alt="icon" class="main-icon" v-if="hasIcon" @error="hasIcon = false" />
+      <h1 class="logo-text">
+        <span v-for="(ch, i) in 'ClearNotify'" :key="i" class="letter" :style="{ animationDelay: `${i * 0.06}s` }">{{ ch }}</span>
+      </h1>
+    </div>
   <form class="form" @submit.prevent="handleRegister">
     <div class="flex-column">
       <label>用户名 / Username</label>
@@ -42,6 +49,7 @@
 
     <p class="error-msg" v-if="errorMessage">{{ errorMessage }}</p>
   </form>
+  </div>
 </template>
 
 <script setup>
@@ -49,6 +57,7 @@ import { ref } from 'vue';
 import { register } from '@/api/user';
 
 const emit = defineEmits(['success', 'switch-to-login']);
+const hasIcon = ref(true);
 
 const username = ref('');
 const email = ref('');
@@ -86,68 +95,103 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
+.form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.main-icon {
+  width: 60px;
+  height: 60px;
+  filter: drop-shadow(0px 4px 8px rgba(192,57,43,0.4)) brightness(0) invert(1);
+}
+
+.logo-text {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 2px;
+  display: flex;
+}
+
+.letter {
+  display: inline-block;
+  color: #fff;
+  animation: letterFloat 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 0;
+}
+
+@keyframes letterFloat {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .form {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 400px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-  background: transparent;
-  padding: 0 40px 30px 40px;
+  background: linear-gradient(160deg, #c0392b 0%, #7b1a1a 40%, #1a1a1a 100%);
+  padding: 30px 40px;
+  width: 450px;
+  border-radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  box-shadow: 0 20px 60px rgba(192,57,43,0.3), 0 4px 20px rgba(0,0,0,0.5);
 }
 
-::placeholder {
-  color: #a5a5a5;
-}
+::placeholder { color: #aaa; }
 
 .flex-column > label {
-  color: #f1f1f1;
+  color: rgba(255,255,255,0.85);
   font-weight: 600;
   font-size: 13px;
 }
 
 .inputForm {
-  border: 1.5px solid #a85c5c;
-  border-radius: 10em;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
   height: 45px;
   display: flex;
   align-items: center;
   padding-left: 15px;
   transition: 0.2s ease-in-out;
-  background-color: #f6f6f6;
+  background-color: rgba(255,255,255,0.08);
   margin-bottom: 5px;
 }
 
-.input-icon {
-  color: #a85c5c;
-}
+.input-icon { color: rgba(255,255,255,0.5); }
 
 .input {
   margin-left: 10px;
-  border-radius: 0;
+  border-radius: 6px;
   border: none;
   width: 100%;
   height: 100%;
   font-size: 14px;
   background: transparent;
-  color: #2f2f2f;
-  -webkit-text-fill-color: #2f2f2f;
-  caret-color: #2f2f2f;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
   box-shadow: none;
   appearance: none;
 }
 
-.input:focus {
-  outline: none;
-}
+.input:focus { outline: none; }
 
 .input:-webkit-autofill,
 .input:-webkit-autofill:hover,
 .input:-webkit-autofill:focus,
 .input:-webkit-autofill:active {
-  -webkit-text-fill-color: #2f2f2f;
-  caret-color: #2f2f2f;
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
   -webkit-background-clip: text;
@@ -155,7 +199,8 @@ const handleRegister = async () => {
 }
 
 .inputForm:focus-within {
-  border: 1.5px solid #e14b4b;
+  border: 1.5px solid #e74c3c;
+  background-color: rgba(255,255,255,0.12);
 }
 
 .flex-row {
@@ -168,17 +213,13 @@ const handleRegister = async () => {
 
 .span {
   font-size: 14px;
-  margin-left: 5px;
-  color: #f2d3d3;
+  color: rgba(255,255,255,0.7);
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: color 0.2s;
   text-decoration: underline;
 }
-
-.span:hover {
-  opacity: 0.8;
-}
+.span:hover { color: #fff; }
 
 .button-submit {
   position: relative;
@@ -186,14 +227,13 @@ const handleRegister = async () => {
   padding: 12px 30px;
   text-align: center;
   letter-spacing: 2px;
-  text-decoration: none;
   background: transparent;
-  transition: ease-out 0.5s;
-  border: 2px solid #f0b0b0;
-  border-radius: 10em;
-  box-shadow: inset 0 0 0 0 #f0b0b0;
+  transition: ease-out 0.4s;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 0 #fff;
   margin: 10px 0;
-  color: #f6eaea;
+  color: white;
   font-size: 16px;
   font-weight: bold;
   height: 50px;
@@ -202,21 +242,15 @@ const handleRegister = async () => {
 }
 
 .button-submit:hover {
-  color: #3a1a1a;
-  box-shadow: inset 0 -100px 0 0 #f0b0b0;
+  color: #c0392b;
+  box-shadow: inset 0 -100px 0 0 #fff;
 }
 
-.button-submit:active {
-  transform: scale(0.95);
-}
-
-.button-submit:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
+.button-submit:active { transform: scale(0.98); }
+.button-submit:disabled { opacity: 0.7; cursor: not-allowed; }
 
 .error-msg {
-  color: #ffb3b3;
+  color: #ffcccc;
   text-align: center;
   font-size: 13px;
   margin: 0;

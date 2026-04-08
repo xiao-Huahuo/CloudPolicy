@@ -50,6 +50,7 @@ database.db
 *.sqlite3
 chroma_store/
 uploads/
+logs/
 
 # Frontend (Vue/Vite)
 web/node_modules/
@@ -65,3 +66,4 @@ web/pnpm-debug.log*
 # Reports
 coverage.xml
 .junit.xml
+.VSCodeCounter
