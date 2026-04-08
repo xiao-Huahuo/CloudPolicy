@@ -1,1 +1,67 @@
-__pycache__/ 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+site/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/*.log
+logs/*.log.*
+
+# Runtime data
+database.db
+*.sqlite
+*.sqlite3
+chroma_store/
+uploads/
+
+# Frontend (Vue/Vite)
+web/node_modules/
+web/dist/
+web/.vite/
+web/coverage/
+web/.cache/
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/pnpm-debug.log*
+
+# Reports
+coverage.xml
+.junit.xml
