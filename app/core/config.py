@@ -31,8 +31,9 @@ class GlobalConfig:
     IMAGES_UPLOAD_DIR = UPLOAD_DIR / "images"
     CHAT_EXPORT_DIR = UPLOAD_DIR / "chat_exports"
     KNOWLEDGE_DIR = PROJECT_ROOT / "app" / "resources"
-    KNOWLEDGE_BASE_PATH = KNOWLEDGE_DIR / "policy_knowledge.json"
-    DB_INIT_DATA_PATH=PROJECT_ROOT/"seed_data.json"
+    KNOWLEDGE_BASE_PATH = KNOWLEDGE_DIR / "vector_init" /"policy_knowledge.json"
+    DB_INIT_DIR = KNOWLEDGE_DIR / "db_init"
+    DB_INIT_DATA_PATH = PROJECT_ROOT / "seed_data.json"  # 已废弃，保留兼容
     LOG_DIR = PROJECT_ROOT / "logs"
     APP_LOG_PATH = LOG_DIR / "app.log"
     MAIL_OUTBOX_DIR = PROJECT_ROOT / "mail_outbox"

@@ -1,0 +1,146 @@
+{
+  "certified_users": [
+    {
+      "uname": "市政务服务管理局",
+      "email": "gov_service@gov.example.com",
+      "phone": "010-12345001",
+      "profession": "政务服务",
+      "avatar_url": null
+    },
+    {
+      "uname": "市人力资源和社会保障局",
+      "email": "hrss@gov.example.com",
+      "phone": "010-12345002",
+      "profession": "人力资源",
+      "avatar_url": null
+    },
+    {
+      "uname": "市生态环境局",
+      "email": "eco@gov.example.com",
+      "phone": "010-12345003",
+      "profession": "生态环境",
+      "avatar_url": null
+    },
+    {
+      "uname": "市教育局",
+      "email": "edu@gov.example.com",
+      "phone": "010-12345004",
+      "profession": "教育管理",
+      "avatar_url": null
+    },
+    {
+      "uname": "市卫生健康委员会",
+      "email": "health@gov.example.com",
+      "phone": "010-12345005",
+      "profession": "医疗卫生",
+      "avatar_url": null
+    },
+    {
+      "uname": "市市场监督管理局",
+      "email": "market@gov.example.com",
+      "phone": "010-12345006",
+      "profession": "市场监管",
+      "avatar_url": null
+    },
+    {
+      "uname": "市农业农村局",
+      "email": "agri@gov.example.com",
+      "phone": "010-12345007",
+      "profession": "农业管理",
+      "avatar_url": null
+    },
+    {
+      "uname": "市住房和城乡建设局",
+      "email": "housing@gov.example.com",
+      "phone": "010-12345008",
+      "profession": "住建管理",
+      "avatar_url": null
+    },
+    {
+      "uname": "市公安局",
+      "email": "police@gov.example.com",
+      "phone": "010-12345009",
+      "profession": "公共安全",
+      "avatar_url": null
+    },
+    {
+      "uname": "市交通运输局",
+      "email": "transport@gov.example.com",
+      "phone": "010-12345010",
+      "profession": "交通运输",
+      "avatar_url": null
+    }
+  ],
+  "normal_users": [
+    {
+      "uname": "市民张伟",
+      "email": "zhangwei@example.com",
+      "phone": "138-0001-0001",
+      "profession": "软件工程师",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民李娜",
+      "email": "lina@example.com",
+      "phone": "138-0001-0002",
+      "profession": "教师",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民王芳",
+      "email": "wangfang@example.com",
+      "phone": "138-0001-0003",
+      "profession": "医生",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民刘洋",
+      "email": "liuyang@example.com",
+      "phone": "138-0001-0004",
+      "profession": "企业主",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民陈静",
+      "email": "chenjing@example.com",
+      "phone": "138-0001-0005",
+      "profession": "会计",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民赵磊",
+      "email": "zhaolei@example.com",
+      "phone": "138-0001-0006",
+      "profession": "律师",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民孙丽",
+      "email": "sunli@example.com",
+      "phone": "138-0001-0007",
+      "profession": "护士",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民周强",
+      "email": "zhouqiang@example.com",
+      "phone": "138-0001-0008",
+      "profession": "建筑师",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民吴敏",
+      "email": "wumin@example.com",
+      "phone": "138-0001-0009",
+      "profession": "设计师",
+      "avatar_url": null
+    },
+    {
+      "uname": "市民郑华",
+      "email": "zhenghua@example.com",
+      "phone": "138-0001-0010",
+      "profession": "退休人员",
+      "avatar_url": null
+    }
+  ]
+}

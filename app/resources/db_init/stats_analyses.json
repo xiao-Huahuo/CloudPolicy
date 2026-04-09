@@ -1,0 +1,114 @@
+{
+  "stats_analyses": [
+    {
+      "user_email": "zhangwei@example.com",
+      "materials_freq": "{\"身份证\": 8, \"户口本\": 6, \"照片\": 3, \"营业执照\": 2, \"银行卡\": 2, \"培训证书\": 1, \"收入证明\": 1}",
+      "risks_freq": "{\"逾期未办理\": 5, \"材料不齐全\": 4, \"虚假申报\": 3, \"影响信用\": 2, \"承担法律责任\": 2}",
+      "complexity_distribution": "{\"高\": 1, \"中\": 4, \"低\": 3}",
+      "notice_type_distribution": "{\"社会保障\": 3, \"证照办理\": 2, \"补贴申请\": 2, \"其他\": 1}",
+      "total_time_saved_minutes": 120,
+      "avg_time_saved_minutes": 15,
+      "time_saved_distribution": "{\"2026-01\": 30, \"2026-02\": 45, \"2026-03\": 45}",
+      "total_parsed_count": 8
+    },
+    {
+      "user_email": "lina@example.com",
+      "materials_freq": "{\"身份证\": 5, \"培训证书\": 2, \"银行卡\": 2, \"户口本\": 3, \"收入证明\": 2, \"住房证明\": 1}",
+      "risks_freq": "{\"材料不齐全\": 3, \"逾期未办理\": 2, \"虚假申报\": 2, \"影响待遇\": 1}",
+      "complexity_distribution": "{\"高\": 0, \"中\": 3, \"低\": 2}",
+      "notice_type_distribution": "{\"补贴申请\": 2, \"社会保障\": 2, \"其他\": 1}",
+      "total_time_saved_minutes": 85,
+      "avg_time_saved_minutes": 17,
+      "time_saved_distribution": "{\"2026-01\": 20, \"2026-02\": 35, \"2026-03\": 30}",
+      "total_parsed_count": 5
+    },
+    {
+      "user_email": "wangfang@example.com",
+      "materials_freq": "{\"营业执照\": 6, \"身份证\": 4, \"财务报表\": 3, \"税务证明\": 2, \"经营场所证明\": 2}",
+      "risks_freq": "{\"列入异常名录\": 4, \"影响信用\": 3, \"虚假申报\": 2, \"行政处罚\": 2}",
+      "complexity_distribution": "{\"高\": 2, \"中\": 4, \"低\": 1}",
+      "notice_type_distribution": "{\"企业经营\": 5, \"市场监管\": 2}",
+      "total_time_saved_minutes": 140,
+      "avg_time_saved_minutes": 20,
+      "time_saved_distribution": "{\"2026-01\": 40, \"2026-02\": 50, \"2026-03\": 50}",
+      "total_parsed_count": 7
+    },
+    {
+      "user_email": "liuyang@example.com",
+      "materials_freq": "{\"营业执照\": 8, \"知识产权证明\": 4, \"审计报告\": 3, \"研发费用明细\": 3, \"担保人资料\": 2, \"项目计划书\": 2}",
+      "risks_freq": "{\"材料造假\": 5, \"影响信用\": 4, \"逾期还款\": 3, \"取消资格\": 2}",
+      "complexity_distribution": "{\"高\": 5, \"中\": 3, \"低\": 0}",
+      "notice_type_distribution": "{\"企业经营\": 4, \"补贴申请\": 3, \"融资贷款\": 1}",
+      "total_time_saved_minutes": 200,
+      "avg_time_saved_minutes": 25,
+      "time_saved_distribution": "{\"2026-01\": 50, \"2026-02\": 75, \"2026-03\": 75}",
+      "total_parsed_count": 8
+    },
+    {
+      "user_email": "chenjing@example.com",
+      "materials_freq": "{\"身份证\": 6, \"户口本\": 5, \"照片\": 3, \"健康证明\": 2, \"收入证明\": 2}",
+      "risks_freq": "{\"逾期未办理\": 3, \"材料不齐全\": 3, \"影响待遇\": 2}",
+      "complexity_distribution": "{\"高\": 0, \"中\": 3, \"低\": 3}",
+      "notice_type_distribution": "{\"社会保障\": 3, \"医疗卫生\": 2, \"证照办理\": 1}",
+      "total_time_saved_minutes": 95,
+      "avg_time_saved_minutes": 16,
+      "time_saved_distribution": "{\"2026-01\": 25, \"2026-02\": 35, \"2026-03\": 35}",
+      "total_parsed_count": 6
+    },
+    {
+      "user_email": "zhaolei@example.com",
+      "materials_freq": "{\"营业执照\": 5, \"健康证\": 4, \"卫生检查记录\": 3, \"进货台账\": 3, \"身份证\": 2}",
+      "risks_freq": "{\"行政处罚\": 5, \"吊销许可证\": 3, \"列入监管名单\": 3, \"虚假填报\": 2}",
+      "complexity_distribution": "{\"高\": 2, \"中\": 4, \"低\": 1}",
+      "notice_type_distribution": "{\"市场监管\": 5, \"企业经营\": 2}",
+      "total_time_saved_minutes": 130,
+      "avg_time_saved_minutes": 19,
+      "time_saved_distribution": "{\"2026-01\": 35, \"2026-02\": 45, \"2026-03\": 50}",
+      "total_parsed_count": 7
+    },
+    {
+      "user_email": "sunli@example.com",
+      "materials_freq": "{\"身份证\": 4, \"结婚证\": 2, \"户口本\": 3, \"照片\": 2, \"健康证明\": 1}",
+      "risks_freq": "{\"影响待遇\": 3, \"逾期未办理\": 2, \"材料不齐全\": 2}",
+      "complexity_distribution": "{\"高\": 0, \"中\": 2, \"低\": 3}",
+      "notice_type_distribution": "{\"社会保障\": 3, \"医疗卫生\": 2}",
+      "total_time_saved_minutes": 70,
+      "avg_time_saved_minutes": 14,
+      "time_saved_distribution": "{\"2026-01\": 20, \"2026-02\": 25, \"2026-03\": 25}",
+      "total_parsed_count": 5
+    },
+    {
+      "user_email": "zhouqiang@example.com",
+      "materials_freq": "{\"身份证\": 5, \"户口本\": 4, \"收入证明\": 3, \"住房证明\": 3, \"婚姻证明\": 2}",
+      "risks_freq": "{\"取消资格\": 3, \"影响信用\": 2, \"材料不齐全\": 2, \"等待时间长\": 1}",
+      "complexity_distribution": "{\"高\": 1, \"中\": 3, \"低\": 2}",
+      "notice_type_distribution": "{\"社会保障\": 4, \"住房保障\": 2}",
+      "total_time_saved_minutes": 110,
+      "avg_time_saved_minutes": 18,
+      "time_saved_distribution": "{\"2026-01\": 30, \"2026-02\": 40, \"2026-03\": 40}",
+      "total_parsed_count": 6
+    },
+    {
+      "user_email": "wumin@example.com",
+      "materials_freq": "{\"身份证\": 4, \"户口本\": 3, \"照片\": 2, \"学历证明\": 1, \"作品集\": 1}",
+      "risks_freq": "{\"逾期未办理\": 2, \"材料不齐全\": 2, \"影响申请\": 1}",
+      "complexity_distribution": "{\"高\": 0, \"中\": 2, \"低\": 2}",
+      "notice_type_distribution": "{\"证照办理\": 2, \"社会保障\": 1, \"其他\": 1}",
+      "total_time_saved_minutes": 60,
+      "avg_time_saved_minutes": 15,
+      "time_saved_distribution": "{\"2026-01\": 15, \"2026-02\": 20, \"2026-03\": 25}",
+      "total_parsed_count": 4
+    },
+    {
+      "user_email": "zhenghua@example.com",
+      "materials_freq": "{\"身份证\": 5, \"户口本\": 4, \"收入证明\": 3, \"健康证明\": 2, \"照片\": 2}",
+      "risks_freq": "{\"影响待遇\": 3, \"逾期未办理\": 2, \"材料不齐全\": 2}",
+      "complexity_distribution": "{\"高\": 0, \"中\": 2, \"低\": 3}",
+      "notice_type_distribution": "{\"社会保障\": 4, \"医疗卫生\": 1}",
+      "total_time_saved_minutes": 75,
+      "avg_time_saved_minutes": 15,
+      "time_saved_distribution": "{\"2026-01\": 20, \"2026-02\": 25, \"2026-03\": 30}",
+      "total_parsed_count": 5
+    }
+  ]
+}

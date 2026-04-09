@@ -1,0 +1,54 @@
+{
+  "favorites": [
+    {
+      "user_email": "zhangwei@example.com",
+      "chat_message_index": 0,
+      "note": "医保缴费很重要，每年都要记得"
+    },
+    {
+      "user_email": "zhangwei@example.com",
+      "chat_message_index": 7,
+      "note": "护照办理流程，准备出国旅游用"
+    },
+    {
+      "user_email": "lina@example.com",
+      "chat_message_index": 1,
+      "note": "职业技能培训补贴，可以申请"
+    },
+    {
+      "user_email": "lina@example.com",
+      "chat_message_index": 6,
+      "note": "公租房申请条件和流程"
+    },
+    {
+      "user_email": "wangfang@example.com",
+      "chat_message_index": 3,
+      "note": "个体户年报，每年必做"
+    },
+    {
+      "user_email": "liuyang@example.com",
+      "chat_message_index": 4,
+      "note": "高新技术企业认定材料清单"
+    },
+    {
+      "user_email": "liuyang@example.com",
+      "chat_message_index": 8,
+      "note": "创业担保贷款，公司扩张可能用到"
+    },
+    {
+      "user_email": "chenjing@example.com",
+      "chat_message_index": 5,
+      "note": "残疾人证办理流程，帮朋友收藏"
+    },
+    {
+      "user_email": "zhaolei@example.com",
+      "chat_message_index": 2,
+      "note": "食品经营许可证年报，客户需要"
+    },
+    {
+      "user_email": "sunli@example.com",
+      "chat_message_index": 9,
+      "note": "生育登记办理，准备要二胎"
+    }
+  ]
+}

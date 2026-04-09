@@ -1,0 +1,164 @@
+{
+  "opinions": [
+    {
+      "doc_title": "关于推进数字政府建设的实施意见",
+      "user_email": "zhangwei@example.com",
+      "opinion_type": "review",
+      "content": "政策方向很好，数字政府建设确实能提升办事效率，希望尽快落地。期待能够实现一网通办，让群众少跑腿。",
+      "rating": 5,
+      "like_count": 23
+    },
+    {
+      "doc_title": "关于推进数字政府建设的实施意见",
+      "user_email": "lina@example.com",
+      "opinion_type": "message",
+      "content": "请问数字政务平台什么时候上线？我们企业很期待，希望能够在线办理更多业务。",
+      "rating": null,
+      "like_count": 8
+    },
+    {
+      "doc_title": "2026年惠企政策汇编",
+      "user_email": "wangfang@example.com",
+      "opinion_type": "review",
+      "content": "惠企政策力度很大，减税降费措施对中小企业帮助明显，特别是研发费用加计扣除政策非常实用。",
+      "rating": 5,
+      "like_count": 34
+    },
+    {
+      "doc_title": "2026年惠企政策汇编",
+      "user_email": "liuyang@example.com",
+      "opinion_type": "correction",
+      "content": "第三条补贴申请材料清单中，营业执照应为最新版本，原文表述不够清晰，建议明确说明需要三证合一后的营业执照。",
+      "rating": null,
+      "like_count": 12
+    },
+    {
+      "doc_title": "关于加强基层医疗卫生服务能力建设的通知",
+      "user_email": "chenjing@example.com",
+      "opinion_type": "review",
+      "content": "基层医疗建设很重要，农村地区看病难问题确实需要重视。希望能够加快推进，让老百姓在家门口就能看好病。",
+      "rating": 5,
+      "like_count": 28
+    },
+    {
+      "doc_title": "关于加强基层医疗卫生服务能力建设的通知",
+      "user_email": "zhaolei@example.com",
+      "opinion_type": "message",
+      "content": "我们村卫生室设备老化，希望能纳入本次支持范围。另外村医待遇偏低，希望能够提高。",
+      "rating": null,
+      "like_count": 15
+    },
+    {
+      "doc_title": "乡村振兴重点帮扶县产业发展支持政策",
+      "user_email": "sunli@example.com",
+      "opinion_type": "review",
+      "content": "乡村振兴政策落地情况参差不齐，建议加强监督考核机制，确保资金真正用到实处。",
+      "rating": 3,
+      "like_count": 9
+    },
+    {
+      "doc_title": "乡村振兴重点帮扶县产业发展支持政策",
+      "user_email": "zhenghua@example.com",
+      "opinion_type": "message",
+      "content": "我们县的特色农产品销路不畅，希望政府能够帮助对接更多销售渠道，特别是电商平台。",
+      "rating": null,
+      "like_count": 6
+    },
+    {
+      "doc_title": "关于规范网络直播营销活动的管理办法",
+      "user_email": "zhouqiang@example.com",
+      "opinion_type": "review",
+      "content": "直播监管办法出台及时，有效规范了市场秩序。希望能够严格执行，打击虚假宣传和假冒伪劣商品。",
+      "rating": 4,
+      "like_count": 19
+    },
+    {
+      "doc_title": "关于规范网络直播营销活动的管理办法",
+      "user_email": "wumin@example.com",
+      "opinion_type": "correction",
+      "content": "第八条处罚标准建议与电商法保持一致，避免执法口径不统一。另外对于屡次违规的主播应加大处罚力度。",
+      "rating": null,
+      "like_count": 11
+    },
+    {
+      "doc_title": "关于开展2026年度义务教育阶段学校招生工作的通知",
+      "user_email": "lina@example.com",
+      "opinion_type": "review",
+      "content": "招生政策公平透明，免试就近入学原则很好。希望能够严格执行，杜绝各种变相选拔。",
+      "rating": 5,
+      "like_count": 42
+    },
+    {
+      "doc_title": "关于开展2026年度义务教育阶段学校招生工作的通知",
+      "user_email": "zhangwei@example.com",
+      "opinion_type": "message",
+      "content": "我家孩子今年上小学，请问学区是如何划分的？房产证和户口不在一起怎么办？",
+      "rating": null,
+      "like_count": 7
+    },
+    {
+      "doc_title": "关于实施城市更新行动的指导意见",
+      "user_email": "wangfang@example.com",
+      "opinion_type": "review",
+      "content": "老旧小区改造确实改善了居住环境，我们小区加装了电梯，老年人出行方便多了。希望能够加快推进。",
+      "rating": 5,
+      "like_count": 31
+    },
+    {
+      "doc_title": "关于实施城市更新行动的指导意见",
+      "user_email": "chenjing@example.com",
+      "opinion_type": "message",
+      "content": "我们小区申请加装电梯已经一年了，还没有批复，希望能够简化审批流程，提高办事效率。",
+      "rating": null,
+      "like_count": 18
+    },
+    {
+      "doc_title": "关于加强道路交通安全管理的通告",
+      "user_email": "zhaolei@example.com",
+      "opinion_type": "review",
+      "content": "严查交通违法行为很有必要，特别是酒驾醉驾，关系到每个人的生命安全。支持严格执法。",
+      "rating": 5,
+      "like_count": 26
+    },
+    {
+      "doc_title": "关于加强道路交通安全管理的通告",
+      "user_email": "liuyang@example.com",
+      "opinion_type": "correction",
+      "content": "建议增加对电动自行车违法行为的处罚规定，现在很多电动车闯红灯、逆行，存在安全隐患。",
+      "rating": null,
+      "like_count": 22
+    },
+    {
+      "doc_title": "关于开展环境保护专项整治行动的通知",
+      "user_email": "sunli@example.com",
+      "opinion_type": "review",
+      "content": "环保整治行动很及时，我们小区附近的餐饮店油烟污染严重，希望能够彻底整治。",
+      "rating": 4,
+      "like_count": 14
+    },
+    {
+      "doc_title": "关于开展环境保护专项整治行动的通知",
+      "user_email": "zhouqiang@example.com",
+      "opinion_type": "message",
+      "content": "我要举报一家工厂偷排废水，请问如何举报？举报后多久能够处理？",
+      "rating": null,
+      "like_count": 10
+    },
+    {
+      "doc_title": "关于调整城乡居民最低生活保障标准的通知",
+      "user_email": "zhenghua@example.com",
+      "opinion_type": "review",
+      "content": "低保标准提高了，对困难群众是个好消息。希望能够加强动态管理，确保应保尽保。",
+      "rating": 5,
+      "like_count": 17
+    },
+    {
+      "doc_title": "关于调整城乡居民最低生活保障标准的通知",
+      "user_email": "wumin@example.com",
+      "opinion_type": "message",
+      "content": "我家符合低保条件，请问需要准备哪些材料？到哪里申请？大概多久能够办下来？",
+      "rating": null,
+      "like_count": 5
+    }
+  ]
+}

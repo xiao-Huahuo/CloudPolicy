@@ -1,0 +1,54 @@
+{
+  "agent_memories": [
+    {
+      "user_email": "zhangwei@example.com",
+      "conversation_index": 0,
+      "summary": "用户咨询了2026年医保缴费标准，了解到个人缴费380元/人，缴费时间为2025年10月1日至12月31日。"
+    },
+    {
+      "user_email": "zhangwei@example.com",
+      "conversation_index": 1,
+      "summary": "用户咨询护照办理流程，了解到办理时限为7个工作日，首次申请费用120元。"
+    },
+    {
+      "user_email": "lina@example.com",
+      "conversation_index": 2,
+      "summary": "用户咨询职业技能培训补贴申请，了解到需在证书取得后6个月内申请，补贴标准500-3000元。"
+    },
+    {
+      "user_email": "wangfang@example.com",
+      "conversation_index": 3,
+      "summary": "用户咨询个体工商户年报报送时间，了解到报送期限为2026年1月1日至6月30日。"
+    },
+    {
+      "user_email": "liuyang@example.com",
+      "conversation_index": 4,
+      "summary": "用户咨询高新技术企业认定条件，了解到需要满足注册满一年、拥有知识产权、研发费用达标等条件。"
+    },
+    {
+      "user_email": "liuyang@example.com",
+      "conversation_index": 5,
+      "summary": "用户咨询创业担保贷款额度，了解到个人最高20万元，合伙创业最高200万元，贷款期限最长3年。"
+    },
+    {
+      "user_email": "chenjing@example.com",
+      "conversation_index": 6,
+      "summary": "用户咨询残疾人证办理材料，了解到需要身份证、户口本、照片，并到指定医院进行残疾评定。"
+    },
+    {
+      "user_email": "zhaolei@example.com",
+      "conversation_index": 7,
+      "summary": "用户咨询食品经营许可证年报提交时间，了解到需在2026年3月31日前通过食品安全监管平台提交。"
+    },
+    {
+      "user_email": "sunli@example.com",
+      "conversation_index": 8,
+      "summary": "用户咨询生育登记办理时间，了解到应在怀孕后至孩子出生前办理，可网上或现场办理，即时办结。"
+    },
+    {
+      "user_email": "zhouqiang@example.com",
+      "conversation_index": 9,
+      "summary": "用户咨询公租房申请条件，了解到需要本市户籍、家庭人均收入低于标准、无房或住房面积不达标。"
+    }
+  ]
+}

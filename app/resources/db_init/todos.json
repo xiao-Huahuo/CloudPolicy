@@ -1,0 +1,84 @@
+{
+  "todos": [
+    {
+      "title": "申请营业执照变更登记",
+      "detail": "公司地址变更，需携带法人身份证、公司章程修正案、股东会决议、原营业执照到市场监督管理局窗口办理变更登记",
+      "deadline": "2026-04-30",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "提交2025年度企业年报",
+      "detail": "登录国家企业信用信息公示系统，填写并提交年度报告，包括企业基本信息、股东出资信息、资产状况等",
+      "deadline": "2026-06-30",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "申请高新技术企业认定",
+      "detail": "准备研发费用明细、知识产权证明、科技人员占比等材料，向科技局提交申请。需要专项审计报告。",
+      "deadline": "2026-05-31",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "办理食品经营许可证年度自查报告",
+      "detail": "登录食品安全监管平台，提交年度自查报告，包括经营场所卫生状况、从业人员健康证明、进货查验记录等",
+      "deadline": "2026-03-31",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "缴纳城乡居民医疗保险",
+      "detail": "通过医保APP或银行网点缴纳2026年度医疗保险费用380元/人，需准备身份证和户口本",
+      "deadline": "2025-12-31",
+      "is_done": true,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "申请职业技能培训补贴",
+      "detail": "已取得电工职业资格证书，需在6个月内向人社局申请培训补贴，准备培训证书、身份证、银行卡、培训费发票",
+      "deadline": "2026-06-15",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "办理孩子小学入学报名",
+      "detail": "孩子今年9月上小学，需在5月31日前完成报名登记，准备户口本、房产证、儿童预防接种证",
+      "deadline": "2026-05-31",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "申请公租房",
+      "detail": "向户籍所在地街道提出公租房申请，准备户口本、身份证、收入证明、住房证明、婚姻状况证明等材料",
+      "deadline": "2026-05-01",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "办理护照",
+      "detail": "计划暑假出国旅游，需提前办理护照。准备身份证、户口簿、照片，到公安局出入境管理部门办理",
+      "deadline": "2026-06-01",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    },
+    {
+      "title": "申请创业担保贷款",
+      "detail": "新开餐饮店需要资金，准备申请创业担保贷款20万元，需准备营业执照、创业项目计划书、担保人资料、就业人员花名册",
+      "deadline": "2026-04-20",
+      "is_done": false,
+      "is_confirmed": true,
+      "source_chat_id": null
+    }
+  ]
+}

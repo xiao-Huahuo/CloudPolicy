@@ -1,0 +1,124 @@
+{
+  "agent_messages": [
+    {
+      "conversation_index": 0,
+      "user_email": "zhangwei@example.com",
+      "role": "user",
+      "content": "请问2026年医保缴费标准是多少？"
+    },
+    {
+      "conversation_index": 0,
+      "user_email": "zhangwei@example.com",
+      "role": "assistant",
+      "content": "2026年度城乡居民基本医疗保险个人缴费标准为380元/人。缴费时间为2025年10月1日至12月31日，可通过医保APP、银行网点、村（居）委会代收等方式缴费。"
+    },
+    {
+      "conversation_index": 1,
+      "user_email": "zhangwei@example.com",
+      "role": "user",
+      "content": "办理护照需要多长时间？"
+    },
+    {
+      "conversation_index": 1,
+      "user_email": "zhangwei@example.com",
+      "role": "assistant",
+      "content": "办理普通护照自受理之日起7个工作日内办结。您需要携带居民身份证、户口簿、近期免冠照片和申请表到户籍所在地或居住地公安机关出入境管理部门办理。首次申请费用为120元。"
+    },
+    {
+      "conversation_index": 2,
+      "user_email": "lina@example.com",
+      "role": "user",
+      "content": "职业技能培训补贴怎么申请？"
+    },
+    {
+      "conversation_index": 2,
+      "user_email": "lina@example.com",
+      "role": "assistant",
+      "content": "符合条件的企业职工和失业人员参加职业技能培训并取得证书后，可在证书取得后6个月内申请培训补贴。补贴标准为500-3000元不等。需要准备培训证书、身份证、银行卡、培训费发票等材料，到市人社局政务服务大厅或网上办事大厅提交申请。"
+    },
+    {
+      "conversation_index": 3,
+      "user_email": "wangfang@example.com",
+      "role": "user",
+      "content": "个体工商户年报什么时候报送？"
+    },
+    {
+      "conversation_index": 3,
+      "user_email": "wangfang@example.com",
+      "role": "assistant",
+      "content": "所有在2025年12月31日前登记注册的个体工商户，应于2026年1月1日至6月30日通过国家企业信用信息公示系统报送年度报告。未按时报送将被列入经营异常名录。"
+    },
+    {
+      "conversation_index": 4,
+      "user_email": "liuyang@example.com",
+      "role": "user",
+      "content": "高新技术企业认定需要什么条件？"
+    },
+    {
+      "conversation_index": 4,
+      "user_email": "liuyang@example.com",
+      "role": "assistant",
+      "content": "申请高新技术企业认定需要满足以下条件：1.企业注册满一年；2.拥有核心自主知识产权；3.研发费用占销售收入比例不低于规定标准；4.高新技术产品收入占比不低于60%。申请时间为2026年4月1日至5月31日，需准备企业营业执照、知识产权证明、研发费用明细、科技人员名单、审计报告等材料。"
+    },
+    {
+      "conversation_index": 5,
+      "user_email": "liuyang@example.com",
+      "role": "user",
+      "content": "创业担保贷款最高能贷多少？"
+    },
+    {
+      "conversation_index": 5,
+      "user_email": "liuyang@example.com",
+      "role": "assistant",
+      "content": "符合条件的创业人员可申请最高20万元的创业担保贷款，合伙创业的可申请最高200万元。贷款期限最长3年，财政给予贴息支持。需要在本市创业、持有营业执照、吸纳就业达到规定人数。"
+    },
+    {
+      "conversation_index": 6,
+      "user_email": "chenjing@example.com",
+      "role": "user",
+      "content": "办理残疾人证需要什么材料？"
+    },
+    {
+      "conversation_index": 6,
+      "user_email": "chenjing@example.com",
+      "role": "assistant",
+      "content": "办理残疾人证需要向户籍所在地街道（乡镇）残联提交身份证、户口本、二寸照片，然后到指定医院进行残疾评定。办理时限为自受理之日起30个工作日内。"
+    },
+    {
+      "conversation_index": 7,
+      "user_email": "zhaolei@example.com",
+      "role": "user",
+      "content": "食品经营许可证年报什么时候提交？"
+    },
+    {
+      "conversation_index": 7,
+      "user_email": "zhaolei@example.com",
+      "role": "assistant",
+      "content": "所有持有食品经营许可证的经营者须于2026年3月31日前，通过食品安全监管平台提交年度自查报告。报告内容包括经营场所卫生状况、从业人员健康证明、食品进货查验记录等。逾期未提交将被列入重点监管名单。"
+    },
+    {
+      "conversation_index": 8,
+      "user_email": "sunli@example.com",
+      "role": "user",
+      "content": "生育登记什么时候办理？"
+    },
+    {
+      "conversation_index": 8,
+      "user_email": "sunli@example.com",
+      "role": "assistant",
+      "content": "夫妻生育子女的，应当在怀孕后至孩子出生前办理生育登记。可以网上办理（登录市卫健委网上办事大厅）或现场办理（到户籍所在地街道卫生计生办）。需要提交夫妻双方身份证、结婚证，即时办结。生育登记是办理生育保险待遇、新生儿落户等业务的前置条件。"
+    },
+    {
+      "conversation_index": 9,
+      "user_email": "zhouqiang@example.com",
+      "role": "user",
+      "content": "公租房申请需要什么条件？"
+    },
+    {
+      "conversation_index": 9,
+      "user_email": "zhouqiang@example.com",
+      "role": "assistant",
+      "content": "申请公租房需要满足以下条件：1.具有本市户籍；2.家庭人均收入低于规定标准；3.无房或人均住房面积低于规定标准。需要准备户口本、身份证、收入证明、住房证明、婚姻状况证明等材料，向户籍所在地街道（乡镇）提出申请。"
+    }
+  ]
+}
