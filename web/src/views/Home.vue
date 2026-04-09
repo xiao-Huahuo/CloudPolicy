@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-container">
     <!-- 查看原文 Modal -->
     <div v-if="showOriginalModal" class="modal-overlay" @click.self="showOriginalModal = false">
@@ -83,6 +83,7 @@
 
         <!-- 初始视图：上传区 -->
         <div v-if="!showResult" class="initial-view">
+          <div class="scan-zone">
           <div
             class="upload-area"
             @click.self="triggerFileUpload"
@@ -137,30 +138,56 @@
               <div class="loading-progress-fill" :style="{ width: `${parseProgress}%` }"></div>
             </div>
           </div>
+          </div>
 
           <!-- 示例区域 -->
           <div class="examples-section">
-            <h2 class="section-title">示例</h2>
-            <div class="examples-grid">
-              <div
-                v-for="(ex, index) in examples"
-                :key="ex.id"
-                class="example-card"
-                :style="{ animationDelay: `${index * 0.15}s` }"
-                @click="handleExampleClick(ex)"
-              >
-                <div class="card-image-wrapper">
-                  <div class="breakout-image">
-                    <img :src="ex.image" alt="example document" />
-                  </div>
-                </div>
-                <div class="card-content">
-                  <h3 class="card-title">{{ ex.title }}</h3>
-                  <div class="card-tags">
-                    <span v-for="tag in ex.tags" :key="tag" class="tag">{{ tag }}</span>
+            <div class="examples-head">
+              <h2 class="section-title">示例</h2>
+              <div class="examples-nav" v-if="exampleChunks.length > 1">
+                <button class="examples-nav-btn" @click="prevExamplePage">‹</button>
+                <button class="examples-nav-btn" @click="nextExamplePage">›</button>
+              </div>
+            </div>
+            <div class="examples-carousel" @mouseenter="stopExampleAutoplay" @mouseleave="startExampleAutoplay">
+              <div class="examples-track" :style="exampleTrackStyle">
+                <div
+                  v-for="(group, groupIndex) in exampleChunks"
+                  :key="`group-${groupIndex}`"
+                  class="examples-page"
+                >
+                  <div class="examples-grid">
+                    <div
+                      v-for="(ex, index) in group"
+                      :key="ex.id"
+                      class="example-card"
+                      :style="{ animationDelay: `${index * 0.12}s` }"
+                      @click="handleExampleClick(ex)"
+                    >
+                      <div class="card-image-wrapper">
+                        <div class="breakout-image">
+                          <img :src="ex.image" alt="example document" />
+                        </div>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-title">{{ ex.title }}</h3>
+                        <div class="card-tags">
+                          <span v-for="tag in ex.tags" :key="tag" class="tag">{{ tag }}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+            <div v-if="exampleChunks.length > 1" class="examples-dots">
+              <button
+                v-for="(_, idx) in exampleChunks"
+                :key="`dot-${idx}`"
+                class="examples-dot"
+                :class="{ active: idx === examplePageIndex }"
+                @click="goToExamplePage(idx)"
+              ></button>
             </div>
           </div>
 
@@ -470,25 +497,65 @@ const kgPayload = computed(() => {
 const currentTitle = computed(() => getMessageTitle(aiResponse.value));
 
 // ── 示例数据 ──────────────────────────────────────────────────────────────────
-const EXAMPLE_META_POOL = [
-  { title: '书籍摘要', tags: ['书籍', '文化', '摘要'] },
-  { title: '政务文件', tags: ['政策', '解读', '官方'] },
-  { title: '学术任务', tags: ['教育', '学生', '计算机'] },
-];
+const EXAMPLE_META_MAP = {
+  'AI回答截图': { title: 'AI回答截图', tags: ['AI问答', '结果核验', '答复对比'] },
+  'git使用说明书': { title: 'Git使用说明书', tags: ['开发工具', '命令手册', '协作规范'] },
+  '国际赛事章程': { title: '国际赛事章程', tags: ['赛事规则', '条款解析', '制度文本'] },
+  '复杂系统设计规范': { title: '复杂系统设计规范', tags: ['系统设计', '工程规范', '架构约束'] },
+  '扫描件': { title: '扫描件', tags: ['OCR识别', '纸质文档', '文本提取'] },
+  '拍照扫描件': { title: '拍照扫描件', tags: ['移动拍照', '图像增强', '识别纠错'] },
+  '物理模拟准则': { title: '物理模拟准则', tags: ['科研方法', '仿真参数', '实验规范'] },
+  '科研论文解读': { title: '科研论文解读', tags: ['学术阅读', '关键结论', '结构化摘要'] },
+  '繁杂笔记': { title: '繁杂笔记', tags: ['笔记整理', '知识归纳', '重点提炼'] },
+  '计算机语言学习': { title: '计算机语言学习', tags: ['编程学习', '语法要点', '知识卡片'] },
+};
 const exampleImageModules = import.meta.glob('/src/assets/photos/main-examples/*.png', { eager: true });
 const exampleImageEntries = Object.entries(exampleImageModules).sort(([a], [b]) => a.localeCompare(b, 'zh-CN'));
 const examples = ref(
-  exampleImageEntries.map(([path, mod], idx) => {
-    const meta = EXAMPLE_META_POOL[idx % EXAMPLE_META_POOL.length];
+  exampleImageEntries.slice(0, 10).map(([path, mod], idx) => {
     const fileName = path.split('/').pop()?.replace(/\.[^.]+$/, '') || `example-${idx + 1}`;
+    const meta = EXAMPLE_META_MAP[fileName];
     return {
       id: idx + 1,
       title: meta?.title || fileName,
-      tags: meta?.tags || ['示例'],
+      tags: meta?.tags || ['示例文档', '智能解析', '知识图谱'],
       image: mod.default,
     };
   })
 );
+const EXAMPLES_PER_PAGE = 3;
+const examplePageIndex = ref(0);
+let exampleAutoTimer = null;
+const exampleChunks = computed(() => {
+  const groups = [];
+  for (let i = 0; i < examples.value.length; i += EXAMPLES_PER_PAGE) {
+    groups.push(examples.value.slice(i, i + EXAMPLES_PER_PAGE));
+  }
+  return groups;
+});
+const exampleTrackStyle = computed(() => ({
+  transform: `translateX(-${examplePageIndex.value * 100}%)`
+}));
+
+const goToExamplePage = (idx) => {
+  const total = exampleChunks.value.length;
+  if (!total) return;
+  examplePageIndex.value = ((idx % total) + total) % total;
+};
+const nextExamplePage = () => goToExamplePage(examplePageIndex.value + 1);
+const prevExamplePage = () => goToExamplePage(examplePageIndex.value - 1);
+const startExampleAutoplay = () => {
+  stopExampleAutoplay();
+  if (exampleChunks.value.length <= 1) return;
+  exampleAutoTimer = setInterval(() => {
+    nextExamplePage();
+  }, 3600);
+};
+const stopExampleAutoplay = () => {
+  if (!exampleAutoTimer) return;
+  clearInterval(exampleAutoTimer);
+  exampleAutoTimer = null;
+};
 
 // ── 生命周期 ──────────────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -509,6 +576,7 @@ onMounted(async () => {
   // 初始化词云
   await nextTick();
   initWordCloud();
+  startExampleAutoplay();
 
    const restoredMessage = sessionStorage.getItem('restoredChatMessage');
    if (restoredMessage) {
@@ -525,6 +593,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearInterval(carouselTimer);
+  stopExampleAutoplay();
   stopParseProgress();
   wordCloudChart?.dispose();
 });
@@ -811,7 +880,7 @@ const handleExampleClick = async (example) => {
     const response = await fetch(example.image);
     const blob = await response.blob();
     const file = new File([blob], `${example.title}.png`, { type: 'image/png' });
-    processFile(file);
+    await processFile(file);
   } catch (error) {
     console.error('处理示例失败:', error);
   }
@@ -830,6 +899,13 @@ const handleDrop = (event) => {
   processFile(event.dataTransfer.files[0]);
 };
 
+const isImageFile = (file) => {
+  const type = String(file?.type || '').toLowerCase();
+  if (type.startsWith('image/')) return true;
+  const filename = String(file?.name || '').toLowerCase();
+  return /\.(png|jpe?g|webp|gif|bmp|tiff?)$/.test(filename);
+};
+
 const processFile = async (file) => {
   if (!file) return;
   loading.value = true;
@@ -837,11 +913,32 @@ const processFile = async (file) => {
   aiResponse.value = null;
   const taskId = await startRealParseProgress();
   try {
-    markParseStage('上传与文本提取中', 26);
-    const uploadRes = await uploadAndExtractDocument(file);
-    const { extracted_text, file_url } = uploadRes.data;
-    markParseStage('LLM 自由解析中', 68);
-    const chatRes = await createChatMessageWithFile(extracted_text, file_url, taskId);
+    let extractedText = '';
+    let fileUrl = '';
+
+    if (isImageFile(file)) {
+      markParseStage('图片上传与OCR识别', 30);
+      const formData = new FormData();
+      formData.append('file', file);
+      const ocrRes = await apiClient.post(API_ROUTES.UPLOAD_OCR, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      extractedText = ocrRes.data?.extracted_text || '';
+      fileUrl = ocrRes.data?.file_url || '';
+      if (!extractedText.trim()) {
+        alert('未能识别出文字，请尝试更清晰的图片。');
+        return;
+      }
+      markParseStage('LLM 自由解析中', 70);
+    } else {
+      markParseStage('上传与文本提取中', 26);
+      const uploadRes = await uploadAndExtractDocument(file);
+      extractedText = uploadRes.data?.extracted_text || '';
+      fileUrl = uploadRes.data?.file_url || '';
+      markParseStage('LLM 自由解析中', 68);
+    }
+
+    const chatRes = await createChatMessageWithFile(extractedText, fileUrl, taskId);
     aiResponse.value = chatRes.data;
     markParseStage('图谱构建与结果整理', 94);
     showResult.value = true;
@@ -1592,6 +1689,15 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+}
+
+.scan-zone {
+  min-height: 44vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
 }
 
@@ -1603,7 +1709,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
-  margin: 0 auto 24px;
+  margin: 0 auto 8px;
   width: 50%;
   min-width: 600px;
   max-width: 800px;
@@ -1620,7 +1726,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   top: 0;
   bottom: 0;
   width: 40px;
-  background: linear-gradient(90deg, #d4a574 0%, #c89968 50%, #d4a574 100%);
+  background: linear-gradient(90deg, #b31217 0%, #d7263d 50%, #b31217 100%);
   box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
   z-index: 1;
 }
@@ -1791,7 +1897,11 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
+  width: 50%;
+  min-width: 600px;
+  max-width: 800px;
+  box-sizing: border-box;
   font-weight: bold;
   font-size: 14px;
   animation: fadeIn 0.5s;
@@ -1822,7 +1932,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 
 .loading-progress-track {
   width: 100%;
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
   background: #f5d9d6;
   overflow: hidden;
@@ -1831,6 +1941,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .loading-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #c0392b 0%, #e67e22 100%);
+  border-radius: 999px;
   transition: width 0.35s ease;
 }
 
@@ -1841,20 +1952,64 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 
 /* 示例区域 */
 .examples-section {
-  margin-top: 32px;
+  margin-top: 4px;
+  width: min(64vw, 1200px);
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
 }
+.examples-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .section-title { font-size: 14px; color: #000; margin-bottom: 14px; font-weight: bold; }
+.examples-nav {
+  display: flex;
+  gap: 8px;
+}
+.examples-nav-btn {
+  border: 1px solid #e2b7b2;
+  background: #fff;
+  color: #c0392b;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.examples-nav-btn:hover {
+  background: #fff3f3;
+}
+.examples-carousel {
+  overflow: hidden;
+  padding-top: 0;
+  margin-top: 0;
+}
+.examples-track {
+  display: flex;
+  transition: transform 0.45s ease;
+  will-change: transform;
+}
+.examples-page {
+  min-width: 100%;
+  width: 100%;
+  padding-top: 56px;
+  box-sizing: border-box;
+}
 .examples-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 .example-card {
   background: #fff;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid #e8e8e8;
   display: flex;
   flex-direction: column;
@@ -1885,53 +2040,57 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .example-card:hover {
-  box-shadow: 0 8px 24px rgba(192,57,43,0.15);
+  box-shadow: none;
   transform: translateY(-4px);
 }
 .example-card:hover .breakout-image {
-  transform: translateY(-8px) rotate(0deg) scale(1.05);
-  box-shadow: 0 16px 30px rgba(0,0,0,0.2);
+  transform: translateX(-50%) translateY(-14px) rotate(0deg) scale(1.03);
+  box-shadow: none;
 }
 .card-image-wrapper {
   height: 140px;
-  background: linear-gradient(135deg, #fdf5f5, #f5e6e6);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: visible;
-  border-radius: 8px 8px 0 0;
+  border-radius: 14px 14px 0 0;
+  z-index: 1;
 }
 .breakout-image {
   position: absolute;
-  bottom: -35px;
+  bottom: -16px;
   left: 50%;
-  transform: translateX(-50%) rotate(2deg);
-  width: 85%;
-  max-width: 180px;
+  transform: translateX(-50%) translateY(-14px) rotate(2deg);
+  width: 78%;
+  max-width: 230px;
   border-radius: 4px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  box-shadow: none;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 10;
-  background: #fff;
-  padding: 4px;
+  z-index: 3;
+  background: transparent;
+  padding: 0;
 }
 .breakout-image img {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: 180px;
   height: auto;
   display: block;
   border-radius: 2px;
+  margin: 0 auto;
 }
 .card-content {
-  padding: 48px 16px 16px;
-  background: #fff;
+  padding: 40px 16px 16px;
+  background: var(--card-bg, #fff);
   flex: 1;
-  z-index: 1;
+  z-index: 4;
   position: relative;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 14px 14px;
 }
 .card-title {
-  font-size: 13px;
+  font-size: 16px;
   margin: 0 0 8px;
   color: #222;
   font-weight: 600;
@@ -1946,6 +2105,25 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   font-size: 11px;
   color: #c0392b;
   border: 1px solid #f5c6c6;
+}
+.examples-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.examples-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: none;
+  background: #e4c2be;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.examples-dot.active {
+  width: 22px;
+  background: #c0392b;
 }
 
 :global([data-theme="dark"]) .example-card {
@@ -1964,6 +2142,28 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 :global([data-theme="dark"]) .tag {
   background: rgba(192,57,43,0.2);
   border-color: rgba(192,57,43,0.4);
+}
+
+:global([data-theme="dark"]) .loading-banner {
+  background: rgba(192,57,43,0.18);
+  color: #ffd4d0;
+  border-left-color: #e67e73;
+}
+
+:global([data-theme="dark"]) .loading-elapsed {
+  color: #d2d9e3;
+}
+
+:global([data-theme="dark"]) .loading-stage {
+  color: #ffc0b8;
+}
+
+:global([data-theme="dark"]) .loading-progress-track {
+  background: rgba(255,255,255,0.14);
+}
+
+:global([data-theme="dark"]) .loading-progress-fill {
+  background: linear-gradient(90deg, #ff8a7d 0%, #ffb36b 100%);
 }
 
 /* 热点资讯图片横条 */
