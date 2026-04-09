@@ -167,6 +167,12 @@ watch(
 </script>
 
 <style scoped>
+@property --composer-glow-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 .conversation-panel {
   display: flex;
   flex-direction: column;
@@ -480,7 +486,7 @@ watch(
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 22px 22px;
+  padding: 0 22px 34px;
 }
 
 .composer-panel.landing {
@@ -515,6 +521,7 @@ watch(
 }
 
 .composer-shell {
+  --composer-glow-angle: 0deg;
   position: relative;
   width: min(40vw, 760px);
   max-width: 100%;
@@ -543,12 +550,29 @@ watch(
 
 .composer-shell::before {
   inset: -4px;
-  border: 1px solid rgba(101, 145, 240, 0.26);
+  padding: 1px;
+  background:
+    conic-gradient(
+      from var(--composer-glow-angle),
+      rgba(101, 145, 240, 0.68),
+      rgba(96, 208, 195, 0.62),
+      rgba(255, 194, 142, 0.44),
+      rgba(101, 145, 240, 0.68)
+    );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
   box-shadow:
     0 0 0 1px rgba(96, 208, 195, 0.12),
     0 0 18px rgba(89, 137, 255, 0.12),
     0 0 30px rgba(69, 210, 192, 0.08);
   opacity: 0.88;
+  animation: composerGlowAngleShift 7.2s linear infinite;
   z-index: 0;
 }
 
@@ -564,7 +588,6 @@ watch(
 }
 
 .composer-shell:focus-within::before {
-  border-color: rgba(101, 145, 240, 0.38);
   box-shadow:
     0 0 0 1px rgba(96, 208, 195, 0.2),
     0 0 24px rgba(89, 137, 255, 0.16),
@@ -679,6 +702,15 @@ watch(
   }
 }
 
+@keyframes composerGlowAngleShift {
+  from {
+    --composer-glow-angle: 0deg;
+  }
+  to {
+    --composer-glow-angle: 360deg;
+  }
+}
+
 @media (max-width: 820px) {
   .message-card {
     max-width: 100%;
@@ -748,7 +780,14 @@ watch(
 }
 
 :global([data-theme='dark']) .composer-shell::before {
-  border-color: rgba(118, 156, 255, 0.3);
+  background:
+    conic-gradient(
+      from var(--composer-glow-angle),
+      rgba(118, 156, 255, 0.74),
+      rgba(73, 204, 188, 0.68),
+      rgba(255, 194, 142, 0.46),
+      rgba(118, 156, 255, 0.74)
+    );
   box-shadow:
     0 0 0 1px rgba(73, 204, 188, 0.14),
     0 0 22px rgba(90, 135, 255, 0.18),
