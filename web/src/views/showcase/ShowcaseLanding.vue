@@ -75,7 +75,21 @@
                     <path d="M21 15l-5-5L5 21"/>
                   </svg>
                 </div>
-                <img v-else :src="card.image" :alt="card.title" />
+                <img
+                  v-else-if="shouldLoadComparisonImages"
+                  :src="card.image"
+                  :alt="card.title"
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
+                />
+                <div v-else class="image-placeholder">
+                  <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21"/>
+                  </svg>
+                </div>
               </div>
               <div class="comp-card-content">
                 <div class="comp-badge advantage">优势</div>
@@ -105,7 +119,21 @@
                     <path d="M21 15l-5-5L5 21"/>
                   </svg>
                 </div>
-                <img v-else :src="card.image" :alt="card.title" />
+                <img
+                  v-else-if="shouldLoadComparisonImages"
+                  :src="card.image"
+                  :alt="card.title"
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
+                />
+                <div v-else class="image-placeholder">
+                  <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21"/>
+                  </svg>
+                </div>
               </div>
               <div class="comp-card-content">
                 <div class="comp-badge disadvantage">痛点</div>
@@ -286,6 +314,7 @@ const flowSteps = [
 ]
 
 const visibleSections = reactive({ hero: false, features: false, comparison: false, flow: false, cta: false })
+const shouldLoadComparisonImages = ref(false)
 const heroRef = ref(null)
 const featuresRef = ref(null)
 const comparisonRef = ref(null)
@@ -293,7 +322,17 @@ const flowRef = ref(null)
 const ctaRef = ref(null)
 
 let observer
+let comparisonImageObserver
 onMounted(() => {
+  comparisonImageObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting && entry.target === comparisonRef.value) {
+        shouldLoadComparisonImages.value = true
+        comparisonImageObserver?.disconnect()
+      }
+    })
+  }, { threshold: 0, rootMargin: '320px 0px' })
+
   observer = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (e.isIntersecting) {
@@ -309,11 +348,15 @@ onMounted(() => {
   if (heroRef.value) observer.observe(heroRef.value)
   if (featuresRef.value) observer.observe(featuresRef.value)
   if (comparisonRef.value) observer.observe(comparisonRef.value)
+  if (comparisonRef.value) comparisonImageObserver.observe(comparisonRef.value)
   if (flowRef.value) observer.observe(flowRef.value)
   if (ctaRef.value) observer.observe(ctaRef.value)
 })
 
-onUnmounted(() => observer?.disconnect())
+onUnmounted(() => {
+  observer?.disconnect()
+  comparisonImageObserver?.disconnect()
+})
 </script>
 
 <style scoped>
@@ -400,7 +443,6 @@ onUnmounted(() => observer?.disconnect())
 
 .comp-card {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
   border-radius: 100px;
   display: flex;
   align-items: center;
@@ -408,10 +450,10 @@ onUnmounted(() => observer?.disconnect())
   padding: 16px 24px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease, box-shadow 0.25s ease;
   opacity: 0;
-  filter: blur(4px);
   min-height: 120px;
+  will-change: transform, opacity;
 }
 
 .comp-card.advantage-card {
@@ -425,7 +467,6 @@ onUnmounted(() => observer?.disconnect())
 .comp-card.visible {
   opacity: 1;
   transform: translateX(0);
-  filter: blur(0);
 }
 
 .comp-card:hover {

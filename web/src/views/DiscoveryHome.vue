@@ -175,7 +175,16 @@
             class="news-list-item"
             @click="openLink(item.link)"
           >
-            <div class="nl-thumb" :style="getNewsThumbStyle(idx)"></div>
+            <div class="nl-thumb" :style="getNewsThumbStyle(idx)">
+              <img
+                v-if="getNewsCover(idx)"
+                :src="getNewsCover(idx)"
+                :alt="item.title || 'news cover'"
+                loading="lazy"
+                decoding="async"
+                fetchpriority="low"
+              />
+            </div>
             <span class="nl-type" :class="item.source_type === 'policy' ? 'type-policy' : 'type-news'">
               {{ item.source_type === 'policy' ? '政策' : '时事' }}
             </span>
@@ -210,6 +219,15 @@
             @click="openLink(item.link)"
           >
             <div class="nc-header" :style="getNewsCardHeaderStyle(idx)">
+              <img
+                v-if="getNewsCover(idx)"
+                class="nc-cover"
+                :src="getNewsCover(idx)"
+                :alt="item.title || 'news cover'"
+                loading="lazy"
+                decoding="async"
+                fetchpriority="low"
+              />
               <span class="nc-header-mask"></span>
               <span class="nc-type">{{ item.source_type === 'policy' ? '政策' : '时事' }}</span>
             </div>
@@ -384,23 +402,27 @@ const getNewsCover = (idx) => {
 };
 
 const getNewsCardHeaderStyle = (idx) => {
-  const cover = getNewsCover(idx);
-  if (!cover) return { background: cardColors[idx % cardColors.length] };
-  return {
-    backgroundImage: `url(${cover})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  };
+  return { background: cardColors[idx % cardColors.length] };
 };
 
 const getNewsThumbStyle = (idx) => {
-  const cover = getNewsCover(idx);
-  if (!cover) return { background: cardColors[idx % cardColors.length] };
-  return {
-    backgroundImage: `url(${cover})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
+  return { background: cardColors[idx % cardColors.length] };
+};
+const prewarmNewsCovers = () => {
+  if (!discoverNewsImages.length) return;
+  const run = () => {
+    discoverNewsImages.forEach((src) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+      if (img.decode) img.decode().catch(() => {});
+    });
   };
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(run, { timeout: 1200 });
+  } else {
+    setTimeout(run, 160);
+  }
 };
 // ── 传送带 ────────────────────────────────────────────────────────────────────
 // 使用 CSS animation，无需 JS timer
@@ -520,6 +542,7 @@ const HOT_DOCS_BASE_COUNT = 5;
 // ── 生命周期 ──────────────────────────────────────────────────────────────────
 onMounted(() => {
   slideTimer = setInterval(nextSlide, 4000);
+  prewarmNewsCovers();
   loadSummary();
   loadNews();
   loadDocs();
@@ -1157,10 +1180,15 @@ const getComplexityClass = (item) => {
   width: 92px;
   height: 60px;
   border-radius: 8px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  overflow: hidden;
+  position: relative;
   flex-shrink: 0;
+}
+.nl-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .nl-type {
   flex-shrink: 0;
@@ -1224,9 +1252,15 @@ const getComplexityClass = (item) => {
   display: flex;
   align-items: flex-end;
   padding: 8px 10px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  overflow: hidden;
+}
+.nc-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .nc-header-mask {
   position: absolute;
