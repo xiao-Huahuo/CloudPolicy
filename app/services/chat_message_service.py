@@ -14,7 +14,6 @@ from app.ai.analysis_agent import analyze_complexity_and_type
 from app.ai.document_parser import rewrite_document
 from app.core.config import GlobalConfig
 from app.models.chat_message import ChatMessage
-from app.services import rag_service
 
 
 logger = logging.getLogger(__name__)
@@ -385,23 +384,7 @@ def open_message_folder(message: ChatMessage) -> dict[str, Any]:
 def get_rag_context_for_message(
     message: ChatMessage, top_k: int = 5
 ) -> list[dict[str, Any]]:
-    query = "\n".join(
-        filter(
-            None,
-            [
-                message.handling_matter,
-                message.required_materials,
-                message.risk_warnings,
-                message.original_text[:500] if message.original_text else "",
-            ],
-        )
-    )
-    return rag_service.search_related_context(
-        query,
-        top_k=top_k,
-        user_id=message.user_id,
-        source="chat_message",
-    )
+    return []
 
 
 def evaluate_notice_difficulty(

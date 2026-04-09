@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 from pathlib import Path
 from typing import List
@@ -12,7 +12,7 @@ from app.core.config import GlobalConfig
 from app.core.database import get_session
 from app.models.chat_message import ChatMessage
 from app.models.user import User, UserRole
-from app.services import email_service, rag_service, stats_service
+from app.services import email_service, stats_service
 
 
 router = APIRouter()
@@ -87,7 +87,11 @@ def set_user_role(
     user.role = role
     session.add(user)
     session.commit()
-    role_names = {UserRole.normal: "普通用户", UserRole.certified: "认证主体", UserRole.admin: "管理员"}
+    role_names = {
+        UserRole.normal: "普通用户",
+        UserRole.certified: "认证主体",
+        UserRole.admin: "管理员",
+    }
     email_service.send_role_change_email(user, role_names[role])
     return {"uid": user.uid, "role": user.role}
 
@@ -106,7 +110,10 @@ def toggle_admin(
     user.role = UserRole.admin if user.role != UserRole.admin else UserRole.normal
     session.add(user)
     session.commit()
-    email_service.send_role_change_email(user, "管理员" if user.role == UserRole.admin else "普通用户")
+    email_service.send_role_change_email(
+        user,
+        "管理员" if user.role == UserRole.admin else "普通用户",
+    )
     return {"uid": user.uid, "role": user.role}
 
 
@@ -167,7 +174,11 @@ def read_logs(
 
 @router.get("/rag/status")
 def rag_status(admin: User = Depends(require_admin)):
-    return rag_service.get_status()
+    return {
+        "backend": "disabled",
+        "document_count": 0,
+        "knowledge_base_path": str(GlobalConfig.KNOWLEDGE_BASE_PATH),
+    }
 
 
 @router.get("/rag/search")
@@ -176,15 +187,7 @@ def rag_search(
     top_k: int = Query(5, ge=1, le=10),
     admin: User = Depends(require_admin),
 ):
-    return {
-        "items": rag_service.search_related_context(
-            q,
-            top_k=top_k,
-            user_id=admin.uid,
-            source="admin_search",
-        )
-    }
-
+    return {"items": []}
 
 @router.get("/user-geo")
 def admin_user_geo(
@@ -198,7 +201,7 @@ def admin_user_geo(
         "广东", "北京", "上海", "浙江", "江苏", "四川", "湖北", "湖南",
         "山东", "河南", "福建", "陕西", "辽宁", "河北", "安徽", "重庆",
         "云南", "贵州", "江西", "黑龙江", "吉林", "内蒙古", "广西", "新疆",
-        "甘肃", "山西", "天津", "海南", "宁夏", "青海", "西藏"
+        "甘肃", "山西", "天津", "海南", "宁夏", "青海", "西藏",
     ]
     dist = {}
     for u in users:
@@ -275,3 +278,5 @@ def get_user_avatar(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"uid": uid, "avatar_url": user.avatar_url}
+
+

@@ -7,7 +7,6 @@ from sqlmodel import Session, select
 
 from app.models.chat_message import ChatMessage
 from app.models.rag_usage import RagUsage
-from app.services import rag_service
 
 
 STOP_WORDS = {
@@ -248,20 +247,6 @@ def _build_vector_scatter(messages: List[ChatMessage], limit: int = 120) -> List
     return points
 
 
-def _build_rag_query_from_message(message: ChatMessage) -> str:
-    return "\n".join(
-        filter(
-            None,
-            [
-                message.handling_matter,
-                message.required_materials,
-                message.risk_warnings,
-                message.original_text[:500] if message.original_text else "",
-            ],
-        )
-    )
-
-
 def _build_stats(messages: List[ChatMessage], rag_payload: Dict[str, Any]) -> Dict[str, Any]:
     total_count = len(messages)
     if total_count == 0:
@@ -312,24 +297,6 @@ def generate_user_stats(session: Session, user_id: int) -> Dict[str, Any]:
     usages = list(session.exec(
         select(RagUsage).where(RagUsage.user_id == user_id)
     ).all())
-    if not usages and messages:
-        recent = sorted(messages, key=lambda msg: msg.created_time, reverse=True)[:20]
-        for message in recent:
-            query = _build_rag_query_from_message(message)
-            if not query.strip():
-                continue
-            try:
-                rag_service.search_related_context(
-                    query,
-                    top_k=3,
-                    user_id=user_id,
-                    source="stats_backfill",
-                )
-            except Exception:
-                pass
-        usages = list(session.exec(
-            select(RagUsage).where(RagUsage.user_id == user_id)
-        ).all())
     rag_payload = _build_rag_stats_from_usage(usages, mode="sequence")
     return _build_stats(messages, rag_payload)
 

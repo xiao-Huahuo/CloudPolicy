@@ -360,3 +360,6 @@
   - 修复插件问题：移除工具中的硬编码 `user_id`、统一 `stream_run` 同步接口声明、实现检索阈值过滤、清理 README 中敏感示例。
   - 同步更新 `.env`、`README.md` `.env` 模板与 `docker-compose.yml` 环境变量映射。
   - 插件关系库存储合并到全局 `database.db`（不再使用 `agent_plugin.db`）。
+  - 删除旧 Agent 链路：移除 `app/ai/agent_graph.py`、`app/services/agent_memory_service.py`，`agent_service` 改为仅走 `agent_plugin`。
+
+- [x] 清理旧 Agent/RAG/存储链路（2026-04-09）：删除 pp/services/rag_service.py，移除 dmin/stats/chat_message 中旧 RAG 调用，/rag/* 接口降级为禁用占位返回，保留仅 plugin 的 agent 执行链路。

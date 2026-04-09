@@ -50,8 +50,17 @@ def run_agent_plugin(
     conversation_id: Optional[int] = None,
     trace_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
 ) -> Dict[str, Any]:
+    base_result = {
+        "enabled": bool(GlobalConfig.AGENT_PLUGIN_ENABLED),
+        "assistant_reply": "",
+        "tool_calls": [],
+        "structured": None,
+        "parse_mode": None,
+        "evidence": [],
+    }
+
     if not GlobalConfig.AGENT_PLUGIN_ENABLED:
-        return {"enabled": False, "assistant_reply": "", "tool_calls": []}
+        return base_result
 
     thread_id = f"conversation_{conversation_id}" if conversation_id else f"user_{user_id}_adhoc"
     assistant_reply = ""
@@ -65,8 +74,17 @@ def run_agent_plugin(
             if not payload:
                 continue
 
-            if payload.get("node") == "agent" and payload.get("content"):
+            if payload.get("node") in {"agent", "answer", "blocked", "output_safety"} and payload.get("content"):
                 assistant_reply = str(payload["content"])
+            thought_event = str(payload.get("thought_event", "")).strip()
+            if thought_event and trace_callback:
+                trace_callback(
+                    {
+                        "tool": "agent_thought",
+                        "input": thought_event,
+                        "output": "",
+                    }
+                )
 
             for tc in payload.get("tool_calls", []) or []:
                 normalized = {
@@ -82,8 +100,30 @@ def run_agent_plugin(
                 if trace_callback:
                     trace_callback(normalized)
 
-    except Exception as exc:
-        logger.exception("Agent plugin 执行失败，准备回退旧链路: %s", exc)
-        return {"enabled": True, "assistant_reply": "", "tool_calls": [], "error": str(exc)}
+            for tr in payload.get("tool_results", []) or []:
+                output = str(tr.get("output", "")).strip()
+                if not output:
+                    continue
+                tool_name = tr.get("name", "tool")
+                matched = False
+                for item in reversed(tool_calls):
+                    if item.get("tool") == tool_name and not item.get("output"):
+                        item["output"] = output
+                        matched = True
+                        if trace_callback:
+                            trace_callback(item)
+                        break
+                if not matched:
+                    fallback = {"tool": tool_name, "input": "{}", "output": output}
+                    tool_calls.append(fallback)
+                    if trace_callback:
+                        trace_callback(fallback)
 
-    return {"enabled": True, "assistant_reply": assistant_reply, "tool_calls": tool_calls}
+    except Exception as exc:
+        logger.exception("Agent plugin 执行失败: %s", exc)
+        base_result["error"] = str(exc)
+        return base_result
+
+    base_result["assistant_reply"] = assistant_reply
+    base_result["tool_calls"] = tool_calls
+    return base_result

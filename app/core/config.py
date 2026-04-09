@@ -40,6 +40,8 @@ class GlobalConfig:
     CHAT_EXPORT_DIR = UPLOAD_DIR / "chat_exports"
     KNOWLEDGE_DIR = PROJECT_ROOT / "app" / "resources"
     KNOWLEDGE_BASE_PATH = KNOWLEDGE_DIR / "vector_init" / "policy_knowledge.json"
+    EMBEDDING_MODELS_DIR = KNOWLEDGE_DIR / "embedding"
+    DEFAULT_AGENT_PLUGIN_EMBEDDING_MODEL = EMBEDDING_MODELS_DIR / "paraphrase-multilingual-MiniLM-L12-v2"
     DB_INIT_DIR = KNOWLEDGE_DIR / "db_init"
     DB_INIT_DATA_PATH = PROJECT_ROOT / "seed_data.json"  # deprecated compatibility only
     LOG_DIR = PROJECT_ROOT / "logs"
@@ -96,7 +98,14 @@ class GlobalConfig:
 
     # Agent plugin behavior params from env
     AGENT_PLUGIN_ENABLED = _to_bool(os.getenv("AGENT_PLUGIN_ENABLED"))
-    AGENT_PLUGIN_EMBEDDING_MODEL = os.getenv("AGENT_PLUGIN_EMBEDDING_MODEL")
+    _embedding_model_raw = os.getenv(
+        "AGENT_PLUGIN_EMBEDDING_MODEL",
+        "paraphrase-multilingual-MiniLM-L12-v2",
+    )
+    AGENT_PLUGIN_EMBEDDING_MODEL_NAME = Path(_embedding_model_raw).name
+    AGENT_PLUGIN_EMBEDDING_MODEL = str(
+        EMBEDDING_MODELS_DIR / AGENT_PLUGIN_EMBEDDING_MODEL_NAME
+    )
     AGENT_PLUGIN_COLLECTION_NAME = os.getenv("AGENT_PLUGIN_COLLECTION_NAME")
     AGENT_PLUGIN_RAG_RAW_FILE_PATH = str(KNOWLEDGE_BASE_PATH)
     AGENT_PLUGIN_RAG_CHUNK_SIZE = int(os.getenv("AGENT_PLUGIN_RAG_CHUNK_SIZE"))

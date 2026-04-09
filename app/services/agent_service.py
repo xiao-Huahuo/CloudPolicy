@@ -1,15 +1,13 @@
-﻿import json
+import json
 import re
 from typing import Any, Callable, Dict, List, Optional
 
 from sqlmodel import Session, select
 
 from app.ai.document_parser import parse_document
-from app.ai.agent_graph import run_agent_graph
-from app.core.config import GlobalConfig
 from app.models.chat_message import ChatMessage
 from app.models.settings import Settings
-from app.services import chat_message_service, rag_service, agent_chat_service, agent_plugin_service
+from app.services import chat_message_service, agent_plugin_service
 
 AGENT_NAME = "通知办理智能体"
 
@@ -80,20 +78,6 @@ def _build_summary(parsed: Dict[str, Any]) -> str:
     return f"本次为 {matter}，面向 {audience}，关键时间节点：{time_deadline}。"
 
 
-def _build_rag_query(parsed: Dict[str, Any], original_text: str) -> str:
-    return "\n".join(
-        filter(
-            None,
-            [
-                parsed.get("handling_matter"),
-                parsed.get("required_materials"),
-                parsed.get("risk_warnings"),
-                (original_text or "")[:500],
-            ],
-        )
-    )
-
-
 def run_agent(
     session: Session,
     user_id: int,
@@ -106,89 +90,37 @@ def run_agent(
     save_to_history: bool = True,
     conversation_id: Optional[int] = None,
     trace_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-user_audience_label=None) -> Dict[str, Any]:
+    user_audience_label=None,
+) -> Dict[str, Any]:
     graph_reply = ""
     tool_state: Dict[str, Any] = {}
     safe_text = original_text
-    history_payload: List[Dict[str, str]] = []
-    if conversation_id:
-        try:
-            items = agent_chat_service.get_messages(session, user_id, conversation_id)
-            history_payload = [
-                {"role": item.role, "content": item.content}
-                for item in items[-8:]
-                if item.role in ("user", "assistant") and item.content
-            ]
-            if history_payload and history_payload[-1]["role"] == "user" and history_payload[-1]["content"] == original_text:
-                history_payload = history_payload[:-1]
-        except Exception:
-            history_payload = []
-    if GlobalConfig.AGENT_PLUGIN_ENABLED:
-        try:
-            plugin_result = agent_plugin_service.run_agent_plugin(
-                user_id=user_id,
-                prompt=original_text,
-                conversation_id=conversation_id,
-                trace_callback=trace_callback,
-            )
-            graph_reply = plugin_result.get("assistant_reply", "") or ""
-            tool_state = {"tool_calls": plugin_result.get("tool_calls", [])}
-            safe_text = original_text
-            if not graph_reply:
-                graph_result = run_agent_graph(
-                    user_id=user_id,
-                    original_text=original_text,
-                    top_k=top_k,
-                    history=history_payload,
-                    conversation_id=conversation_id,
-                    user_audience_label=user_audience_label,
-                    trace_callback=trace_callback,
-                )
-                graph_reply = graph_result.get("assistant_reply", "") or ""
-                tool_state = graph_result.get("tool_state", {}) or tool_state
-                safe_text = graph_result.get("safe_text", original_text) or original_text
-        except Exception:
-            try:
-                graph_result = run_agent_graph(
-                    user_id=user_id,
-                    original_text=original_text,
-                    top_k=top_k,
-                    history=history_payload,
-                    conversation_id=conversation_id,
-                    user_audience_label=user_audience_label,
-                    trace_callback=trace_callback,
-                )
-                graph_reply = graph_result.get("assistant_reply", "") or ""
-                tool_state = graph_result.get("tool_state", {}) or {}
-                safe_text = graph_result.get("safe_text", original_text) or original_text
-            except Exception:
-                graph_reply = ""
-                tool_state = {}
-                safe_text = original_text
-    else:
-        try:
-            graph_result = run_agent_graph(
-                user_id=user_id,
-                original_text=original_text,
-                top_k=top_k,
-                history=history_payload,
-                conversation_id=conversation_id,
-                user_audience_label=user_audience_label,
-                trace_callback=trace_callback,
-            )
-            graph_reply = graph_result.get("assistant_reply", "") or ""
-            tool_state = graph_result.get("tool_state", {}) or {}
-            safe_text = graph_result.get("safe_text", original_text) or original_text
-        except Exception:
-            graph_reply = ""
-            tool_state = {}
-            safe_text = original_text
+
+    try:
+        plugin_result = agent_plugin_service.run_agent_plugin(
+            user_id=user_id,
+            prompt=original_text,
+            conversation_id=conversation_id,
+            trace_callback=trace_callback,
+        )
+        graph_reply = plugin_result.get("assistant_reply", "") or ""
+        tool_state = {
+            "tool_calls": plugin_result.get("tool_calls", []),
+            "structured": plugin_result.get("structured"),
+            "parse_mode": plugin_result.get("parse_mode"),
+            "evidence": plugin_result.get("evidence", []),
+        }
+        safe_text = original_text
+    except Exception:
+        graph_reply = ""
+        tool_state = {}
+        safe_text = original_text
 
     parsed = tool_state.get("structured")
     parse_mode = tool_state.get("parse_mode")
     if not parsed or not parse_mode:
         parsed, parse_mode = parse_document(safe_text, user_id)
-    # 关键兼容层（禁止删除）：parse_document 可能返回 Pydantic 模型，后续逻辑统一按 dict 处理。
+
     if not isinstance(parsed, dict):
         if hasattr(parsed, "model_dump"):
             parsed = parsed.model_dump()
@@ -215,32 +147,10 @@ user_audience_label=None) -> Dict[str, Any]:
     evidence: List[Dict[str, Any]] = []
     avg_score = 0.0
     result_count = 0
-    if use_rag:
-        if tool_state.get("evidence"):
-            evidence = tool_state.get("evidence", [])
-            result_count = len(evidence)
-            avg_score = sum(item.get("score", 0) for item in evidence) / result_count if result_count else 0.0
-        else:
-            query = _build_rag_query(parsed, safe_text)
-            items = rag_service.search_related_context(
-                query,
-                top_k=top_k,
-                user_id=user_id,
-                source="agent_run",
-            )
-            result_count = len(items)
-            avg_score = sum(item.get("score", 0) for item in items) / result_count if result_count else 0.0
-            for item in items:
-                content = str(item.get("content", ""))[:160]
-                evidence.append(
-                    {
-                        "title": item.get("title"),
-                        "category": item.get("category"),
-                        "score": round(float(item.get("score", 0)), 3),
-                        "snippet": content,
-                        "tags": item.get("tags", []),
-                    }
-                )
+    if use_rag and tool_state.get("evidence"):
+        evidence = tool_state.get("evidence", [])
+        result_count = len(evidence)
+        avg_score = sum(item.get("score", 0) for item in evidence) / result_count if result_count else 0.0
 
     confidence = 0.35
     if parse_mode == "ai":
@@ -311,7 +221,7 @@ def _is_json_like(text: str) -> bool:
     t = text.strip()
     if (t.startswith("{") and t.endswith("}")) or (t.startswith("[") and t.endswith("]")):
         return True
-    if re.search(r"\"[^\"]+\"\\s*:", t):
+    if re.search(r'"[^"]+"\\s*:', t):
         return True
     return False
 
