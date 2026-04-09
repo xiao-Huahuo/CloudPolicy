@@ -22,6 +22,12 @@ _INGEST_LOCK = Lock()
 _INGEST_STARTED = False
 
 
+def warmup_agent_plugin() -> None:
+    if not GlobalConfig.AGENT_PLUGIN_ENABLED:
+        return
+    _get_agent_core()
+
+
 def _ensure_agent_embedding_ready() -> None:
     if not GlobalConfig.AGENT_PLUGIN_ENABLED:
         return
