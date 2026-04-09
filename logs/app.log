@@ -7998,3 +7998,23 @@ WHERE user.uid = ?
 2026-04-09 14:34:28,365 | INFO | app.main | HTTP GET /news/central-docs -> 200
 2026-04-09 14:34:28,372 | INFO | app.main | HTTP GET /news/hot
 2026-04-09 14:34:28,375 | INFO | app.main | HTTP GET /news/hot -> 200
+2026-04-09 14:36:53,877 | INFO | app.main | HTTP GET /user/me
+2026-04-09 14:36:53,881 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-09 14:36:53,881 | INFO | sqlalchemy.engine.Engine | SELECT user.uname AS user_uname, user.email AS user_email, user.phone AS user_phone, user.avatar_url AS user_avatar_url, user.role AS user_role, user.profession AS user_profession, user.uid AS user_uid, user.hashed_pwd AS user_hashed_pwd, user.created_time AS user_created_time, user.last_login AS user_last_login, user.email_verified AS user_email_verified, user.email_verification_code AS user_email_verification_code, user.email_verification_sent_at AS user_email_verification_sent_at, user.last_ip AS user_last_ip 
+FROM user 
+WHERE user.uid = ?
+2026-04-09 14:36:53,881 | INFO | sqlalchemy.engine.Engine | [cached since 1.063e+04s ago] (1,)
+2026-04-09 14:36:53,884 | INFO | app.main | HTTP GET /user/me -> 200
+2026-04-09 14:36:53,885 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-09 14:36:53,925 | INFO | app.main | HTTP GET /settings/me
+2026-04-09 14:36:53,927 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-09 14:36:53,927 | INFO | sqlalchemy.engine.Engine | SELECT user.uname AS user_uname, user.email AS user_email, user.phone AS user_phone, user.avatar_url AS user_avatar_url, user.role AS user_role, user.profession AS user_profession, user.uid AS user_uid, user.hashed_pwd AS user_hashed_pwd, user.created_time AS user_created_time, user.last_login AS user_last_login, user.email_verified AS user_email_verified, user.email_verification_code AS user_email_verification_code, user.email_verification_sent_at AS user_email_verification_sent_at, user.last_ip AS user_last_ip 
+FROM user 
+WHERE user.uid = ?
+2026-04-09 14:36:53,927 | INFO | sqlalchemy.engine.Engine | [cached since 1.063e+04s ago] (1,)
+2026-04-09 14:36:53,928 | INFO | sqlalchemy.engine.Engine | SELECT settings.default_audience, settings.theme_mode, settings.system_notifications, settings.user_id, settings.id 
+FROM settings 
+WHERE settings.user_id = ?
+2026-04-09 14:36:53,928 | INFO | sqlalchemy.engine.Engine | [cached since 1.063e+04s ago] (1,)
+2026-04-09 14:36:53,930 | INFO | app.main | HTTP GET /settings/me -> 200
+2026-04-09 14:36:53,931 | INFO | sqlalchemy.engine.Engine | ROLLBACK
