@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from threading import Thread
 from threading import Lock
 from typing import Any, Callable, Dict, Optional
 
 from app.ai.document_parser import parse_document
 from app.agent_plugin.agent.agent import AgentCore
+from app.agent_plugin.agent.config import AgentConfig
 from app.agent_plugin.agent.memory import GLOBAL_KNOWLEDGE_USER_ID
 from app.agent_plugin.bootstrap import ensure_agent_plugin_configured
 from app.core.config import GlobalConfig
@@ -20,11 +22,47 @@ _INGEST_LOCK = Lock()
 _INGEST_STARTED = False
 
 
+def _ensure_agent_embedding_ready() -> None:
+    if not GlobalConfig.AGENT_PLUGIN_ENABLED:
+        return
+
+    embedding_path = Path(str(AgentConfig.EMBEDDING_MODEL))
+    if embedding_path.exists():
+        return
+
+    logger.warning(
+        "Agent plugin enabled but embedding missing, preparing download: %s",
+        embedding_path,
+    )
+    embedding_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        from sentence_transformers import SentenceTransformer
+
+        model_name = str(GlobalConfig.AGENT_PLUGIN_EMBEDDING_MODEL_NAME)
+        model = SentenceTransformer(
+            model_name,
+            cache_folder=str(GlobalConfig.EMBEDDING_MODELS_DIR),
+        )
+        model.save(str(embedding_path))
+        logger.info(
+            "Agent embedding download completed: model=%s, saved_to=%s",
+            model_name,
+            embedding_path,
+        )
+    except Exception as exc:
+        logger.exception("Agent embedding prepare failed: %s", exc)
+        raise RuntimeError(
+            f"Agent plugin enabled but embedding unavailable: {embedding_path}"
+        ) from exc
+
+
 def _get_agent_core() -> AgentCore:
     global _AGENT_CORE
     with _LOCK:
         if _AGENT_CORE is None:
             ensure_agent_plugin_configured()
+            _ensure_agent_embedding_ready()
             _AGENT_CORE = AgentCore()
             _ensure_global_rag_ingest_once(_AGENT_CORE)
     return _AGENT_CORE
