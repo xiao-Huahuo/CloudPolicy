@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div class="opinion-hall">
     <div class="hall-header">
-      <PolicyTitle title="民生评议大厅" />
+      <PolicyTitle title="民生福祉大厅" />
       <p class="hall-desc">全站用户对各项政策的落地评价、智能解析纠错和办事留言公开展示</p>
     </div>
 
@@ -50,7 +50,7 @@
 
     <!-- 词云气泡区域 -->
     <div class="wordcloud-section">
-      <div class="wordcloud-container" ref="wordcloudRef">
+      <div class="wordcloud-container" ref="wordcloudRef" :style="{ height: `${cloudHeight}px` }">
         <div
           v-for="word in cloudWords" :key="word.text"
           class="bubble-word"
@@ -61,7 +61,7 @@
     </div>
 
     <!-- 认证主体专属视图 -->
-    <div v-if="userStore.isCertified || userStore.isAdmin" class="certified-section">
+    <div v-if="showCertifiedSection" class="certified-section">
       <div class="section-header">
         <span class="section-dot"></span>
         <span>我的政策反馈（认证主体专属）</span>
@@ -133,7 +133,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import PolicyTitle from '@/components/common/PolicyTitle.vue'
 import { useUserStore } from '@/stores/auth.js'
 import { useRouter } from 'vue-router'
@@ -141,6 +141,7 @@ import { apiClient, API_ROUTES } from '@/router/api_routes'
 
 const userStore = useUserStore()
 const router = useRouter()
+const showCertifiedSection = computed(() => userStore.user?.role === 'certified')
 
 const slideIdx = ref(0)
 const topDocs = ref([])
@@ -154,6 +155,7 @@ const feedSkip = ref(0)
 const viewMode = ref('list')
 const wordcloudRef = ref(null)
 const loadMoreRef = ref(null)
+const cloudHeight = ref(240)
 
 const SLIDE_COLORS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#e67e22']
 const carouselImageModules = import.meta.glob('/src/assets/photos/opinion-carousel/*.{jpg,jpeg,png,webp}', { eager: true })
@@ -163,6 +165,24 @@ const carouselImages = Object.entries(carouselImageModules)
 
 let slideTimer = null
 let observer = null
+let bubbleRaf = null
+let resizeHandler = null
+const BUBBLE_PADDING = 14
+
+const updateCloudHeight = (nodes, minHeight = 180) => {
+  if (!nodes.length) {
+    cloudHeight.value = minHeight
+    return
+  }
+  let minTop = Number.POSITIVE_INFINITY
+  let maxBottom = Number.NEGATIVE_INFINITY
+  nodes.forEach((n) => {
+    minTop = Math.min(minTop, n.y - n.radius)
+    maxBottom = Math.max(maxBottom, n.y + n.radius)
+  })
+  const needed = Math.ceil((maxBottom - minTop) + BUBBLE_PADDING * 2)
+  cloudHeight.value = Math.max(minHeight, needed)
+}
 
 const prevSlide = () => { slideIdx.value = (slideIdx.value - 1 + topDocs.value.length) % topDocs.value.length }
 const nextSlide = () => { slideIdx.value = (slideIdx.value + 1) % topDocs.value.length }
@@ -196,7 +216,7 @@ const searchByWord = (word) => {
 const buildWordCloud = (opinions) => {
   const freq = {}
   opinions.forEach(op => {
-    op.content.split(/[\s，。！？、,.!?]+/).filter(w => w.length >= 2).forEach(w => {
+    op.content.split(/[\s，。！？,.!?]+/).filter(w => w.length >= 2).forEach(w => {
       freq[w] = (freq[w] || 0) + 1
     })
   })
@@ -204,21 +224,191 @@ const buildWordCloud = (opinions) => {
   const max = sorted[0]?.[1] || 1
   cloudWords.value = sorted.map(([text, count], i) => {
     const ratio = count / max
-    const size = 10 + ratio * 12
-    const dim = size * text.length * 0.52 + 14
+    const size = 8 + ratio * 8
+    const labelWidth = Math.max(size * String(text).length * 0.58, size * 1.8)
+    const labelHeight = size * 1.9
+    const radius = Math.min(120, Math.max(20, Math.max(labelWidth, labelHeight) / 2 + 10 + ratio * 4))
     return {
       text,
+      radius,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
       bubbleStyle: {
         '--bubble-color': SLIDE_COLORS[i % SLIDE_COLORS.length],
-        '--float-dur': `${3.5 + (i % 5) * 0.7}s`,
-        '--float-delay': `${(i * 0.4) % 4}s`,
         fontSize: `${size}px`,
-        width: `${dim}px`,
-        height: `${dim}px`,
         opacity: 0.72 + ratio * 0.28,
+        width: `${radius * 2}px`,
+        height: `${radius * 2}px`,
+        left: '0px',
+        top: '0px',
       }
     }
   })
+  nextTick(() => startBubbleCluster())
+}
+
+const startBubbleCluster = () => {
+  stopBubbleCluster()
+  const el = wordcloudRef.value
+  if (!el || !cloudWords.value.length) return
+  const width = el.clientWidth || 0
+  if (width <= 0) return
+
+  const estimatedRows = Math.max(2, Math.ceil(Math.sqrt(cloudWords.value.length) * 0.72))
+  const avgDiameter = cloudWords.value.reduce((sum, w) => sum + w.radius * 2, 0) / cloudWords.value.length
+  cloudHeight.value = Math.max(190, Math.ceil(estimatedRows * avgDiameter * 0.72))
+
+  const cx = width / 2
+  const cy = cloudHeight.value / 2
+  const baseR = Math.min(width, cloudHeight.value) * 0.14
+  cloudWords.value.forEach((w, i) => {
+    const angle = (i / cloudWords.value.length) * Math.PI * 2
+    const dist = baseR + (i % 4) * 8
+    w.x = cx + Math.cos(angle) * dist
+    w.y = cy + Math.sin(angle) * dist
+    w.vx = 0
+    w.vy = 0
+    w.bubbleStyle.left = `${w.x - w.radius}px`
+    w.bubbleStyle.top = `${w.y - w.radius}px`
+  })
+  updateCloudHeight(cloudWords.value)
+  bubbleRaf = requestAnimationFrame(stepBubbleCluster)
+}
+
+const stopBubbleCluster = () => {
+  if (!bubbleRaf) return
+  cancelAnimationFrame(bubbleRaf)
+  bubbleRaf = null
+}
+
+const stepBubbleCluster = () => {
+  const el = wordcloudRef.value
+  if (!el || !cloudWords.value.length) return
+  const width = el.clientWidth || 0
+  if (width <= 0) return
+  const height = cloudHeight.value
+  const cx = width / 2
+  const cy = height / 2
+  const nodes = cloudWords.value
+
+  for (let i = 0; i < nodes.length; i += 1) {
+    const n = nodes[i]
+    n.vx += (cx - n.x) * 0.0026
+    n.vy += (cy - n.y) * 0.0026
+  }
+
+  for (let i = 0; i < nodes.length; i += 1) {
+    for (let j = i + 1; j < nodes.length; j += 1) {
+      const a = nodes[i]
+      const b = nodes[j]
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const dist = Math.hypot(dx, dy) || 0.001
+      const minDist = a.radius + b.radius + 4
+      if (dist < minDist) {
+        const force = (minDist - dist) * 0.05
+        const nx = dx / dist
+        const ny = dy / dist
+        a.vx -= nx * force
+        a.vy -= ny * force
+        b.vx += nx * force
+        b.vy += ny * force
+      }
+    }
+  }
+
+  // 硬分离：确保圆形气泡不重叠
+  for (let iter = 0; iter < 3; iter += 1) {
+    for (let i = 0; i < nodes.length; i += 1) {
+      for (let j = i + 1; j < nodes.length; j += 1) {
+        const a = nodes[i]
+        const b = nodes[j]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const dist = Math.hypot(dx, dy) || 0.001
+        const minDist = a.radius + b.radius + 2
+        if (dist < minDist) {
+          const overlap = minDist - dist
+          const nx = dx / dist
+          const ny = dy / dist
+          const shift = overlap / 2
+          a.x -= nx * shift
+          a.y -= ny * shift
+          b.x += nx * shift
+          b.y += ny * shift
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < nodes.length; i += 1) {
+    const n = nodes[i]
+    n.vx *= 0.9
+    n.vy *= 0.9
+    n.x += n.vx
+    n.y += n.vy
+    const minX = n.radius + BUBBLE_PADDING
+    const maxX = width - n.radius - BUBBLE_PADDING
+    if (n.x < minX) { n.x = minX; n.vx *= -0.45 }
+    if (n.x > maxX) { n.x = maxX; n.vx *= -0.45 }
+  }
+
+  // 速度更新后再做一轮硬分离，避免回弹导致重新重叠
+  for (let iter = 0; iter < 2; iter += 1) {
+    for (let i = 0; i < nodes.length; i += 1) {
+      for (let j = i + 1; j < nodes.length; j += 1) {
+        const a = nodes[i]
+        const b = nodes[j]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const dist = Math.hypot(dx, dy) || 0.001
+        const minDist = a.radius + b.radius + 2
+        if (dist < minDist) {
+          const overlap = minDist - dist
+          const nx = dx / dist
+          const ny = dy / dist
+          const shift = overlap / 2
+          a.x -= nx * shift
+          a.y -= ny * shift
+          b.x += nx * shift
+          b.y += ny * shift
+        }
+      }
+    }
+    for (let i = 0; i < nodes.length; i += 1) {
+      const n = nodes[i]
+      const minX = n.radius + BUBBLE_PADDING
+      const maxX = width - n.radius - BUBBLE_PADDING
+      if (n.x < minX) n.x = minX
+      if (n.x > maxX) n.x = maxX
+    }
+  }
+
+  let minTop = Number.POSITIVE_INFINITY
+  let maxBottom = Number.NEGATIVE_INFINITY
+  for (let i = 0; i < nodes.length; i += 1) {
+    const n = nodes[i]
+    minTop = Math.min(minTop, n.y - n.radius)
+    maxBottom = Math.max(maxBottom, n.y + n.radius)
+  }
+  if (minTop < BUBBLE_PADDING) {
+    const shift = BUBBLE_PADDING - minTop
+    for (let i = 0; i < nodes.length; i += 1) nodes[i].y += shift
+    maxBottom += shift
+  }
+  const neededHeight = Math.ceil(maxBottom + BUBBLE_PADDING)
+  if (neededHeight > cloudHeight.value) cloudHeight.value = neededHeight
+
+  for (let i = 0; i < nodes.length; i += 1) {
+    const n = nodes[i]
+    n.bubbleStyle.left = `${n.x - n.radius}px`
+    n.bubbleStyle.top = `${n.y - n.radius}px`
+  }
+
+  updateCloudHeight(nodes)
+  bubbleRaf = requestAnimationFrame(stepBubbleCluster)
 }
 
 const loadFeed = async () => {
@@ -268,7 +458,7 @@ onMounted(async () => {
   }
 
   // 认证主体加载自己的评议
-  if (userStore.isCertified || userStore.isAdmin) {
+  if (showCertifiedSection.value) {
     try {
       const res = await apiClient.get(API_ROUTES.OPINIONS_MINE)
       myOpinions.value = res.data
@@ -285,11 +475,16 @@ onMounted(async () => {
     if (entries[0].isIntersecting) loadFeed()
   }, { threshold: 0.1 })
   if (loadMoreRef.value) observer.observe(loadMoreRef.value)
+
+  resizeHandler = () => startBubbleCluster()
+  window.addEventListener('resize', resizeHandler)
 })
 
 onUnmounted(() => {
   clearInterval(slideTimer)
   observer?.disconnect()
+  stopBubbleCluster()
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
 })
 </script>
 
@@ -301,7 +496,7 @@ onUnmounted(() => {
 }
 
 .hall-header { margin-bottom: 24px; }
-.hall-desc { color: var(--color-text-muted, #666); font-size: 14px; margin: 6px 0 0; }
+.hall-desc { color: var(--text-secondary, #666); font-size: 14px; margin: 6px 0 0; }
 
 /* 顶部区域 */
 .top-section {
@@ -378,8 +573,8 @@ onUnmounted(() => {
 
 /* 热门政策面板 */
 .hot-docs-panel {
-  background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e8e8e8);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e8e8e8);
   border-left: 3px solid #c0392b;
   border-radius: 4px;
   padding: 16px;
@@ -395,7 +590,7 @@ onUnmounted(() => {
 
 .hot-doc-item {
   display: flex; align-items: flex-start; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid var(--color-border, #f0f0f0);
+  padding: 8px 0; border-bottom: 1px solid var(--border-color, #f0f0f0);
   cursor: pointer; transition: opacity 0.2s;
 }
 .hot-doc-item:hover { opacity: 0.7; }
@@ -415,25 +610,24 @@ onUnmounted(() => {
 
 /* 词云气泡 */
 .wordcloud-section {
-  background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e8e8e8);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e8e8e8);
   border-radius: 0;
   padding: 14px 24px;
   margin-left: -18px;
   margin-right: -18px;
   margin-bottom: 24px;
-  min-height: 140px;
 }
 
 .wordcloud-container {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  transition: height 0.25s ease;
 }
 
 .bubble-word {
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -444,11 +638,14 @@ onUnmounted(() => {
   font-weight: 700;
   cursor: pointer;
   user-select: none;
-  animation: bubbleFloat var(--float-dur, 4s) ease-in-out infinite;
-  animation-delay: var(--float-delay, 0s);
   transition: transform 0.2s, box-shadow 0.2s;
   text-align: center;
-  padding: 2px;
+  white-space: normal;
+  line-height: 1.22;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+  box-sizing: border-box;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--bubble-color) 20%, transparent);
 }
 
@@ -457,23 +654,54 @@ onUnmounted(() => {
   border: 1px solid color-mix(in srgb, var(--bubble-color) 60%, transparent);
 }
 
-.bubble-word:hover {
-  transform: scale(1.18);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--bubble-color) 35%, transparent);
-  z-index: 1;
+:global([data-theme="dark"]) .hot-docs-panel {
+  background: var(--card-bg);
+  border-color: rgba(255,255,255,0.12);
 }
 
-@keyframes bubbleFloat {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  33%       { transform: translateY(-8px) rotate(1deg); }
-  66%       { transform: translateY(-4px) rotate(-0.5deg); }
+:global([data-theme="dark"]) .panel-header,
+:global([data-theme="dark"]) .hot-doc-title {
+  color: #e2e8f0;
+}
+
+:global([data-theme="dark"]) .panel-more {
+  color: #fda4af;
+}
+
+:global([data-theme="dark"]) .hot-doc-item {
+  border-bottom-color: rgba(255,255,255,0.08);
+}
+
+:global([data-theme="dark"]) .hot-doc-meta {
+  color: #94a3b8;
+}
+
+:global([data-theme="dark"]) .hot-rank {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+:global([data-theme="dark"]) .hot-rank.top3 {
+  background: #c0392b;
+  color: #fff;
+}
+
+:global([data-theme="dark"]) .wordcloud-section {
+  background: var(--card-bg);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.bubble-word:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--bubble-color) 35%, transparent);
+  z-index: 1;
 }
 
 /* 认证主体专属 */
 .certified-section {
   margin-bottom: 24px;
-  background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e8e8e8);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e8e8e8);
   border-left: 3px solid #1a56db;
   padding: 20px;
 }
@@ -485,14 +713,34 @@ onUnmounted(() => {
 
 /* 信息流 */
 .feed-section {
-  background: var(--color-bg-card, #fff);
-  border: 1px solid var(--color-border, #e8e8e8);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e8e8e8);
   padding: 20px;
 }
 
 :global([data-theme="dark"]) .feed-section {
   background: var(--card-bg);
   border-color: rgba(255,255,255,0.1);
+}
+
+:global([data-theme="dark"]) .feed-header,
+:global([data-theme="dark"]) .section-header {
+  color: #e2e8f0;
+}
+
+:global([data-theme="dark"]) .mode-btn,
+:global([data-theme="dark"]) .refresh-btn {
+  border-color: rgba(255,255,255,0.15);
+  color: #cbd5e1;
+  background: transparent;
+}
+
+:global([data-theme="dark"]) .mode-btn.active,
+:global([data-theme="dark"]) .mode-btn:hover,
+:global([data-theme="dark"]) .refresh-btn:hover {
+  background: #c0392b;
+  color: #fff;
+  border-color: #c0392b;
 }
 
 .feed-header {
@@ -504,9 +752,9 @@ onUnmounted(() => {
 
 .mode-btn, .refresh-btn {
   display: flex; align-items: center; gap: 4px;
-  background: none; border: 1px solid var(--color-border, #e8e8e8);
+  background: none; border: 1px solid var(--border-color, #e8e8e8);
   padding: 5px 10px; border-radius: 4px;
-  font-size: 12px; cursor: pointer; color: #666;
+  font-size: 12px; cursor: pointer; color: var(--text-secondary, #666);
   transition: all 0.2s;
 }
 .mode-btn.active, .mode-btn:hover, .refresh-btn:hover {
@@ -527,7 +775,7 @@ onUnmounted(() => {
 }
 
 .opinion-card {
-  border: 1px solid var(--color-border, #e8e8e8);
+  border: 1px solid var(--border-color, #e8e8e8);
   border-left: 3px solid #c0392b;
   padding: 14px 16px;
   transition: box-shadow 0.2s;
@@ -559,7 +807,7 @@ onUnmounted(() => {
 :global([data-theme="dark"]) .op-user { color: #e2e8f0; }
 :global([data-theme="dark"]) .op-time { color: #94a3b8; }
 
-.op-content { font-size: 14px; line-height: 1.6; margin: 0 0 8px; color: var(--color-text, #333); }
+.op-content { font-size: 14px; line-height: 1.6; margin: 0 0 8px; color: var(--text-primary, #333); }
 
 :global([data-theme="dark"]) .op-content { color: #cbd5e1; }
 
@@ -570,9 +818,9 @@ onUnmounted(() => {
 .op-actions { display: flex; gap: 8px; }
 .like-btn {
   display: flex; align-items: center; gap: 4px;
-  background: none; border: 1px solid var(--color-border, #e8e8e8);
+  background: none; border: 1px solid var(--border-color, #e8e8e8);
   padding: 3px 8px; border-radius: 12px;
-  font-size: 12px; cursor: pointer; color: #666;
+  font-size: 12px; cursor: pointer; color: var(--text-secondary, #666);
   transition: all 0.2s;
 }
 .like-btn:hover { color: #c0392b; border-color: #c0392b; }
@@ -586,3 +834,4 @@ onUnmounted(() => {
 .slide-fade-enter-active, .slide-fade-leave-active { transition: opacity 0.4s; }
 .slide-fade-enter-from, .slide-fade-leave-to { opacity: 0; }
 </style>
+

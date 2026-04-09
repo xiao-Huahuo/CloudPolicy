@@ -1,13 +1,6 @@
-<template>
+﻿<template>
   <header class="app-header">
-    <!-- Back button -->
-    <button class="icon-btn back-btn" @click="goBack" title="返回">
-      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="19" y1="12" x2="5" y2="12"></line>
-        <polyline points="12 19 5 12 12 5"></polyline>
-      </svg>
-    </button>
-
+    <div class="header-left-controls">
     <!-- Hamburger button: only visible in icon mode -->
     <button v-if="isIconMode" class="icon-btn hamburger-btn" @click="$emit('update:isIconMode', false)" title="展开侧边栏">
       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -16,6 +9,16 @@
         <line x1="3" y1="18" x2="21" y2="18"></line>
       </svg>
     </button>
+
+    
+    <!-- Back button -->
+    <button class="icon-btn back-btn" @click="goBack" title="返回">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+    </button>
+    </div>
 
     <div class="search-section" v-if="showSearch">
       <div class="search-bar">
@@ -45,10 +48,10 @@
       <select class="palette-select" :value="settingsStore.settings.color_scheme" @change="toggleColorScheme($event)">
         <option value="classic">经典红灰</option>
         <option value="morandi">莫兰迪</option>
-        <option value="graphite">石墨灰</option>
+        <option value="graphite">石墨黑</option>
       </select>
 
-      <!-- 明暗切换开关 -->
+      <!-- 鏄庢殫鍒囨崲寮€鍏?-->
       <label class="theme-switch" title="切换明暗模式">
         <input class="theme-switch__checkbox" type="checkbox" :checked="isDark" @change="toggleTheme" />
         <div class="theme-switch__container">
@@ -70,7 +73,7 @@
         </div>
       </label>
 
-      <!-- 通知图标 -->
+      <!-- 閫氱煡鍥炬爣 -->
       <button class="icon-btn" @click="toggleNotification" :title="settingsStore.settings.system_notifications ? '关闭系统通知' : '开启系统通知'">
         <svg v-if="settingsStore.settings.system_notifications" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -85,7 +88,7 @@
         </svg>
       </button>
 
-      <!-- 用户头像区 -->
+      <!-- 鐢ㄦ埛澶村儚鍖?-->
       <div class="user-profile" @click="handleUserClick" title="个人中心">
         <button v-if="!userStore.token" @click.stop="emitLoginEvent" class="login-capsule">登录</button>
         <template v-else>
@@ -96,7 +99,7 @@
         </template>
       </div>
 
-      <!-- 退出登录按钮 -->
+      <!-- 閫€鍑虹櫥褰曟寜閽?-->
       <button v-if="userStore.token" class="icon-btn logout-btn" @click="handleLogout" title="退出登录">
         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -188,13 +191,20 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   flex-shrink: 0;
 }
 
+.header-left-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .back-btn {
-  margin-right: 8px;
+  margin-right: 0;
   flex-shrink: 0;
 }
 
 .hamburger-btn {
-  margin-right: 8px;
+  margin-right: 0;
   flex-shrink: 0;
 }
 
@@ -331,7 +341,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
 }
 .login-capsule:hover { background-color: rgba(255,255,255,0.35); }
 
-/* ── 明暗切换开关 ── */
+/* 鈹€鈹€ 鏄庢殫鍒囨崲寮€鍏?鈹€鈹€ */
 .theme-switch {
   --toggle-size: 11px;
   --container-width: 5.625em;
@@ -419,3 +429,4 @@ onBeforeUnmount(() => themeObserver?.disconnect());
 }
 .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container { top: 0.312em; }
 </style>
+

@@ -179,6 +179,10 @@ const overviewRef = ref(null)
 const slideIdx = ref(0)
 const carouselDocs = ref([])
 let carouselTimer = null
+const carouselImageModules = import.meta.glob('/src/assets/photos/opinion-carousel/*.{jpg,jpeg,png,webp}', { eager: true })
+const carouselImages = Object.entries(carouselImageModules)
+  .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+  .map(([, mod]) => mod.default)
 
 // 中央文件和热点新闻
 const centralDocs = ref([])
@@ -201,9 +205,14 @@ const stripHtml = (html) => {
 }
 
 const getCarouselStyle = (doc) => {
-  if (!doc) return {}
-  const colors = ['linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)']
-  return { background: colors[slideIdx.value % colors.length] }
+  const style = { background: '#c0392b' }
+  if (!doc) return style
+  if (doc.bgImage) {
+    style.backgroundImage = `url(${doc.bgImage})`
+    style.backgroundSize = 'cover'
+    style.backgroundPosition = 'center'
+  }
+  return style
 }
 
 const loadMore = async () => {
@@ -219,7 +228,10 @@ const loadMore = async () => {
 
     // 初始化轮播图数据
     if (carouselDocs.value.length === 0 && items.length > 0) {
-      carouselDocs.value = items.slice(0, 3)
+      carouselDocs.value = items.slice(0, 5).map((doc, i) => ({
+        ...doc,
+        bgImage: carouselImages.length ? carouselImages[i % carouselImages.length] : ''
+      }))
     }
   } catch (e) { console.error(e) }
   finally { loading.value = false }
@@ -272,6 +284,7 @@ const openLink = (url) => {
 
 const startCarousel = () => {
   carouselTimer = setInterval(() => {
+    if (!carouselDocs.value.length) return
     slideIdx.value = (slideIdx.value + 1) % carouselDocs.value.length
   }, 4000)
 }
@@ -419,7 +432,7 @@ onBeforeUnmount(() => {
 .carousel-section {
   position: relative;
   height: 200px;
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
