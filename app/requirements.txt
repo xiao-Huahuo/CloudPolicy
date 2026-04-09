@@ -20,3 +20,6 @@ redis
 langgraph
 langchain-openai
 langchain-core
+chromadb
+sentence-transformers
+aiosqlite

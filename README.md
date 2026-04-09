@@ -245,6 +245,17 @@ LLM_BASE_URL=https://api.moonshot.cn/v1
 LLM_TIMEOUT=60
 LLM_MODEL=moonshot-v1-8k
 LLM_TEMPERATURE=0
+
+# Agent Plugin（通用插件配置，统一由 GlobalConfig 控制）
+AGENT_PLUGIN_ENABLED=true
+AGENT_PLUGIN_EMBEDDING_MODEL=paraphrase-multilingual-MiniLM-L12-v2
+AGENT_PLUGIN_COLLECTION_NAME=agent_plugin_memory
+AGENT_PLUGIN_RAG_CHUNK_SIZE=500
+AGENT_PLUGIN_RAG_METADATA_EXTRAS=category,source
+AGENT_PLUGIN_RAG_FORCE_UPDATE=false
+AGENT_PLUGIN_RAG_TOP_K=5
+AGENT_PLUGIN_RAG_SCORE_THRESHOLD=0.7
+AGENT_PLUGIN_SYSTEM_PROMPT=你是一个具备自主能力的 AI 助手。请在必要时调用工具，并给出准确、简洁、可执行的答案。
 ```
 说明：未配置 SMTP 时系统会自动将邮件写入 `mail_outbox` 目录供本地预览。
 
@@ -384,4 +395,3 @@ ADMIN_PASSWORD = 11235813xx
 - 所有的API路由都注册在router/api_routes.js中的API代理,禁止在其他地方使用非API代理的路由.
 - 所有的页面路由都注册在router/index.js中,以实现Modal对于页面的集中管理.
 - 组件分配应该按照**主框架-页面-组件**的逻辑进行编排,主框架(Modal)和所有的页面都放在views中,每个页面XXX含有的组件应该存放于components/XXX/之下,根据页面进行组件的划分,其中components/common存放公共常用组件.不同页面的组件可以相互调用.
-

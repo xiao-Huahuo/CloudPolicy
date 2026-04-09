@@ -8018,3 +8018,98 @@ WHERE settings.user_id = ?
 2026-04-09 14:36:53,928 | INFO | sqlalchemy.engine.Engine | [cached since 1.063e+04s ago] (1,)
 2026-04-09 14:36:53,930 | INFO | app.main | HTTP GET /settings/me -> 200
 2026-04-09 14:36:53,931 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-09 14:43:16,795 | INFO | watchfiles.main | 1 change detected
+2026-04-09 14:43:17,152 | INFO | watchfiles.main | 2 changes detected
+2026-04-09 15:04:38,370 | INFO | app.main | Stopping Redis worker thread...
+2026-04-09 15:04:38,370 | INFO | app.services.worker | Stopping Redis queue worker...
+2026-04-09 15:04:38,616 | INFO | app.services.worker | Redis queue worker stopped.
+2026-04-09 15:04:38,616 | INFO | app.main | Redis worker thread stopped.
+2026-04-09 15:04:40,266 | INFO | watchfiles.main | 520 changes detected
+2026-04-09 15:04:52,178 | INFO | watchfiles.main | 1 change detected
+2026-04-09 15:05:00,085 | INFO | watchfiles.main | 1 change detected
+2026-04-09 15:05:52,967 | INFO | watchfiles.main | 6 changes detected
+2026-04-09 15:05:53,882 | INFO | watchfiles.main | 5 changes detected
+2026-04-09 15:06:05,745 | INFO | watchfiles.main | 5 changes detected
+2026-04-09 15:06:06,097 | INFO | watchfiles.main | 23 changes detected
+2026-04-09 15:06:06,457 | INFO | watchfiles.main | 22 changes detected
+2026-04-09 15:06:06,815 | INFO | watchfiles.main | 22 changes detected
+2026-04-09 15:06:07,175 | INFO | watchfiles.main | 22 changes detected
+2026-04-09 15:06:07,684 | INFO | watchfiles.main | 29 changes detected
+2026-04-09 15:06:08,148 | INFO | watchfiles.main | 26 changes detected
+2026-04-09 15:06:08,550 | INFO | watchfiles.main | 22 changes detected
+2026-04-09 15:06:08,954 | INFO | watchfiles.main | 25 changes detected
+2026-04-09 15:06:09,310 | INFO | watchfiles.main | 22 changes detected
+2026-04-09 15:06:09,721 | INFO | watchfiles.main | 21 changes detected
+2026-04-09 15:06:10,176 | INFO | watchfiles.main | 26 changes detected
+2026-04-09 15:06:10,592 | INFO | watchfiles.main | 25 changes detected
+2026-04-09 15:06:11,097 | INFO | watchfiles.main | 29 changes detected
+2026-04-09 15:06:11,459 | INFO | watchfiles.main | 13 changes detected
+2026-04-09 15:06:56,861 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-09 15:06:56,861 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("user")
+2026-04-09 15:06:56,861 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("chatmessage")
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("ragusage")
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("statsanalysis")
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("settings")
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("todoitem")
+2026-04-09 15:06:56,862 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("favorite")
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("agentmemory")
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("agentconversation")
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("agentmessage")
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("policydocument")
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | PRAGMA main.table_info("opinion")
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | [raw sql] ()
+2026-04-09 15:06:56,863 | INFO | sqlalchemy.engine.Engine | COMMIT
+2026-04-09 15:06:56,864 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-09 15:06:56,864 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0
+2026-04-09 15:06:56,864 | INFO | sqlalchemy.engine.Engine | [generated in 0.00018s] ()
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT 0
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | [generated in 0.00026s] ()
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN email_verification_code VARCHAR
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | [generated in 0.00007s] ()
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN email_verification_sent_at DATETIME
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN role VARCHAR NOT NULL DEFAULT 'normal'
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN last_ip VARCHAR
+2026-04-09 15:06:56,865 | INFO | sqlalchemy.engine.Engine | [generated in 0.00007s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ALTER TABLE user ADD COLUMN profession VARCHAR
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ALTER TABLE chatmessage ADD COLUMN source_chat_id INTEGER REFERENCES chatmessage(id)
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ALTER TABLE chatmessage ADD COLUMN session_json_path VARCHAR
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ALTER TABLE agentmemory ADD COLUMN updated_time DATETIME
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ALTER TABLE policydocument ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | [generated in 0.00005s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ALTER TABLE policydocument ADD COLUMN like_count INTEGER NOT NULL DEFAULT 0
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | [generated in 0.00006s] ()
+2026-04-09 15:06:56,866 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-09 15:06:56,867 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-09 15:06:56,883 | INFO | sqlalchemy.engine.Engine | SELECT user.uname, user.email, user.phone, user.avatar_url, user.role, user.profession, user.uid, user.hashed_pwd, user.created_time, user.last_login, user.email_verified, user.email_verification_code, user.email_verification_sent_at, user.last_ip 
+FROM user 
+WHERE user.email = ?
+2026-04-09 15:06:56,883 | INFO | sqlalchemy.engine.Engine | [generated in 0.00024s] ('1647239706@qq.com',)
+2026-04-09 15:06:56,883 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-09 15:06:56,884 | INFO | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-09 15:06:56,884 | INFO | sqlalchemy.engine.Engine | SELECT user.uname, user.email, user.phone, user.avatar_url, user.role, user.profession, user.uid, user.hashed_pwd, user.created_time, user.last_login, user.email_verified, user.email_verification_code, user.email_verification_sent_at, user.last_ip 
+FROM user
+2026-04-09 15:06:56,884 | INFO | sqlalchemy.engine.Engine | [generated in 0.00010s] ()
+2026-04-09 15:06:56,885 | INFO | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-09 15:06:56,885 | INFO | app.main | Starting Redis worker thread...
+2026-04-09 15:06:56,886 | INFO | app.services.worker | Starting Redis queue worker...
+2026-04-09 15:06:56,886 | INFO | app.main | Redis worker thread started.
+2026-04-09 15:15:54,291 | INFO | watchfiles.main | 1 change detected
+2026-04-09 15:36:12,864 | INFO | app.main | Stopping Redis worker thread...
+2026-04-09 15:36:12,864 | INFO | app.services.worker | Stopping Redis queue worker...

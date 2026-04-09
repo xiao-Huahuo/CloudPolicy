@@ -10,6 +10,7 @@ from app.core.config import GlobalConfig
 from app.api.routes import user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin, agent, policy_document, opinion
 from app.services.init_db import init_db_and_admin
 from app.services.worker import start_worker, stop_worker # 导入 worker 的启动和停止函数
+from app.services.agent_plugin_service import close_agent_core
 from app.core.cors import CorsMiddleWare
 from app.core.logging_config import setup_logging
 
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI):
     # 应用关闭后执行：停止 Redis Worker 线程
     logger.info("Stopping Redis worker thread...")
     stop_worker()
+    close_agent_core()
     if worker_thread.is_alive():
         worker_thread.join(timeout=5) # 等待 worker 线程结束，最多等待5秒
         if worker_thread.is_alive():
@@ -102,4 +104,3 @@ if __name__ == "__main__":
     import uvicorn
     # 传app,且reload=True(热重载),改代码后可以直接改后端,无需重启
     uvicorn.run("app.main:app", host=GlobalConfig.HOST, port=GlobalConfig.PORT, reload=True, timeout_keep_alive=60)
-

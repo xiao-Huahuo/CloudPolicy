@@ -3,9 +3,15 @@ import os
 from dotenv import load_dotenv
 import logging
 
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-# Docker生产环境下,优先加载容器下环境变量,其次再加载开发时.env
 logger = logging.getLogger("ClearNotify")
+
+
+def _to_bool(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 if not os.getenv("DOCKER_DEPLOYMENT"):
     print("==================== PRINT | Environment Variables From .env ====================")
     logger.info("==================== Environment Variables From .env ====================")
@@ -14,6 +20,8 @@ if not os.getenv("DOCKER_DEPLOYMENT"):
 else:
     print("==================== PRINT | Environment Variables From Docker-Compose ====================")
     logger.info("==================== Environment Variables From Docker-Compose ====================")
+
+
 class GlobalConfig:
     DEFAULT_ADMIN_PASSWORD = "111111"
     DEFAULT_ADMIN_USERNAME = "admin"
@@ -31,15 +39,19 @@ class GlobalConfig:
     IMAGES_UPLOAD_DIR = UPLOAD_DIR / "images"
     CHAT_EXPORT_DIR = UPLOAD_DIR / "chat_exports"
     KNOWLEDGE_DIR = PROJECT_ROOT / "app" / "resources"
-    KNOWLEDGE_BASE_PATH = KNOWLEDGE_DIR / "vector_init" /"policy_knowledge.json"
+    KNOWLEDGE_BASE_PATH = KNOWLEDGE_DIR / "vector_init" / "policy_knowledge.json"
     DB_INIT_DIR = KNOWLEDGE_DIR / "db_init"
-    DB_INIT_DATA_PATH = PROJECT_ROOT / "seed_data.json"  # 已废弃，保留兼容
+    DB_INIT_DATA_PATH = PROJECT_ROOT / "seed_data.json"  # deprecated compatibility only
     LOG_DIR = PROJECT_ROOT / "logs"
     APP_LOG_PATH = LOG_DIR / "app.log"
     MAIL_OUTBOX_DIR = PROJECT_ROOT / "mail_outbox"
     CHROMA_DIR = PROJECT_ROOT / "chroma_store"
 
-    # 去掉所有 os.getenv 的默认值参数
+    # Agent plugin storage paths are global constants, not env vars.
+    AGENT_DATA_DIR = UPLOAD_DIR / "agent_plugin"
+    AGENT_VECTOR_DB_DIRNAME = "chroma"
+    AGENT_VECTOR_DB_PATH = AGENT_DATA_DIR / AGENT_VECTOR_DB_DIRNAME
+
     SECRET_KEY = os.getenv("SECRET_KEY")
     ALGORITHM = os.getenv("ALGORITHM")
     ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS"))
@@ -62,8 +74,8 @@ class GlobalConfig:
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
     SMTP_SENDER = os.getenv("SMTP_SENDER")
     SMTP_SENDER_NAME = os.getenv("SMTP_SENDER_NAME")
-    SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "").lower() == "true"
-    SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "").lower() == "true"
+    SMTP_USE_SSL = _to_bool(os.getenv("SMTP_USE_SSL"))
+    SMTP_USE_TLS = _to_bool(os.getenv("SMTP_USE_TLS"))
     EMAIL_VERIFICATION_CODE_LENGTH = int(os.getenv("EMAIL_VERIFICATION_CODE_LENGTH"))
     EMAIL_VERIFICATION_EXPIRE_MINUTES = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_MINUTES"))
 
@@ -79,38 +91,35 @@ class GlobalConfig:
     LLM_API_KEY = os.getenv("LLM_API_KEY")
     LLM_BASE_URL = os.getenv("LLM_BASE_URL")
     LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT"))
-    LLM_MODEL=os.getenv("LLM_MODEL")
-    LLM_TEMPERATURE=float(os.getenv("LLM_TEMPERATURE"))
+    LLM_MODEL = os.getenv("LLM_MODEL")
+    LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE"))
+
+    # Agent plugin behavior params from env
+    AGENT_PLUGIN_ENABLED = _to_bool(os.getenv("AGENT_PLUGIN_ENABLED"))
+    AGENT_PLUGIN_EMBEDDING_MODEL = os.getenv("AGENT_PLUGIN_EMBEDDING_MODEL")
+    AGENT_PLUGIN_COLLECTION_NAME = os.getenv("AGENT_PLUGIN_COLLECTION_NAME")
+    AGENT_PLUGIN_RAG_RAW_FILE_PATH = str(KNOWLEDGE_BASE_PATH)
+    AGENT_PLUGIN_RAG_CHUNK_SIZE = int(os.getenv("AGENT_PLUGIN_RAG_CHUNK_SIZE"))
+    AGENT_PLUGIN_RAG_METADATA_EXTRAS = os.getenv("AGENT_PLUGIN_RAG_METADATA_EXTRAS")
+    AGENT_PLUGIN_RAG_FORCE_UPDATE = _to_bool(os.getenv("AGENT_PLUGIN_RAG_FORCE_UPDATE"))
+    AGENT_PLUGIN_RAG_TOP_K = int(os.getenv("AGENT_PLUGIN_RAG_TOP_K"))
+    AGENT_PLUGIN_RAG_SCORE_THRESHOLD = float(os.getenv("AGENT_PLUGIN_RAG_SCORE_THRESHOLD"))
+    AGENT_PLUGIN_SYSTEM_PROMPT = os.getenv("AGENT_PLUGIN_SYSTEM_PROMPT")
 
     @staticmethod
     def _show_config():
-        """
-        调试专用：直接使用 print 输出所有配置成员，确保在 Docker 中可见。
-        """
-        import os
         source = "Docker-Compose" if os.getenv("DOCKER_DEPLOYMENT") else ".env"
-
-        # 头部：美丽的分割线
         print(f"\n{'=' * 20} [DEBUG] GlobalConfig Members ({source}) {'=' * 20}")
 
-        # 自动获取类成员
-        # 过滤掉内置属性(__)和方法(callable)
-        attrs = [attr for attr in dir(GlobalConfig) if
-                 not attr.startswith('__') and not callable(getattr(GlobalConfig, attr))]
-
+        attrs = [
+            attr
+            for attr in dir(GlobalConfig)
+            if not attr.startswith("__") and not callable(getattr(GlobalConfig, attr))
+        ]
         for attr in sorted(attrs):
             val = getattr(GlobalConfig, attr)
-            # 格式化输出：变量名左对齐占 35 位，中间用竖线分隔
             print(f"{attr:35} | {val}")
-
-        # 底部：美丽的分割线
         print(f"{'=' * 75}\n")
 
 
-
-# ===== DEBUG: 展示所有环境变量 =====
 GlobalConfig._show_config()
-
-
-
-

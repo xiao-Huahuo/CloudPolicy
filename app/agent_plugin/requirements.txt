@@ -1,0 +1,7 @@
+langgraph
+langchain_openai
+openai
+langgraph-checkpoint-sqlite
+sentence-transformers
+aiosqlite
+pytest-asyncio

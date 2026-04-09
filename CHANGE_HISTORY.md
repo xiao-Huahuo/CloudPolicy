@@ -353,3 +353,10 @@
 - [x] 暗黑模式下发现页面的搜索框里面有灰色矩形,应该改为透明.全景政策广场及其组件应该适应暗黑模式.
 - [x] 暗黑模式下登录注册页面输入的文字的地方有灰色矩形,应该把它的底色变成透明.
 - [x] 将sidebar的民意大厅改为民生大厅,并修改页面的标题.避免政治错误.
+- [x] Agent 插件项目化对接（2026-04-09）
+  - 将 `app/agent_plugin` 配置改为由 `app/core/config.py::GlobalConfig` 统一管理，新增 `AGENT_PLUGIN_*` 环境变量。
+  - 新增 `app/agent_plugin/bootstrap.py` 负责把项目全局配置注入 `agent_plugin.AgentConfig`。
+  - 新增 `app/services/agent_plugin_service.py`，并接入 `app/services/agent_service.py` 运行链路（失败自动回退旧 `run_agent_graph`）。
+  - 修复插件问题：移除工具中的硬编码 `user_id`、统一 `stream_run` 同步接口声明、实现检索阈值过滤、清理 README 中敏感示例。
+  - 同步更新 `.env`、`README.md` `.env` 模板与 `docker-compose.yml` 环境变量映射。
+  - 插件关系库存储合并到全局 `database.db`（不再使用 `agent_plugin.db`）。

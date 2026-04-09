@@ -6,9 +6,10 @@ from sqlmodel import Session, select
 
 from app.ai.document_parser import parse_document
 from app.ai.agent_graph import run_agent_graph
+from app.core.config import GlobalConfig
 from app.models.chat_message import ChatMessage
 from app.models.settings import Settings
-from app.services import chat_message_service, rag_service, agent_chat_service
+from app.services import chat_message_service, rag_service, agent_chat_service, agent_plugin_service
 
 AGENT_NAME = "通知办理智能体"
 
@@ -122,23 +123,66 @@ user_audience_label=None) -> Dict[str, Any]:
                 history_payload = history_payload[:-1]
         except Exception:
             history_payload = []
-    try:
-        graph_result = run_agent_graph(
-            user_id=user_id,
-            original_text=original_text,
-            top_k=top_k,
-            history=history_payload,
-            conversation_id=conversation_id,
-            user_audience_label=user_audience_label,
-            trace_callback=trace_callback,
-        )
-        graph_reply = graph_result.get("assistant_reply", "") or ""
-        tool_state = graph_result.get("tool_state", {}) or {}
-        safe_text = graph_result.get("safe_text", original_text) or original_text
-    except Exception:
-        graph_reply = ""
-        tool_state = {}
-        safe_text = original_text
+    if GlobalConfig.AGENT_PLUGIN_ENABLED:
+        try:
+            plugin_result = agent_plugin_service.run_agent_plugin(
+                user_id=user_id,
+                prompt=original_text,
+                conversation_id=conversation_id,
+                trace_callback=trace_callback,
+            )
+            graph_reply = plugin_result.get("assistant_reply", "") or ""
+            tool_state = {"tool_calls": plugin_result.get("tool_calls", [])}
+            safe_text = original_text
+            if not graph_reply:
+                graph_result = run_agent_graph(
+                    user_id=user_id,
+                    original_text=original_text,
+                    top_k=top_k,
+                    history=history_payload,
+                    conversation_id=conversation_id,
+                    user_audience_label=user_audience_label,
+                    trace_callback=trace_callback,
+                )
+                graph_reply = graph_result.get("assistant_reply", "") or ""
+                tool_state = graph_result.get("tool_state", {}) or tool_state
+                safe_text = graph_result.get("safe_text", original_text) or original_text
+        except Exception:
+            try:
+                graph_result = run_agent_graph(
+                    user_id=user_id,
+                    original_text=original_text,
+                    top_k=top_k,
+                    history=history_payload,
+                    conversation_id=conversation_id,
+                    user_audience_label=user_audience_label,
+                    trace_callback=trace_callback,
+                )
+                graph_reply = graph_result.get("assistant_reply", "") or ""
+                tool_state = graph_result.get("tool_state", {}) or {}
+                safe_text = graph_result.get("safe_text", original_text) or original_text
+            except Exception:
+                graph_reply = ""
+                tool_state = {}
+                safe_text = original_text
+    else:
+        try:
+            graph_result = run_agent_graph(
+                user_id=user_id,
+                original_text=original_text,
+                top_k=top_k,
+                history=history_payload,
+                conversation_id=conversation_id,
+                user_audience_label=user_audience_label,
+                trace_callback=trace_callback,
+            )
+            graph_reply = graph_result.get("assistant_reply", "") or ""
+            tool_state = graph_result.get("tool_state", {}) or {}
+            safe_text = graph_result.get("safe_text", original_text) or original_text
+        except Exception:
+            graph_reply = ""
+            tool_state = {}
+            safe_text = original_text
 
     parsed = tool_state.get("structured")
     parse_mode = tool_state.get("parse_mode")
