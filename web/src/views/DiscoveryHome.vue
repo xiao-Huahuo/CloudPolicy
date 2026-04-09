@@ -170,6 +170,7 @@
             class="news-list-item"
             @click="openLink(item.link)"
           >
+            <div class="nl-thumb" :style="getNewsThumbStyle(idx)"></div>
             <span class="nl-type" :class="item.source_type === 'policy' ? 'type-policy' : 'type-news'">
               {{ item.source_type === 'policy' ? '政策' : '时事' }}
             </span>
@@ -198,7 +199,8 @@
             class="news-card"
             @click="openLink(item.link)"
           >
-            <div class="nc-header" :style="{ background: cardColors[idx % cardColors.length] }">
+            <div class="nc-header" :style="getNewsCardHeaderStyle(idx)">
+              <span class="nc-header-mask"></span>
               <span class="nc-type">{{ item.source_type === 'policy' ? '政策' : '时事' }}</span>
             </div>
             <div class="nc-body">
@@ -360,6 +362,36 @@ const slides = (discoverSlideImages.length ? discoverSlideImages : ['']).map((im
   const meta = slideMetaPool[idx % slideMetaPool.length];
   return { ...meta, img };
 });
+
+const discoverNewsModules = import.meta.glob('/src/assets/photos/discover/news/*.{jpg,jpeg,png,webp}', { eager: true });
+const discoverNewsImages = Object.entries(discoverNewsModules)
+  .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+  .map(([, mod]) => mod.default);
+
+const getNewsCover = (idx) => {
+  if (!discoverNewsImages.length) return '';
+  return discoverNewsImages[idx % discoverNewsImages.length];
+};
+
+const getNewsCardHeaderStyle = (idx) => {
+  const cover = getNewsCover(idx);
+  if (!cover) return { background: cardColors[idx % cardColors.length] };
+  return {
+    backgroundImage: `url(${cover})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+};
+
+const getNewsThumbStyle = (idx) => {
+  const cover = getNewsCover(idx);
+  if (!cover) return { background: cardColors[idx % cardColors.length] };
+  return {
+    backgroundImage: `url(${cover})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+};
 // ── 传送带 ────────────────────────────────────────────────────────────────────
 // 使用 CSS animation，无需 JS timer
 
@@ -1045,6 +1077,15 @@ const getComplexityClass = (item) => {
   transition: background 0.15s;
 }
 .news-list-item:hover { background: #fafafa; }
+.nl-thumb {
+  width: 92px;
+  height: 60px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+}
 .nl-type {
   flex-shrink: 0;
   font-size: 10px;
@@ -1102,12 +1143,27 @@ const getComplexityClass = (item) => {
 }
 .news-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
 .nc-header {
+  position: relative;
   height: 60px;
   display: flex;
   align-items: flex-end;
   padding: 8px 10px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
-.nc-type { font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 700; }
+.nc-header-mask {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.45) 100%);
+}
+.nc-type {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  color: rgba(255,255,255,0.9);
+  font-weight: 700;
+}
 .nc-body { padding: 10px; flex: 1; }
 .nc-title { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: #111; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nc-desc { margin: 0; font-size: 11px; color: #888; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
