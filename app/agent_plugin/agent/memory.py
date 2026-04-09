@@ -1,13 +1,62 @@
-import os
-import json
-import uuid
 import hashlib
-from typing import List, Dict, Optional
+import json
+import logging
+import os
+import threading
+import time
+import uuid
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import chromadb
 from chromadb.utils import embedding_functions
 
 from app.agent_plugin.agent.config import AgentConfig
+
+
+logger = logging.getLogger(__name__)
+
+
+def _dir_size_mb(path: Path) -> float:
+    if not path.exists():
+        return 0.0
+    total = 0
+    for fp in path.rglob("*"):
+        if fp.is_file():
+            try:
+                total += fp.stat().st_size
+            except OSError:
+                continue
+    return round(total / (1024 * 1024), 2)
+
+
+class _ProgressHeartbeat:
+    def __init__(self, model_path: Path, interval_seconds: int = 3):
+        self.model_path = model_path
+        self.interval_seconds = interval_seconds
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self.started_at = time.time()
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=0.5)
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.interval_seconds):
+            elapsed = int(time.time() - self.started_at)
+            size_mb = _dir_size_mb(self.model_path)
+            logger.info(
+                "Embedding 模型加载中: path=%s, elapsed=%ss, local_size=%.2fMB",
+                self.model_path,
+                elapsed,
+                size_mb,
+            )
 
 
 class LongTermMemory:
@@ -16,9 +65,33 @@ class LongTermMemory:
     collection: chromadb.Collection
 
     def __init__(self):
-        self.local_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=AgentConfig.EMBEDDING_MODEL
+        model_path = Path(str(AgentConfig.EMBEDDING_MODEL))
+        logger.info("初始化 Embedding 模型: %s", model_path)
+        if not model_path.exists():
+            logger.info("Embedding 本地模型目录不存在，准备触发下载: %s", model_path)
+        else:
+            logger.info(
+                "Embedding 本地模型目录已存在: %s (size=%.2fMB)",
+                model_path,
+                _dir_size_mb(model_path),
+            )
+
+        heartbeat = _ProgressHeartbeat(model_path=model_path)
+        heartbeat.start()
+        try:
+            self.local_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name=AgentConfig.EMBEDDING_MODEL
+            )
+        finally:
+            heartbeat.stop()
+
+        logger.info(
+            "Embedding 模型加载完成: %s (size=%.2fMB, elapsed=%ss)",
+            model_path,
+            _dir_size_mb(model_path),
+            int(time.time() - heartbeat.started_at),
         )
+
         self.chroma_client = chromadb.PersistentClient(path=AgentConfig.VECTOR_DB_PATH)
         self.collection = self.chroma_client.get_or_create_collection(
             name=AgentConfig.COLLECTION_NAME,
@@ -38,17 +111,19 @@ class LongTermMemory:
                     file_data = json.load(f)
                     if isinstance(file_data, list):
                         final_ingest_data.extend(file_data)
-                        print(
-                            f"--- [长期记忆] 已从 {AgentConfig.RAG_RAW_FILE_PATH} 加载 {len(file_data)} 条初始知识 ---"
+                        logger.info(
+                            "[长期记忆] 已从 %s 加载 %s 条初始知识",
+                            AgentConfig.RAG_RAW_FILE_PATH,
+                            len(file_data),
                         )
             except Exception as e:
-                print(f"--- [长期记忆] 读取本地知识文件失败: {e} ---")
+                logger.exception("[长期记忆] 读取本地知识文件失败: %s", e)
 
         if raw_data:
             final_ingest_data.extend(raw_data)
 
         if not final_ingest_data:
-            print("--- [长期记忆] 无需同步的数据 ---")
+            logger.info("[长期记忆] 无需同步的数据")
             return
 
         current_hash = self._calculate_md5(final_ingest_data)
@@ -61,7 +136,7 @@ class LongTermMemory:
             last_hash = existing_lock["metadatas"][0].get("hash_lock")
 
         if current_hash != last_hash or AgentConfig.RAG_FORCE_UPDATE:
-            print(f"--- [长期记忆] 检测到变更，开始同步 (user={user_id}) ---")
+            logger.info("[长期记忆] 检测到变更，开始同步 (user=%s)", user_id)
 
             if self.collection.count() > 0:
                 self.collection.delete(where={"user_id": user_id})
@@ -92,9 +167,9 @@ class LongTermMemory:
                 documents=["HASH_LOCK_MARKER"],
                 metadatas=[{"hash_lock": current_hash, "user_id": user_id}],
             )
-            print(f"--- [长期记忆] 同步完成，共 {len(documents)} 条 ---")
+            logger.info("[长期记忆] 同步完成，共 %s 条", len(documents))
         else:
-            print("--- [长期记忆] 内容未变化，跳过同步 ---")
+            logger.info("[长期记忆] 内容未变化，跳过同步")
 
     def rag_query_top_k(self, query: str, user_id: str, rag_top_k: Optional[int] = None) -> List[str]:
         top_k = rag_top_k if rag_top_k is not None else AgentConfig.RAG_TOP_K
@@ -132,7 +207,7 @@ class LongTermMemory:
         if not content or content.upper() == "NONE":
             return
 
-        print(f"\n--- [系统自动提炼新记忆] {content} ---")
+        logger.info("[系统自动提炼新记忆] %s", content)
 
         self.collection.add(
             documents=[content],

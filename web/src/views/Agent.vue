@@ -44,8 +44,8 @@
         </div>
         <div ref="messageWrapRef" class="message-list">
           <div
-            v-for="(msg, index) in messages"
-            :key="index"
+            v-for="msg in messages"
+            :key="msg.id"
             class="message-row"
             :class="msg.role"
           >
@@ -188,6 +188,22 @@
           </ul>
           <div v-else class="placeholder">等待工具调用</div>
         </div>
+
+        <div class="panel">
+          <div class="panel-title">Agent思考轨迹</div>
+          <div v-if="traceTimeline.length" class="trace-timeline">
+            <div class="trace-item" v-for="item in traceTimeline" :key="item.id">
+              <div class="trace-meta">
+                <span class="trace-type">{{ item.kindLabel }}</span>
+                <span class="trace-time">{{ item.time }}</span>
+              </div>
+              <div class="trace-main">{{ item.title }}</div>
+              <div v-if="item.input" class="trace-io">输入: {{ item.input }}</div>
+              <div v-if="item.output" class="trace-io">输出: {{ item.output }}</div>
+            </div>
+          </div>
+          <div v-else class="placeholder">等待思考轨迹</div>
+        </div>
       </div>
     </aside>
   </div>
@@ -216,11 +232,22 @@ const uploadedFileName = ref('');
 const pendingFiles = ref([]);
 const selectedModel = ref('kimi');
 const markdown = new MarkdownIt({ linkify: true, breaks: true });
+const traceTimeline = ref([]);
+const liveProcessMessageId = ref(null);
+let messageIdSeed = 1;
+let traceIdSeed = 1;
+let traceSeenSignatures = new Set();
+
+const makeMessage = (role, content = '', extra = {}) => ({
+  id: messageIdSeed++,
+  role,
+  content,
+  ...extra
+});
 
 const messages = ref([
   {
-    role: 'assistant',
-    content: '我是通知办理智能体。把通知内容粘贴给我，我会生成办理清单、证据链和风险提示。'
+    ...makeMessage('assistant', '我是通知办理智能体。把通知内容粘贴给我，我会生成办理清单、证据链和风险提示。')
   }
 ]);
 
@@ -247,6 +274,89 @@ const formatTime = (value) => {
   return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
+const nowTimeLabel = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(
+    d.getSeconds()
+  ).padStart(2, '0')}`;
+};
+
+const shortText = (value, max = 180) => {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+};
+
+const buildTraceView = (entry) => {
+  const tool = String(entry?.tool || '').trim() || 'tool';
+  const input = shortText(entry?.input || '');
+  const output = shortText(entry?.output || '');
+  const isThought = tool === 'agent_thought';
+  if (isThought) {
+    const thoughtText = input || output || '无思考内容';
+    return {
+      kind: 'thought',
+      kindLabel: '思考',
+      title: thoughtText,
+      input: '',
+      output: ''
+    };
+  }
+  return {
+    kind: 'tool',
+    kindLabel: '工具',
+    title: tool,
+    input,
+    output
+  };
+};
+
+const buildTraceChatContent = (view) => {
+  if (view.kind === 'thought') {
+    return `**思考过程**\n${view.title}`;
+  }
+  const lines = [`**工具调用**`, `- 工具: ${view.title}`];
+  if (view.input) lines.push(`- 输入: ${view.input}`);
+  if (view.output) lines.push(`- 输出: ${view.output}`);
+  return lines.join('\n');
+};
+
+const upsertLiveProcessMessage = (content) => {
+  if (!content) return;
+  const id = liveProcessMessageId.value;
+  if (id) {
+    const index = messages.value.findIndex((item) => item.id === id);
+    if (index >= 0) {
+      messages.value[index].content = content;
+      return;
+    }
+  }
+  const msg = makeMessage('trace', content, { transient: true });
+  messages.value.push(msg);
+  liveProcessMessageId.value = msg.id;
+};
+
+const appendTraceTimeline = (entry) => {
+  const view = buildTraceView(entry);
+  const signature = `${view.kind}|${view.title}|${view.input}|${view.output}`;
+  if (traceSeenSignatures.has(signature)) return;
+  traceSeenSignatures.add(signature);
+  const traceItem = {
+    id: traceIdSeed++,
+    time: nowTimeLabel(),
+    ...view
+  };
+  traceTimeline.value.push(traceItem);
+  upsertLiveProcessMessage(buildTraceChatContent(view));
+  nextTick(scrollToBottom);
+};
+
+const resetRunRuntime = () => {
+  liveProcessMessageId.value = null;
+  traceTimeline.value = [];
+  traceSeenSignatures = new Set();
+};
+
 const fetchConversations = async () => {
   const res = await apiClient.get(API_ROUTES.AGENT_CONVERSATIONS);
   conversations.value = res.data || [];
@@ -254,7 +364,9 @@ const fetchConversations = async () => {
 
 const loadMessages = async (conversationId) => {
   const res = await apiClient.get(API_ROUTES.AGENT_MESSAGES(conversationId));
-  messages.value = res.data?.map((item) => ({ role: item.role, content: item.content })) || [];
+  messages.value = res.data?.map((item) => makeMessage(item.role, item.content)) || [];
+  resetRunRuntime();
+  agentResult.value = null;
   await nextTick();
   scrollToBottom();
 };
@@ -270,8 +382,10 @@ const createConversation = async () => {
   await fetchConversations();
   activeConversationId.value = res.data.id;
   messages.value = [
-    { role: 'assistant', content: '新对话已创建，请输入通知内容。' }
+    makeMessage('assistant', '新对话已创建，请输入通知内容。')
   ];
+  resetRunRuntime();
+  agentResult.value = null;
 };
 
 const selectConversation = async (id) => {
@@ -315,7 +429,7 @@ const connectSocket = async () => {
 
   if (!socketRef.value) {
     loading.value = false;
-    messages.value.push({ role: 'assistant', content: '智能体连接失败，请确认后端已在 8080 端口启动。' });
+    messages.value.push(makeMessage('assistant', '智能体连接失败，请确认后端已在 8080 端口启动。'));
     return;
   }
 
@@ -333,33 +447,17 @@ const connectSocket = async () => {
       return;
     }
     if (data.type === 'trace') {
-      const lines = ['**执行过程**'];
-      (data.tool_calls || []).forEach((item) => {
-        const tool = item.tool || 'tool';
-        const input = item.input ? `输入: ${item.input}` : '';
-        const output = item.output ? `输出: ${item.output}` : '';
-        lines.push(`- ${tool} ${input} ${output}`.trim());
-      });
-      messages.value.push({ role: 'trace', content: lines.join('\n') });
-      nextTick(scrollToBottom);
+      (data.tool_calls || []).forEach((item) => appendTraceTimeline(item));
       return;
     }
     if (data.type === 'trace_step') {
-      const item = data.tool_call || {};
-      const tool = item.tool || 'tool';
-      const input = item.input ? `输入: ${item.input}` : '';
-      const output = item.output ? `输出: ${item.output}` : '';
-      messages.value.push({
-        role: 'trace',
-        content: `**执行步骤**\n- ${tool} ${input} ${output}`.trim()
-      });
-      nextTick(scrollToBottom);
+      appendTraceTimeline(data.tool_call || {});
       return;
     }
     if (data.type === 'chunk') {
       const last = messages.value[messages.value.length - 1];
       if (!last || last.role !== 'assistant' || last.streaming !== true) {
-        messages.value.push({ role: 'assistant', content: data.content, streaming: true });
+        messages.value.push(makeMessage('assistant', data.content, { streaming: true }));
       } else {
         last.content += data.content;
       }
@@ -428,7 +526,7 @@ const sendMessage = async (textOverride) => {
   } catch (e) {
     loading.value = false;
     console.error('[AgentWS] ensure failed', e);
-    messages.value.push({ role: 'assistant', content: '连接智能体失败，请刷新页面后重试。' });
+    messages.value.push(makeMessage('assistant', '连接智能体失败，请刷新页面后重试。'));
     return;
   }
   await ensureConversationReady();
@@ -454,10 +552,10 @@ const sendMessage = async (textOverride) => {
           fileSections.push(`【文件解析】${item.name}\n${extracted}`);
           fileLabels.push(item.name);
         } else {
-          messages.value.push({ role: 'assistant', content: `文件 ${item.name} 未能提取到可用文本。` });
+          messages.value.push(makeMessage('assistant', `文件 ${item.name} 未能提取到可用文本。`));
         }
       } catch (e) {
-        messages.value.push({ role: 'assistant', content: `文件 ${item.name} 解析失败。` });
+        messages.value.push(makeMessage('assistant', `文件 ${item.name} 解析失败。`));
       }
     }
   }
@@ -469,7 +567,8 @@ const sendMessage = async (textOverride) => {
   if (!combinedText) return;
 
   loading.value = true;
-  messages.value.push({ role: 'user', content, files: fileLabels });
+  resetRunRuntime();
+  messages.value.push(makeMessage('user', content, { files: fileLabels }));
   await nextTick();
   scrollToBottom();
 
@@ -998,13 +1097,54 @@ onBeforeUnmount(() => {
   color: #aaa;
 }
 
+.trace-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trace-item {
+  border: 1px dashed #e1e1e1;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fcfcfc;
+}
+
+.trace-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #666;
+}
+
+.trace-type {
+  font-weight: 700;
+  color: #111;
+}
+
+.trace-main {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #222;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.trace-io {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #555;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 1100px) {
   .agent-sidebar {
     display: none;
   }
 }
 </style>
-
-
 
 

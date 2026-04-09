@@ -47,7 +47,6 @@ class GlobalConfig:
     LOG_DIR = PROJECT_ROOT / "logs"
     APP_LOG_PATH = LOG_DIR / "app.log"
     MAIL_OUTBOX_DIR = PROJECT_ROOT / "mail_outbox"
-    CHROMA_DIR = PROJECT_ROOT / "chroma_store"
 
     # Agent plugin storage paths are global constants, not env vars.
     AGENT_DATA_DIR = UPLOAD_DIR / "agent_plugin"
