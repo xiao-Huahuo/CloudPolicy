@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Optional
 import time
 
 from app.ai.document_parser import parse_document
-from app.agent_plugin.agent.agent import AgentCore
+from app.agent_plugin.agent.agent import AgentCore, write_agent_graph_svg
 from app.agent_plugin.agent.config import AgentConfig
 from app.agent_plugin.agent.memory import GLOBAL_KNOWLEDGE_USER_ID
 from app.agent_plugin.bootstrap import ensure_agent_plugin_configured
@@ -40,6 +40,19 @@ def warmup_agent_plugin() -> None:
     _console(">>> [2/2] Agent Core 初始化完成")
     _console(f"✓ Agent 插件预热完成，用时 {time.perf_counter() - started:.2f}s")
     _console("=" * 80 + "\n")
+
+
+def ensure_agent_graph_svg_on_startup(overwrite: bool = True) -> None:
+    graph_path = Path(str(GlobalConfig.AGENT_GRAPH_SVG_PATH))
+    try:
+        wrote = write_agent_graph_svg(graph_path=graph_path, overwrite=overwrite)
+        if wrote:
+            _console(f"✓ AgentGraph 已生成：{graph_path}")
+        else:
+            _console(f"✓ AgentGraph 已存在：{graph_path}")
+    except Exception as exc:
+        _console(f"✗ AgentGraph 生成失败：{exc}")
+        logger.exception("AgentGraph 生成失败: %s", exc)
 
 
 def _ensure_agent_embedding_ready() -> None:
@@ -104,13 +117,50 @@ def close_agent_core() -> None:
 
 def _run_global_rag_ingest(core: AgentCore) -> None:
     try:
-        core.memory_engine.rag_ingest(user_id=GLOBAL_KNOWLEDGE_USER_ID)
+        _console(">>> [RAG] 开始初始化全局向量知识库...")
+        result = core.memory_engine.rag_ingest(user_id=GLOBAL_KNOWLEDGE_USER_ID) or {}
+        status = str(result.get("status", "")).strip().lower()
+        source = result.get("source_path") or GlobalConfig.AGENT_PLUGIN_RAG_RAW_FILE_PATH
+        input_count = int(result.get("input_count", 0) or 0)
+        synced_count = int(result.get("synced_count", 0) or 0)
+
+        if status == "synced":
+            _console(f"✓ [RAG] 全局知识同步完成：{synced_count} 条（来源 {source}）")
+            logger.info(
+                "Agent plugin 全局知识已同步: source=%s, owner=%s, input_count=%s, synced_count=%s",
+                source,
+                GLOBAL_KNOWLEDGE_USER_ID,
+                input_count,
+                synced_count,
+            )
+            return
+        if status == "skipped":
+            _console(f"✓ [RAG] 全局知识未变化，跳过同步（来源 {source}）")
+            logger.info(
+                "Agent plugin 全局知识跳过同步: source=%s, owner=%s, input_count=%s",
+                source,
+                GLOBAL_KNOWLEDGE_USER_ID,
+                input_count,
+            )
+            return
+        if status == "empty":
+            _console(f"✓ [RAG] 无可同步知识，已跳过（来源 {source}）")
+            logger.info(
+                "Agent plugin 全局知识为空，跳过同步: source=%s, owner=%s",
+                source,
+                GLOBAL_KNOWLEDGE_USER_ID,
+            )
+            return
+
+        _console("✓ [RAG] 全局知识初始化完成")
         logger.info(
-            "Agent plugin 全局知识已同步: source=%s, owner=%s",
-            GlobalConfig.AGENT_PLUGIN_RAG_RAW_FILE_PATH,
+            "Agent plugin 全局知识初始化完成: source=%s, owner=%s, status=%s",
+            source,
             GLOBAL_KNOWLEDGE_USER_ID,
+            status or "unknown",
         )
     except Exception:
+        _console("✗ [RAG] 全局向量知识库初始化失败")
         logger.exception("Agent plugin 全局知识同步失败")
 
 

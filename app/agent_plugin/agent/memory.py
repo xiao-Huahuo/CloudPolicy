@@ -103,7 +103,7 @@ class LongTermMemory:
         data_str = json.dumps(data, sort_keys=True)
         return hashlib.md5(data_str.encode("utf-8")).hexdigest()
 
-    def rag_ingest(self, user_id: str, raw_data: Optional[List[Dict[str, str]]] = None):
+    def rag_ingest(self, user_id: str, raw_data: Optional[List[Dict[str, str]]] = None) -> dict:
         final_ingest_data = []
 
         if os.path.exists(AgentConfig.RAG_RAW_FILE_PATH):
@@ -125,7 +125,13 @@ class LongTermMemory:
 
         if not final_ingest_data:
             logger.info("[长期记忆] 无需同步的数据")
-            return
+            return {
+                "status": "empty",
+                "user_id": user_id,
+                "source_path": AgentConfig.RAG_RAW_FILE_PATH,
+                "input_count": 0,
+                "synced_count": 0,
+            }
 
         current_hash = self._calculate_md5(final_ingest_data)
 
@@ -169,8 +175,22 @@ class LongTermMemory:
                 metadatas=[{"hash_lock": current_hash, "user_id": user_id}],
             )
             logger.info("[长期记忆] 同步完成，共 %s 条", len(documents))
+            return {
+                "status": "synced",
+                "user_id": user_id,
+                "source_path": AgentConfig.RAG_RAW_FILE_PATH,
+                "input_count": len(final_ingest_data),
+                "synced_count": len(documents),
+            }
         else:
             logger.info("[长期记忆] 内容未变化，跳过同步")
+            return {
+                "status": "skipped",
+                "user_id": user_id,
+                "source_path": AgentConfig.RAG_RAW_FILE_PATH,
+                "input_count": len(final_ingest_data),
+                "synced_count": 0,
+            }
 
     def rag_query_top_k(self, query: str, user_id: str, rag_top_k: Optional[int] = None) -> List[str]:
         top_k = rag_top_k if rag_top_k is not None else AgentConfig.RAG_TOP_K

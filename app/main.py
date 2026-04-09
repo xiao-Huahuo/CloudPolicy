@@ -10,7 +10,7 @@ from app.core.config import GlobalConfig
 from app.api.routes import user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin, agent, policy_document, opinion
 from app.services.init_db import init_db_and_admin
 from app.services.worker import start_worker, stop_worker # 导入 worker 的启动和停止函数
-from app.services.agent_plugin_service import close_agent_core, warmup_agent_plugin
+from app.services.agent_plugin_service import close_agent_core, ensure_agent_graph_svg_on_startup, warmup_agent_plugin
 from app.core.cors import CorsMiddleWare
 from app.core.logging_config import setup_logging
 
@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI):
     global worker_thread
     # 应用启动前执行：初始化数据库和管理员
     init_db_and_admin()
+    ensure_agent_graph_svg_on_startup(overwrite=True)
     # 预下载Embedding模型,仅当缺失时下载.(需要科学上网).
     warmup_agent_plugin()
     

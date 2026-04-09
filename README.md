@@ -292,6 +292,7 @@ pip install -r requirements.txt
 ```
 uvicorn app.main:app --reload
 ```
+初次启动时会进行数据库初始化+Embedding模型下载+向量库初始化(建议科学上网以稳定下载).
 ### 构建
 1. 安装打包工具:
 ```

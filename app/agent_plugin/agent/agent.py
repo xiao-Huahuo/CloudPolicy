@@ -16,6 +16,7 @@ from app.agent_plugin.agent.config import AgentConfig
 from app.agent_plugin.agent.memory import LongTermMemory, get_long_term_memory
 from app.agent_plugin.agent.safety import StaticSafetyEngine
 from app.agent_plugin.agent.tools import tools, tool_node
+from app.core.config import GlobalConfig
 from app.core.database import engine
 from app.models.user import User
 
@@ -30,9 +31,49 @@ class AgentState(TypedDict):
     thought_event: str
 
 
+AGENT_GRAPH_SVG_TEMPLATE = """<svg xmlns="http://www.w3.org/2000/svg" width="980" height="420" viewBox="0 0 980 420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#445"/>
+    </marker>
+    <style>
+      .n{fill:#f8fafc;stroke:#334155;stroke-width:2;rx:12;ry:12}
+      .t{font:14px 'Microsoft YaHei',sans-serif;fill:#0f172a}
+      .l{stroke:#475569;stroke-width:2;marker-end:url(#arrow);fill:none}
+      .h{font:12px 'Microsoft YaHei',sans-serif;fill:#334155}
+      .ttl{font:18px 'Microsoft YaHei',sans-serif;fill:#111827;font-weight:700}
+    </style>
+  </defs>
+  <text x="24" y="34" class="ttl">AgentGraph ?????</text>
+
+  <rect class="n" x="40"  y="90"  width="150" height="56"/><text class="t" x="89"  y="124">decide</text>
+  <rect class="n" x="250" y="90"  width="150" height="56"/><text class="t" x="307" y="124">agent</text>
+  <rect class="n" x="460" y="90"  width="150" height="56"/><text class="t" x="515" y="124">action</text>
+  <rect class="n" x="250" y="230" width="150" height="56"/><text class="t" x="304" y="264">answer</text>
+  <rect class="n" x="670" y="160" width="170" height="56"/><text class="t" x="719" y="194">summarize</text>
+  <rect class="n" x="880" y="160" width="70"  height="56"/><text class="t" x="904" y="194">END</text>
+
+  <path class="l" d="M190 118 L250 118"/><text class="h" x="202" y="108">tools</text>
+  <path class="l" d="M190 130 C220 190, 220 250, 250 258"/><text class="h" x="194" y="208">answer</text>
+  <path class="l" d="M400 118 L460 118"/><text class="h" x="414" y="108">has tool_calls</text>
+  <path class="l" d="M610 118 L400 118"/><text class="h" x="488" y="106">loop</text>
+  <path class="l" d="M400 130 C500 150, 580 170, 670 188"/><text class="h" x="486" y="160">no tool_calls</text>
+  <path class="l" d="M400 258 C510 240, 580 210, 670 188"/>
+  <path class="l" d="M840 188 L880 188"/>
+</svg>
+"""
+
+
+def write_agent_graph_svg(graph_path: Path, overwrite: bool = False) -> bool:
+    if graph_path.exists() and not overwrite:
+        return False
+    graph_path.parent.mkdir(parents=True, exist_ok=True)
+    graph_path.write_text(AGENT_GRAPH_SVG_TEMPLATE, encoding="utf-8")
+    return True
+
+
 class AgentCore:
     MAX_RECURSION_STEPS = 24
-    GRAPH_IMAGE_NAME = "AgentGraph.svg"
 
     model: Any
     plain_model: Any
@@ -107,44 +148,11 @@ class AgentCore:
         self.app = self.workflow.compile(checkpointer=self.saver)
 
     def _ensure_graph_image(self):
-        graph_path = Path.cwd() / self.GRAPH_IMAGE_NAME
-        if graph_path.exists():
-            return
-        svg = """<svg xmlns="http://www.w3.org/2000/svg" width="980" height="420" viewBox="0 0 980 420">
-  <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#445"/>
-    </marker>
-    <style>
-      .n{fill:#f8fafc;stroke:#334155;stroke-width:2;rx:12;ry:12}
-      .t{font:14px 'Microsoft YaHei',sans-serif;fill:#0f172a}
-      .l{stroke:#475569;stroke-width:2;marker-end:url(#arrow);fill:none}
-      .h{font:12px 'Microsoft YaHei',sans-serif;fill:#334155}
-      .ttl{font:18px 'Microsoft YaHei',sans-serif;fill:#111827;font-weight:700}
-    </style>
-  </defs>
-  <text x="24" y="34" class="ttl">AgentGraph 状态转移图</text>
-
-  <rect class="n" x="40"  y="90"  width="150" height="56"/><text class="t" x="89"  y="124">decide</text>
-  <rect class="n" x="250" y="90"  width="150" height="56"/><text class="t" x="307" y="124">agent</text>
-  <rect class="n" x="460" y="90"  width="150" height="56"/><text class="t" x="515" y="124">action</text>
-  <rect class="n" x="250" y="230" width="150" height="56"/><text class="t" x="304" y="264">answer</text>
-  <rect class="n" x="670" y="160" width="170" height="56"/><text class="t" x="719" y="194">summarize</text>
-  <rect class="n" x="880" y="160" width="70"  height="56"/><text class="t" x="904" y="194">END</text>
-
-  <path class="l" d="M190 118 L250 118"/><text class="h" x="202" y="108">tools</text>
-  <path class="l" d="M190 130 C220 190, 220 250, 250 258"/><text class="h" x="194" y="208">answer</text>
-  <path class="l" d="M400 118 L460 118"/><text class="h" x="414" y="108">has tool_calls</text>
-  <path class="l" d="M610 118 L400 118"/><text class="h" x="488" y="106">loop</text>
-  <path class="l" d="M400 130 C500 150, 580 170, 670 188"/><text class="h" x="486" y="160">no tool_calls</text>
-  <path class="l" d="M400 258 C510 240, 580 210, 670 188"/>
-  <path class="l" d="M840 188 L880 188"/>
-</svg>
-"""
+        graph_path = Path(GlobalConfig.AGENT_GRAPH_SVG_PATH)
         try:
-            graph_path.write_text(svg, encoding="utf-8")
+            write_agent_graph_svg(graph_path=graph_path, overwrite=False)
         except Exception:
-            # 图是附加能力，生成失败不影响主链路。
+            # ??????????????????
             pass
 
     def _inject_runtime_args(self, state: AgentState, response: Any) -> Any:
