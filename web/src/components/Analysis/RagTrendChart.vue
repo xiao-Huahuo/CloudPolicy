@@ -10,107 +10,121 @@ import * as echarts from 'echarts/core';
 import { LineChart, BarChart } from 'echarts/charts';
 import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 
 echarts.use([LineChart, BarChart, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer]);
 
 const props = defineProps({
   chartData: { type: Object, default: () => ({}) },
   compareData: { type: Object, default: () => null },
-  chartType: { type: String, default: 'line' }
+  chartType: { type: String, default: 'line' },
 });
 
 const chartRef = ref(null);
 let myChart = null;
+let themeObserver = null;
 
-const buildSeries = (baseData, namePrefix, color) => {
-  const keys = Object.keys(baseData || {});
-  const avgScore = keys.map((key) => baseData[key]?.avg_score ?? 0);
-  const hitRate = keys.map((key) => baseData[key]?.hit_rate ?? 0);
-  const type = props.chartType;
+const buildSeries = (dataMap, prefix, hitColor, scoreColor, theme) => {
+  const keys = Object.keys(dataMap || {});
+  const hitRate = keys.map((key) => dataMap[key]?.hit_rate ?? 0);
+  const avgScore = keys.map((key) => dataMap[key]?.avg_score ?? 0);
+  const isLine = props.chartType === 'line';
+
+  const createAreaStyle = (color, alpha) => (
+    isLine
+      ? {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: withAlpha(color, alpha) },
+            { offset: 1, color: withAlpha(color, 0) },
+          ]),
+        }
+      : undefined
+  );
+
   return [
     {
-      name: `${namePrefix}命中率`,
+      name: `${prefix}命中率`,
+      type: props.chartType,
       data: hitRate,
-      type,
       smooth: true,
       showSymbol: false,
-      itemStyle: { color },
-      lineStyle: { width: 2, color }
+      itemStyle: { color: hitColor },
+      lineStyle: { width: 2, color: hitColor },
+      areaStyle: createAreaStyle(hitColor, theme.dark ? 0.32 : 0.2),
     },
     {
-      name: `${namePrefix}相关度`,
+      name: `${prefix}相关度`,
+      type: props.chartType,
       data: avgScore,
-      type,
       smooth: true,
       showSymbol: false,
-      itemStyle: { color: '#2e86de' },
-      lineStyle: { width: 2, color: '#2e86de' }
-    }
+      itemStyle: { color: scoreColor },
+      lineStyle: { width: 2, color: scoreColor },
+      areaStyle: createAreaStyle(scoreColor, theme.dark ? 0.28 : 0.16),
+    },
   ];
 };
 
 const updateChart = () => {
   if (!myChart) return;
+
+  const theme = getChartTheme();
   const baseData = props.chartData || {};
   const compareData = props.compareData || null;
-  const xAxisData = Object.keys(baseData);
-  const series = buildSeries(baseData, '个人', '#c0392b');
+  let keys = Object.keys(baseData);
+  let series = buildSeries(baseData, '个人', theme.primary, theme.secondary, theme);
+
   if (compareData) {
     const compareKeys = Object.keys(compareData);
-    const mergedKeys = Array.from(new Set([...xAxisData, ...compareKeys])).sort();
-    const alignData = (data) => {
-      const aligned = {};
-      mergedKeys.forEach((key) => {
-        aligned[key] = data[key] || { avg_score: 0, hit_rate: 0 };
-      });
-      return aligned;
-    };
-    const alignedBase = alignData(baseData);
-    const alignedCompare = alignData(compareData);
-    const seriesMe = buildSeries(alignedBase, '个人', '#c0392b');
-    const seriesAll = buildSeries(alignedCompare, '全体', '#3498db');
-    series.length = 0;
-    series.push(...seriesMe, ...seriesAll);
-    xAxisData.length = 0;
-    xAxisData.push(...mergedKeys);
+    keys = Array.from(new Set([...keys, ...compareKeys])).sort();
+    const align = (source) => Object.fromEntries(
+      keys.map((key) => [key, source?.[key] || { hit_rate: 0, avg_score: 0 }]),
+    );
+    series = [
+      ...buildSeries(align(baseData), '个人', theme.primary, theme.secondary, theme),
+      ...buildSeries(align(compareData), '全体', theme.accentCool, theme.accentMint, theme),
+    ];
   }
 
-  const option = {
+  myChart.setOption({
     grid: { left: '3%', right: '4%', bottom: '6%', top: '12%', containLabel: true },
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
+      textStyle: { color: theme.textPrimary },
+    },
     legend: {
       right: 0,
-      textStyle: { color: '#999', fontSize: 11 }
+      textStyle: { color: theme.textSecondary, fontSize: 11 },
     },
     xAxis: {
       type: 'category',
-      data: xAxisData,
-      axisLine: { lineStyle: { color: '#eee' } },
-      axisLabel: { color: '#999' },
-      axisTick: { show: false }
+      data: keys,
+      axisLine: { lineStyle: { color: theme.axisLine } },
+      axisLabel: { color: theme.textSecondary },
+      axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 1,
-      axisLabel: { color: '#999' },
-      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
+      axisLabel: { color: theme.textSecondary },
+      splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } },
     },
-    series
-  };
-
-  myChart.setOption(option, true);
+    series,
+  }, true);
 };
 
 const initChart = () => {
   if (!chartRef.value) return;
-  if (myChart) myChart.dispose();
+  myChart?.dispose();
   myChart = echarts.init(chartRef.value);
   updateChart();
 };
 
 const handleResize = () => {
-  if (myChart) myChart.resize();
+  myChart?.resize();
 };
 
 watch(() => props.chartData, () => nextTick(updateChart), { deep: true });
@@ -119,12 +133,14 @@ watch(() => props.chartType, () => nextTick(updateChart));
 
 onMounted(() => {
   initChart();
+  themeObserver = observeChartAppearance(() => nextTick(updateChart));
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  if (myChart) myChart.dispose();
+  themeObserver?.disconnect();
+  myChart?.dispose();
 });
 </script>
 

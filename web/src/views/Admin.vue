@@ -13,29 +13,41 @@
     <div v-if="!isAdmin" class="no-permission">无权限访问</div>
     <template v-else>
       <div class="stats-row">
-        <div class="stat-card stat-card--yellow">
-          <div class="stat-icon-circle" style="background:#f9a825">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="#f57f17" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <div class="stat-card stat-card--primary">
+          <div class="stat-icon stat-icon--primary">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
           </div>
-          <div class="stat-text">
+          <div class="stat-copy">
             <span class="stat-num">{{ stats.total_users ?? '-' }}</span>
             <span class="stat-label">注册用户</span>
           </div>
         </div>
-        <div class="stat-card stat-card--blue">
-          <div class="stat-icon-circle" style="background:#1565c0">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="#0d47a1" stroke-width="2" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+
+        <div class="stat-card stat-card--cool">
+          <div class="stat-icon stat-icon--cool">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
           </div>
-          <div class="stat-text">
+          <div class="stat-copy">
             <span class="stat-num">{{ stats.total_messages ?? '-' }}</span>
             <span class="stat-label">总解析次数</span>
           </div>
         </div>
-        <div class="stat-card stat-card--green">
-          <div class="stat-icon-circle" style="background:#2e7d32">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="#1b5e20" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+
+        <div class="stat-card stat-card--mint">
+          <div class="stat-icon stat-icon--mint">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
           </div>
-          <div class="stat-text">
+          <div class="stat-copy">
             <span class="stat-num">{{ stats.active_users ?? '-' }}</span>
             <span class="stat-label">活跃用户</span>
           </div>
@@ -43,26 +55,46 @@
       </div>
 
       <div class="time-cards-row">
-        <div class="time-card personal">
+        <div class="time-card time-card--primary">
           <span class="tc-label">个人平均节省</span>
           <span class="tc-value">{{ myStats?.avg_time_saved_minutes || 0 }} <small>分钟/篇</small></span>
         </div>
-        <div class="time-card personal">
+        <div class="time-card time-card--primary-dark">
           <span class="tc-label">个人总计节省</span>
           <span class="tc-value">{{ myStats?.total_time_saved_minutes || 0 }} <small>分钟</small></span>
         </div>
-        <div class="time-card global">
+        <div class="time-card time-card--cool">
           <span class="tc-label">全体平均节省</span>
           <span class="tc-value">{{ allStats?.avg_time_saved_minutes || 0 }} <small>分钟/篇</small></span>
         </div>
-        <div class="time-card global">
+        <div class="time-card time-card--cool-dark">
           <span class="tc-label">全体总计节省</span>
           <span class="tc-value">{{ allStats?.total_time_saved_minutes || 0 }} <small>分钟</small></span>
         </div>
       </div>
 
       <div class="section">
-        <div class="section-label-row">
+        <div class="section-head">
+          <span class="section-label">政务文件状态</span>
+        </div>
+        <div class="doc-status-row">
+          <div class="metric-card metric-card--mint">
+            <span class="metric-value">{{ opinionStats?.approved_docs ?? '-' }}</span>
+            <span class="metric-label">已通过</span>
+          </div>
+          <div class="metric-card metric-card--secondary">
+            <span class="metric-value">{{ opinionStats?.pending_docs ?? '-' }}</span>
+            <span class="metric-label">待审核</span>
+          </div>
+          <div class="metric-card metric-card--cool">
+            <span class="metric-value">{{ opinionStats?.total_docs ?? '-' }}</span>
+            <span class="metric-label">总文件数</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
           <span class="section-label">节省时间趋势</span>
           <div class="toggle-group">
             <span class="action-tag" :class="{ active: timeChartType === 'line' }" @click="timeChartType = 'line'">曲线</span>
@@ -73,7 +105,7 @@
       </div>
 
       <div class="section">
-        <div class="section-label-row">
+        <div class="section-head">
           <span class="section-label">分布分析</span>
           <div class="toggle-group">
             <span class="action-tag" :class="{ active: distScope === 'personal' }" @click="distScope = 'personal'">个人</span>
@@ -101,39 +133,89 @@
       </div>
 
       <div class="section">
-        <div class="section-label-row">
+        <div class="section-head">
+          <span class="section-label">民意评议分析</span>
+        </div>
+        <div class="opinion-overview">
+          <div v-for="card in opinionCards" :key="card.label" class="metric-card" :class="`metric-card--${card.tone}`">
+            <span class="metric-value">{{ card.value }}</span>
+            <span class="metric-label">{{ card.label }}</span>
+          </div>
+        </div>
+        <div class="dist-grid">
+          <div>
+            <div class="chart-sub-label">评议类型分布</div>
+            <div ref="opTypePieRef" class="chart-area-sm"></div>
+          </div>
+          <div>
+            <div class="chart-sub-label">评分分布</div>
+            <div ref="opRatingBarRef" class="chart-area-sm"></div>
+          </div>
+          <div>
+            <div class="chart-sub-label">用户角色分布</div>
+            <div ref="rolePieRef" class="chart-area-sm"></div>
+          </div>
+          <div>
+            <div class="chart-sub-label">热词 Top20</div>
+            <div class="hot-words">
+              <span
+                v-for="(word, index) in (opinionStats?.hot_words || []).slice(0, 20)"
+                :key="word.word"
+                class="hot-word"
+                :class="`hot-word--${['primary', 'secondary', 'cool'][index % 3]}`"
+                :style="{ fontSize: `${Math.max(11, Math.min(20, 11 + word.count))}px` }"
+              >
+                {{ word.word }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
           <span class="section-label">用户管理</span>
         </div>
         <div v-if="usersLoading" class="loading-text">加载中...</div>
         <table v-else class="user-table">
           <thead>
             <tr>
-              <th>头像</th><th>UID</th><th>用户名</th><th>邮箱</th><th>验证</th><th>注册时间</th><th>身份</th><th>操作</th>
+              <th>头像</th>
+              <th>UID</th>
+              <th>用户名</th>
+              <th>邮箱</th>
+              <th>验证</th>
+              <th>注册时间</th>
+              <th>身份</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.uid">
+            <tr v-for="user in users" :key="user.uid">
               <td>
-                <img v-if="u.avatar_url" :src="u.avatar_url" class="user-avatar-thumb" alt="avatar" />
+                <img v-if="user.avatar_url" :src="user.avatar_url" class="user-avatar-thumb" alt="avatar" />
                 <div v-else class="avatar-placeholder-sm">
-                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
                 </div>
               </td>
-              <td>{{ u.uid }}</td>
-              <td>{{ u.uname }}</td>
-              <td>{{ u.email }}</td>
-              <td>{{ u.email_verified ? '已验证' : '未验证' }}</td>
-              <td>{{ u.created_time?.slice(0, 10) }}</td>
+              <td>{{ user.uid }}</td>
+              <td>{{ user.uname }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.email_verified ? '已验证' : '未验证' }}</td>
+              <td>{{ user.created_time?.slice(0, 10) }}</td>
               <td>
-                <span :class="u.role === 'admin' ? 'badge-admin' : u.role === 'certified' ? 'badge-certified' : 'badge-user'">
-                  {{ u.role === 'admin' ? '管理员' : u.role === 'certified' ? '认证主体' : '普通用户' }}
+                <span :class="user.role === 'admin' ? 'badge-admin' : user.role === 'certified' ? 'badge-certified' : 'badge-user'">
+                  {{ user.role === 'admin' ? '管理员' : user.role === 'certified' ? '认证主体' : '普通用户' }}
                 </span>
               </td>
               <td class="action-cell">
-                <button class="tbl-btn" @click="toggleAdmin(u.uid)" :disabled="u.uid === selfUid">
-                  {{ u.role === 'admin' ? '撤销管理员' : '设为管理员' }}
+                <button class="tbl-btn" @click="toggleAdmin(user.uid)" :disabled="user.uid === selfUid">
+                  {{ user.role === 'admin' ? '撤销管理员' : '设为管理员' }}
                 </button>
-                <button class="tbl-btn danger" @click="deleteUser(u.uid)" :disabled="u.uid === selfUid">删除</button>
+                <button class="tbl-btn danger" @click="deleteUser(user.uid)" :disabled="user.uid === selfUid">删除</button>
               </td>
             </tr>
           </tbody>
@@ -153,67 +235,9 @@
         </div>
       </div>
 
-      <!-- 民意评议分析 -->
       <div class="section">
-        <div class="section-label-row">
-          <span class="section-label">民意评议分析</span>
-        </div>
-        <div class="opinion-overview">
-          <div class="ov-mini" v-for="card in opinionCards" :key="card.label" :style="{'--ac': card.color}">
-            <span class="ov-mini-val">{{ card.value }}</span>
-            <span class="ov-mini-label">{{ card.label }}</span>
-          </div>
-        </div>
-        <div class="dist-grid">
-          <div>
-            <div class="chart-sub-label">评议类型分布</div>
-            <div ref="opTypePieRef" class="chart-area-sm"></div>
-          </div>
-          <div>
-            <div class="chart-sub-label">评分分布</div>
-            <div ref="opRatingBarRef" class="chart-area-sm"></div>
-          </div>
-          <div>
-            <div class="chart-sub-label">用户角色分布</div>
-            <div ref="rolePieRef" class="chart-area-sm"></div>
-          </div>
-          <div>
-            <div class="chart-sub-label">热词 Top20</div>
-            <div class="hot-words">
-              <span v-for="w in (opinionStats?.hot_words || []).slice(0,20)" :key="w.word"
-                class="hot-word" :style="{ fontSize: Math.max(11, Math.min(20, 11 + w.count)) + 'px' }">
-                {{ w.word }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 政务文件状态 -->
-      <div class="section">
-        <div class="section-label-row">
-          <span class="section-label">政务文件状态</span>
-        </div>
-        <div class="doc-status-row">
-          <div class="ds-card" style="--ac:#27ae60">
-            <span class="ds-val">{{ opinionStats?.approved_docs ?? '-' }}</span>
-            <span class="ds-label">已通过</span>
-          </div>
-          <div class="ds-card" style="--ac:#e67e22">
-            <span class="ds-val">{{ opinionStats?.pending_docs ?? '-' }}</span>
-            <span class="ds-label">待审核</span>
-          </div>
-          <div class="ds-card" style="--ac:#2980b9">
-            <span class="ds-val">{{ opinionStats?.total_docs ?? '-' }}</span>
-            <span class="ds-label">总文件数</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 用户IP地理分布 -->
-      <div class="section">
-        <div class="section-label-row">
-          <span class="section-label">用户IP地理分布</span>
+        <div class="section-head">
+          <span class="section-label">用户 IP 地理分布</span>
         </div>
         <div ref="chinaMapRef" class="china-map-area"></div>
       </div>
@@ -225,27 +249,29 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart, PieChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components';
+import { BarChart, LineChart, PieChart, MapChart } from 'echarts/charts';
+import { GridComponent, LegendComponent, TitleComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
+import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 
-echarts.use([LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer]);
+echarts.use([LineChart, BarChart, PieChart, MapChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent, CanvasRenderer]);
 
 const userStore = useUserStore();
-const isAdmin = computed(() => userStore.isAdmin);
+const isAdmin = computed(() => Boolean(userStore.isAdmin));
 const selfUid = computed(() => userStore.user?.uid);
-
 const users = ref([]);
 const stats = ref({});
 const myStats = ref(null);
 const allStats = ref(null);
+const opinionStats = ref(null);
+const roleDist = ref(null);
+const geoData = ref([]);
 const usersLoading = ref(true);
 const timeChartType = ref('line');
 const distScope = ref('personal');
 const streamConnected = ref(false);
-
 const timeChartRef = ref(null);
 const roseChartRef = ref(null);
 const materialsComboChartRef = ref(null);
@@ -255,10 +281,6 @@ const opTypePieRef = ref(null);
 const opRatingBarRef = ref(null);
 const rolePieRef = ref(null);
 const chinaMapRef = ref(null);
-
-const opinionStats = ref(null);
-const roleDist = ref(null);
-const geoData = ref([]);
 
 let timeChart = null;
 let roseChart = null;
@@ -270,13 +292,21 @@ let opRatingBarChart = null;
 let rolePieChart = null;
 let chinaMapChart = null;
 let statsEventSource = null;
+let themeObserver = null;
+
+const opinionCards = computed(() => [
+  { label: '总评议数', value: opinionStats.value?.total_opinions ?? '-', tone: 'primary' },
+  { label: '总文件数', value: opinionStats.value?.total_docs ?? '-', tone: 'cool' },
+  { label: '已通过文件', value: opinionStats.value?.approved_docs ?? '-', tone: 'mint' },
+  { label: '待审核文件', value: opinionStats.value?.pending_docs ?? '-', tone: 'secondary' },
+]);
 
 const getDistData = () => (distScope.value === 'personal' ? myStats.value : allStats.value);
 
 async function loadAll() {
   usersLoading.value = true;
   try {
-    const [usersRes, statsRes, myRes, allRes, opRes, roleRes, geoRes] = await Promise.all([
+    const [usersRes, statsRes, myRes, allRes, opinionRes, roleRes, geoRes] = await Promise.all([
       apiClient.get(API_ROUTES.ADMIN_USERS),
       apiClient.get(API_ROUTES.ADMIN_STATS),
       apiClient.get(API_ROUTES.ANALYSIS_ME),
@@ -289,14 +319,14 @@ async function loadAll() {
     stats.value = statsRes.data;
     myStats.value = myRes.data;
     allStats.value = allRes.data;
-    opinionStats.value = opRes.data;
+    opinionStats.value = opinionRes.data;
     roleDist.value = roleRes.data;
     geoData.value = geoRes.data.geo_dist || [];
     await nextTick();
     renderAllCharts();
     connectRealtimeStream();
-  } catch (e) {
-    console.warn('管理员数据加载失败', e);
+  } catch (error) {
+    console.warn('管理员数据加载失败', error);
   } finally {
     usersLoading.value = false;
   }
@@ -311,8 +341,7 @@ function connectRealtimeStream() {
   };
   statsEventSource.onmessage = (event) => {
     try {
-      const payload = JSON.parse(event.data);
-      stats.value = payload;
+      stats.value = JSON.parse(event.data);
     } catch (error) {
       console.warn('实时数据解析失败', error);
     }
@@ -333,33 +362,30 @@ function renderAllCharts() {
 
 function renderTimeChart() {
   if (!timeChartRef.value) return;
+  const theme = getChartTheme();
   if (!timeChart) timeChart = echarts.init(timeChartRef.value);
+
   const myDist = myStats.value?.time_saved_distribution || {};
   const allDist = allStats.value?.time_saved_distribution || {};
   const keys = Array.from(new Set([...Object.keys(myDist), ...Object.keys(allDist)]));
+  const area = (color) => (timeChartType.value === 'line'
+    ? {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: withAlpha(color, theme.dark ? 0.32 : 0.18) },
+          { offset: 1, color: withAlpha(color, 0) },
+        ]),
+      }
+    : undefined);
+
   timeChart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['个人节省', '全体节省'], top: 0 },
+    tooltip: { trigger: 'axis', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+    legend: { data: ['个人节省', '全体节省'], top: 0, textStyle: { color: theme.textSecondary } },
     grid: { top: 36, bottom: 24, left: 40, right: 20 },
-    xAxis: { type: 'category', data: keys, axisLabel: { fontSize: 10 } },
-    yAxis: { type: 'value', name: '分钟' },
+    xAxis: { type: 'category', data: keys, axisLabel: { fontSize: 10, color: theme.textSecondary }, axisLine: { lineStyle: { color: theme.axisLine } }, axisTick: { show: false } },
+    yAxis: { type: 'value', name: '分钟', nameTextStyle: { color: theme.textMuted }, axisLabel: { color: theme.textSecondary }, splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } } },
     series: [
-      {
-        name: '个人节省',
-        type: timeChartType.value,
-        data: keys.map((key) => myDist[key] || 0),
-        itemStyle: { color: '#c0392b' },
-        smooth: true,
-        areaStyle: timeChartType.value === 'line' ? { color: 'rgba(192,57,43,0.1)' } : undefined,
-      },
-      {
-        name: '全体节省',
-        type: timeChartType.value,
-        data: keys.map((key) => allDist[key] || 0),
-        itemStyle: { color: '#2980b9' },
-        smooth: true,
-        areaStyle: timeChartType.value === 'line' ? { color: 'rgba(41,128,185,0.1)' } : undefined,
-      },
+      { name: '个人节省', type: timeChartType.value, data: keys.map((key) => myDist[key] || 0), itemStyle: { color: theme.primary }, lineStyle: { color: theme.primary, width: 2.5 }, smooth: true, areaStyle: area(theme.primary), barMaxWidth: 24 },
+      { name: '全体节省', type: timeChartType.value, data: keys.map((key) => allDist[key] || 0), itemStyle: { color: theme.accentCool }, lineStyle: { color: theme.accentCool, width: 2.5 }, smooth: true, areaStyle: area(theme.accentCool), barMaxWidth: 24 },
     ],
   }, true);
 }
@@ -367,26 +393,15 @@ function renderTimeChart() {
 function renderDistributionCharts() {
   const distData = getDistData();
   if (!distData) return;
+  const theme = getChartTheme();
 
   if (roseChartRef.value) {
     if (!roseChart) roseChart = echarts.init(roseChartRef.value);
     const roseData = Object.entries(distData.notice_type_distribution || {}).map(([name, value]) => ({ name, value }));
     roseChart.setOption({
-      color: ['#c0392b', '#e67e22', '#f1c40f', '#7f8c8d', '#95a5a6'],
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      series: [{
-        type: 'pie',
-        roseType: 'radius',
-        radius: ['15%', '75%'],
-        center: ['50%', '55%'],
-        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, formatter: '{b}\n{c}', fontSize: 10 },
-        animationType: 'expansion',
-        animationEasing: 'cubicOut',
-        startAngle: 90,
-        clockwise: true,
-        data: roseData.sort((a, b) => a.value - b.value),
-      }],
+      color: theme.palette,
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+      series: [{ type: 'pie', roseType: 'radius', radius: ['15%', '75%'], center: ['50%', '55%'], itemStyle: { borderRadius: 6, borderColor: 'transparent', borderWidth: 0 }, label: { show: true, formatter: '{b}\n{c}', fontSize: 10, color: theme.dark ? '#fff' : theme.textPrimary }, startAngle: 90, clockwise: true, data: roseData.sort((a, b) => a.value - b.value) }],
     }, true);
   }
 
@@ -394,31 +409,14 @@ function renderDistributionCharts() {
     if (!materialsComboChart) materialsComboChart = echarts.init(materialsComboChartRef.value);
     const topMaterials = Object.entries(distData.materials_freq || {}).slice(0, 8);
     materialsComboChart.setOption({
-      tooltip: { trigger: 'axis' },
-      legend: { data: ['材料频次', '变化曲线'], top: 0, textStyle: { fontSize: 10 } },
+      tooltip: { trigger: 'axis', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+      legend: { data: ['材料频次', '变化曲线'], top: 0, textStyle: { fontSize: 10, color: theme.textSecondary } },
       grid: { top: 30, bottom: 35, left: 35, right: 10 },
-      xAxis: {
-        type: 'category',
-        data: topMaterials.map(([name]) => name),
-        axisLabel: { interval: 0, rotate: 25, fontSize: 9 },
-      },
-      yAxis: { type: 'value' },
+      xAxis: { type: 'category', data: topMaterials.map(([name]) => name), axisLabel: { interval: 0, rotate: 25, fontSize: 9, color: theme.textSecondary }, axisLine: { lineStyle: { color: theme.axisLine } } },
+      yAxis: { type: 'value', axisLabel: { color: theme.textSecondary }, splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } } },
       series: [
-        {
-          name: '材料频次',
-          type: 'bar',
-          barWidth: '42%',
-          data: topMaterials.map(([, value]) => value),
-          itemStyle: { color: '#c0392b' },
-        },
-        {
-          name: '变化曲线',
-          type: 'line',
-          smooth: true,
-          data: topMaterials.map(([, value]) => value),
-          itemStyle: { color: '#2980b9' },
-          lineStyle: { width: 2 },
-        },
+        { name: '材料频次', type: 'bar', barWidth: '42%', data: topMaterials.map(([, value]) => value), itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: theme.primary }, { offset: 1, color: theme.secondary }]), borderRadius: [6, 6, 0, 0] } },
+        { name: '变化曲线', type: 'line', smooth: true, data: topMaterials.map(([, value]) => value), itemStyle: { color: theme.accentCool }, lineStyle: { color: theme.accentCool, width: 2 } },
       ],
     }, true);
   }
@@ -427,38 +425,30 @@ function renderDistributionCharts() {
     if (!barChart) barChart = echarts.init(barChartRef.value);
     const top5 = Object.entries(distData.materials_freq || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
     barChart.setOption({
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: 'axis', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
       grid: { top: 10, bottom: 30, left: 60, right: 10 },
-      xAxis: { type: 'value' },
-      yAxis: { type: 'category', data: top5.map((item) => item[0]), axisLabel: { fontSize: 10 } },
-      series: [{
-        type: 'bar',
-        data: top5.map((item) => item[1]),
-        itemStyle: {
-          color: (params) => ['#c0392b', '#e67e22', '#f1c40f', '#7f8c8d', '#922b21'][params.dataIndex % 5],
-        },
-      }],
+      xAxis: { type: 'value', axisLabel: { color: theme.textSecondary }, splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } } },
+      yAxis: { type: 'category', data: top5.map((item) => item[0]), axisLabel: { fontSize: 10, color: theme.textSecondary }, axisLine: { lineStyle: { color: theme.axisLine } }, axisTick: { show: false } },
+      series: [{ type: 'bar', data: top5.map((item) => item[1]), itemStyle: { color: (params) => theme.palette[params.dataIndex % theme.palette.length], borderRadius: [0, 6, 6, 0] } }],
     }, true);
   }
 
   if (diffChartRef.value) {
     if (!diffChart) diffChart = echarts.init(diffChartRef.value);
-    const cd = distData.complexity_distribution || {};
-    const cats = [...new Set(Object.keys(cd).map((key) => key.split('-')[0]))];
-    const levels = ['高', '中', '低'];
+    const complexity = distData.complexity_distribution || {};
+    const categories = [...new Set(Object.keys(complexity).map((key) => key.split('-')[0]))];
+    const levels = [
+      { label: '高', color: theme.primary },
+      { label: '中', color: theme.secondary },
+      { label: '低', color: theme.accentCool },
+    ];
     diffChart.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { data: levels, top: 0, textStyle: { fontSize: 10 } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+      legend: { data: levels.map((level) => level.label), top: 0, textStyle: { fontSize: 10, color: theme.textSecondary } },
       grid: { top: 30, bottom: 24, left: 50, right: 10 },
-      xAxis: { type: 'category', data: cats, axisLabel: { fontSize: 9 } },
-      yAxis: { type: 'value' },
-      series: levels.map((level, index) => ({
-        name: level,
-        type: 'bar',
-        stack: 'total',
-        data: cats.map((cat) => cd[`${cat}-${level}`] || 0),
-        itemStyle: { color: ['#c0392b', '#e67e22', '#27ae60'][index] },
-      })),
+      xAxis: { type: 'category', data: categories, axisLabel: { fontSize: 9, color: theme.textSecondary }, axisLine: { lineStyle: { color: theme.axisLine } } },
+      yAxis: { type: 'value', axisLabel: { color: theme.textSecondary }, splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } } },
+      series: levels.map((level) => ({ name: level.label, type: 'bar', stack: 'total', data: categories.map((category) => complexity[`${category}-${level.label}`] || 0), itemStyle: { color: level.color } })),
     }, true);
   }
 }
@@ -467,98 +457,71 @@ async function renderChinaMap() {
   if (!chinaMapRef.value) return;
   if (!echarts.getMap('china')) {
     try {
-      const res = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
-      const geoJson = await res.json();
-      echarts.registerMap('china', geoJson);
-    } catch (e) { console.warn('China map load failed', e); return; }
+      const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+      echarts.registerMap('china', await response.json());
+    } catch (error) {
+      console.warn('China map load failed', error);
+      return;
+    }
   }
+
+  const theme = getChartTheme();
   if (!chinaMapChart) chinaMapChart = echarts.init(chinaMapRef.value);
   const data = geoData.value;
-  const max = Math.max(...data.map(d => d.value), 1);
+  const max = Math.max(...data.map((item) => item.value), 1);
+
   chinaMapChart.setOption({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} 人' },
-    visualMap: {
-      min: 0, max,
-      left: 'left', bottom: 20,
-      text: ['多', '少'],
-      inRange: { color: ['#fde8e8', '#c0392b'] },
-      textStyle: { fontSize: 11 },
-    },
-    series: [{
-      type: 'map', map: 'china',
-      roam: true,
-      emphasis: { itemStyle: { areaColor: '#e74c3c' }, label: { show: true } },
-      data,
-      itemStyle: { borderColor: '#fff', borderWidth: 0.5 },
-    }],
+    tooltip: { trigger: 'item', formatter: '{b}: {c} 人', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+    visualMap: { min: 0, max, left: 'left', bottom: 20, text: ['高', '低'], inRange: { color: [withAlpha(theme.accentCool, theme.dark ? 0.2 : 0.1), theme.primary] }, textStyle: { fontSize: 11, color: theme.textSecondary } },
+    series: [{ type: 'map', map: 'china', roam: true, emphasis: { itemStyle: { areaColor: theme.secondary }, label: { show: true, color: theme.textPrimary } }, data, itemStyle: { areaColor: withAlpha(theme.accentCool, theme.dark ? 0.08 : 0.04), borderColor: withAlpha(theme.textSecondary, theme.dark ? 0.42 : 0.24), borderWidth: 0.5 }, label: { color: theme.textSecondary } }],
   }, true);
 }
 
-const opinionCards = computed(() => [
-  { label: '总评议数', value: opinionStats.value?.total_opinions ?? '-', color: '#8e44ad' },
-  { label: '总文件数', value: opinionStats.value?.total_docs ?? '-', color: '#2980b9' },
-  { label: '已通过文件', value: opinionStats.value?.approved_docs ?? '-', color: '#27ae60' },
-  { label: '待审核文件', value: opinionStats.value?.pending_docs ?? '-', color: '#e67e22' },
-]);
-
 function renderOpinionCharts() {
+  const theme = getChartTheme();
   const typeMap = { review: '落地评价', correction: '解析纠错', message: '办事留言' };
   const typeDist = opinionStats.value?.type_dist || {};
+
   if (opTypePieRef.value) {
     if (!opTypePieChart) opTypePieChart = echarts.init(opTypePieRef.value);
     opTypePieChart.setOption({
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      color: ['#c0392b', '#2980b9', '#27ae60'],
-      series: [{
-        type: 'pie', radius: ['35%', '68%'],
-        data: Object.entries(typeDist).map(([k, v]) => ({ name: typeMap[k] || k, value: v })),
-        label: { fontSize: 11 },
-        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.2)' } },
-      }],
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+      color: [theme.primary, theme.secondary, theme.accentCool],
+      series: [{ type: 'pie', radius: ['35%', '68%'], data: Object.entries(typeDist).map(([key, value]) => ({ name: typeMap[key] || key, value })), label: { fontSize: 11, color: theme.textSecondary }, itemStyle: { borderColor: 'transparent', borderWidth: 0 }, emphasis: { itemStyle: { shadowBlur: 8, shadowColor: withAlpha(theme.primaryDark, 0.2) } } }],
     }, true);
   }
+
   const ratingDist = opinionStats.value?.rating_dist || {};
   if (opRatingBarRef.value) {
     if (!opRatingBarChart) opRatingBarChart = echarts.init(opRatingBarRef.value);
     opRatingBarChart.setOption({
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: 'axis', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
       grid: { top: 10, bottom: 30, left: 36, right: 10 },
-      xAxis: { type: 'category', data: ['1星','2星','3星','4星','5星'] },
-      yAxis: { type: 'value', minInterval: 1 },
-      series: [{
-        type: 'bar', barWidth: '50%',
-        data: [1,2,3,4,5].map(n => ratingDist[String(n)] || 0),
-        itemStyle: {
-          color: p => ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#27ae60'][p.dataIndex],
-          borderRadius: [4,4,0,0],
-        },
-      }],
+      xAxis: { type: 'category', data: ['1星', '2星', '3星', '4星', '5星'], axisLabel: { color: theme.textSecondary }, axisLine: { lineStyle: { color: theme.axisLine } }, axisTick: { show: false } },
+      yAxis: { type: 'value', minInterval: 1, axisLabel: { color: theme.textSecondary }, splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } } },
+      series: [{ type: 'bar', barWidth: '50%', data: [1, 2, 3, 4, 5].map((num) => ratingDist[String(num)] || 0), itemStyle: { color: (params) => [theme.primaryLight, theme.primary, theme.secondary, theme.accentCool, theme.accentMint][params.dataIndex], borderRadius: [4, 4, 0, 0] } }],
     }, true);
   }
+
   const roleLabels = { normal: '普通用户', certified: '认证主体', admin: '管理员' };
-  const rd = roleDist.value?.role_dist || {};
+  const roles = roleDist.value?.role_dist || {};
   if (rolePieRef.value) {
     if (!rolePieChart) rolePieChart = echarts.init(rolePieRef.value);
     rolePieChart.setOption({
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      color: ['#bdc3c7', '#c0392b', '#2980b9'],
-      series: [{
-        type: 'pie', radius: ['35%', '68%'],
-        data: Object.entries(rd).map(([k, v]) => ({ name: roleLabels[k] || k, value: v })),
-        label: { fontSize: 11 },
-        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.2)' } },
-      }],
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
+      color: [withAlpha(theme.textSecondary, 0.6), theme.secondary, theme.primary],
+      series: [{ type: 'pie', radius: ['35%', '68%'], data: Object.entries(roles).map(([key, value]) => ({ name: roleLabels[key] || key, value })), label: { fontSize: 11, color: theme.textSecondary }, itemStyle: { borderColor: 'transparent', borderWidth: 0 }, emphasis: { itemStyle: { shadowBlur: 8, shadowColor: withAlpha(theme.primaryDark, 0.2) } } }],
     }, true);
   }
 }
 
 async function toggleAdmin(uid) {
   try {
-    const res = await apiClient.patch(API_ROUTES.ADMIN_TOGGLE_ADMIN(uid));
-    const user = users.value.find((item) => item.uid === uid);
-    if (user) user.role = res.data.role;
-  } catch (e) {
-    console.warn(e);
+    const response = await apiClient.patch(API_ROUTES.ADMIN_TOGGLE_ADMIN(uid));
+    const target = users.value.find((item) => item.uid === uid);
+    if (target) target.role = response.data.role;
+  } catch (error) {
+    console.warn(error);
   }
 }
 
@@ -567,124 +530,120 @@ async function deleteUser(uid) {
   try {
     await apiClient.delete(`${API_ROUTES.ADMIN_USERS}/${uid}`);
     users.value = users.value.filter((item) => item.uid !== uid);
-  } catch (e) {
-    console.warn(e);
+  } catch (error) {
+    console.warn(error);
   }
+}
+
+function resizeCharts() {
+  [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart, chinaMapChart].forEach((chart) => chart?.resize());
 }
 
 const maxCount = computed(() => Math.max(...(stats.value.user_message_counts || []).map((item) => item.count), 1));
 const barWidth = (count) => `${Math.round((count / maxCount.value) * 100)}%`;
 
+watch(isAdmin, (value) => {
+  if (value && !users.value.length) loadAll();
+});
+watch([timeChartType, myStats, allStats], () => nextTick(renderTimeChart), { deep: true });
+watch([distScope, myStats, allStats], () => nextTick(renderDistributionCharts), { deep: true });
+watch([opinionStats, roleDist], () => nextTick(renderOpinionCharts), { deep: true });
+watch(geoData, () => nextTick(renderChinaMap), { deep: true });
+
 onMounted(() => {
   if (isAdmin.value) loadAll();
-});
-
-watch(isAdmin, (val) => {
-  if (val && !users.value.length) {
-    loadAll();
-  }
+  themeObserver = observeChartAppearance(() => nextTick(renderAllCharts));
+  window.addEventListener('resize', resizeCharts);
 });
 
 onUnmounted(() => {
+  themeObserver?.disconnect();
+  window.removeEventListener('resize', resizeCharts);
   [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart, chinaMapChart].forEach((chart) => chart?.dispose());
   statsEventSource?.close();
 });
 </script>
 
 <style scoped>
-.admin-page { display: flex; flex-direction: column; gap: 16px; padding: 20px; overflow-y: auto; height: 100%; box-sizing: border-box; }
-.admin-header { display: flex; align-items: center; justify-content: space-between; }
+.admin-page { display: flex; flex-direction: column; gap: 16px; padding: 16px 20px 20px; overflow-y: auto; height: 100%; box-sizing: border-box; }
+.admin-header, .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .header-left { display: flex; align-items: center; gap: 12px; }
-.page-title { font-size: 20px; font-weight: 800; color: #111; margin: 0; }
-.live-badge { font-size: 12px; padding: 4px 10px; background: #eee; color: #666; }
-.live-badge.connected { background: #c0392b; color: #fff; }
-.no-permission { text-align: center; color: #aaa; padding: 60px 0; font-size: 14px; }
-
-.stats-row { display: flex; gap: 12px; }
-.stat-card { flex: 1; border-radius: 16px; border: none; padding: 16px; display: flex; align-items: center; gap: 14px; }
-.stat-card--yellow { background: #fffde7; }
-.stat-card--blue { background: #e3f2fd; }
-.stat-card--green { background: #e8f5e9; }
-.stat-icon-circle { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.stat-text { display: flex; flex-direction: column; gap: 4px; }
-.stat-num { font-size: 28px; font-weight: 800; color: #111; line-height: 1; }
-.stat-label { font-size: 12px; color: #888; }
-
-.time-cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.time-card { background: #fff; border: 1px solid #eee; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
-.time-card.personal { border-top: 3px solid #c0392b; }
-.time-card.global { border-top: 3px solid #2980b9; }
-.tc-label { font-size: 11px; color: #888; }
-.tc-value { font-size: 22px; font-weight: 800; color: #111; line-height: 1; }
-.tc-value small { font-size: 11px; font-weight: 400; color: #aaa; }
-
-.section { background: #fff; border: 1px solid #eee; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.section-label-row { display: flex; align-items: center; justify-content: space-between; }
-.section-label { font-size: 13px; font-weight: 700; color: #111; }
-.refresh-btn { background: #c0392b; border: none; border-bottom: 3px solid #922b21; border-radius: 999px; color: #fff; padding: 7px 18px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.refresh-btn:hover { background: #e74c3c; border-bottom-color: #c0392b; }
-.loading-text { color: #aaa; font-size: 13px; }
-
-.toggle-group { display: flex; gap: 4px; }
-.action-tag { font-size: 11px; padding: 3px 10px; border-radius: 10px; background: #f0f0f0; color: #666; cursor: pointer; transition: all 0.2s; }
-.action-tag.active { background: #c0392b; color: #fff; }
-
+.live-badge, .toggle-group, .tbl-btn { border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color)); }
+.live-badge, .toggle-group { background: color-mix(in srgb, var(--color-primary) 7%, var(--card-bg)); }
+.live-badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--text-secondary); }
+.live-badge.connected, .action-tag.active, .badge-admin, .refresh-btn { background: var(--color-primary); color: #fff; }
+.refresh-btn { border: none; border-bottom: 3px solid var(--color-primary-dark); border-radius: 999px; padding: 7px 18px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+.refresh-btn:hover { background: var(--color-primary-light); border-bottom-color: var(--color-primary); }
+.no-permission, .loading-text { color: var(--text-muted); font-size: 14px; }
+.no-permission { text-align: center; padding: 60px 0; }
+.stats-row, .doc-status-row { display: flex; gap: 12px; }
+.stat-card, .time-card, .section, .metric-card { background: var(--card-bg); border: 1px solid var(--border-color); }
+.stat-card { flex: 1; border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 14px; }
+.stat-card--primary { background: color-mix(in srgb, var(--color-primary) 10%, var(--card-bg)); }
+.stat-card--cool { background: color-mix(in srgb, var(--color-accent-cool) 10%, var(--card-bg)); }
+.stat-card--mint { background: color-mix(in srgb, var(--color-accent-mint) 10%, var(--card-bg)); }
+.stat-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-icon--primary { background: color-mix(in srgb, var(--color-primary) 18%, transparent); color: var(--color-primary-dark); }
+.stat-icon--cool { background: color-mix(in srgb, var(--color-accent-cool) 18%, transparent); color: color-mix(in srgb, var(--color-accent-cool) 72%, #0d2033); }
+.stat-icon--mint { background: color-mix(in srgb, var(--color-accent-mint) 18%, transparent); color: color-mix(in srgb, var(--color-accent-mint) 68%, #12321f); }
+.stat-copy, .time-card, .metric-card { display: flex; flex-direction: column; }
+.stat-copy { gap: 4px; }
+.stat-num, .metric-value { font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.stat-label, .tc-label, .metric-label, .chart-sub-label, .bar-uid { color: var(--text-secondary); }
+.stat-label, .metric-label { font-size: 12px; }
+.time-cards-row, .dist-grid, .opinion-overview { display: grid; gap: 12px; }
+.time-cards-row { grid-template-columns: repeat(4, 1fr); }
+.time-card { padding: 16px; gap: 6px; }
+.time-card--primary { border-top: 3px solid var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, var(--card-bg)); }
+.time-card--primary-dark { border-top: 3px solid var(--color-primary-dark); background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary-dark) 82%, #0f1116), color-mix(in srgb, var(--color-primary) 62%, #151922)); color: #fff; }
+.time-card--cool { border-top: 3px solid var(--color-accent-cool); background: color-mix(in srgb, var(--color-accent-cool) 8%, var(--card-bg)); }
+.time-card--cool-dark { border-top: 3px solid var(--color-accent-cool); background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent-cool) 70%, #0f1720), color-mix(in srgb, var(--color-accent-mint) 44%, #12202b)); color: #fff; }
+.tc-label { font-size: 11px; }
+.time-card--primary-dark .tc-label, .time-card--cool-dark .tc-label { color: rgba(255, 255, 255, 0.74); }
+.tc-value { font-size: 22px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.time-card--primary-dark .tc-value, .time-card--cool-dark .tc-value { color: #fff; }
+.tc-value small { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+.time-card--primary-dark .tc-value small, .time-card--cool-dark .tc-value small { color: rgba(255, 255, 255, 0.7); }
+.section { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.section-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.toggle-group { display: flex; gap: 4px; padding: 4px; border-radius: 10px; }
+.action-tag { font-size: 11px; padding: 3px 10px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s ease; }
+.action-tag:hover, .tbl-btn:hover { background: color-mix(in srgb, var(--color-primary) 14%, var(--card-bg)); color: var(--text-primary); }
 .chart-area { width: 100%; height: 220px; }
-.dist-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.chart-sub-label { font-size: 11px; color: #888; font-weight: 600; margin-bottom: 6px; }
 .chart-area-sm { width: 100%; height: 180px; }
-
+.dist-grid, .opinion-overview { grid-template-columns: repeat(4, 1fr); }
 .user-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.user-table th { text-align: left; padding: 8px 10px; background: #f9f9f9; color: #666; font-weight: 600; border-bottom: 1px solid #eee; }
-.user-table td { padding: 8px 10px; border-bottom: 1px solid #f5f5f5; color: #333; vertical-align: middle; }
-.badge-admin { background: #c0392b; color: #fff; padding: 2px 8px; font-size: 11px; font-weight: 700; }
-.badge-certified { background: #2980b9; color: #fff; padding: 2px 8px; font-size: 11px; font-weight: 700; }
-.badge-user { background: #f0f0f0; color: #666; padding: 2px 8px; font-size: 11px; }
+.user-table th { padding: 8px 10px; background: color-mix(in srgb, var(--border-color) 24%, var(--card-bg)); color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color); text-align: left; }
+.user-table td { padding: 8px 10px; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 74%, transparent); color: var(--text-primary); vertical-align: middle; }
+.badge-admin, .badge-certified, .badge-user { padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 999px; }
+.badge-certified { background: var(--color-accent-cool); color: #fff; }
+.badge-user { background: color-mix(in srgb, var(--border-color) 40%, var(--card-bg)); color: var(--text-secondary); }
 .action-cell { display: flex; gap: 6px; }
-.tbl-btn { background: #f5f5f5; border: none; padding: 4px 10px; font-size: 11px; cursor: pointer; transition: background 0.2s; }
-.tbl-btn:hover { background: #e0e0e0; }
-.tbl-btn.danger:hover { background: #c0392b; color: #fff; }
+.tbl-btn { background: color-mix(in srgb, var(--color-primary) 7%, var(--card-bg)); padding: 4px 10px; font-size: 11px; cursor: pointer; transition: all 0.2s ease; color: var(--text-primary); }
+.tbl-btn.danger:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 .tbl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.user-avatar-thumb { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
-.avatar-placeholder-sm { width: 28px; height: 28px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #bbb; }
-
+.user-avatar-thumb, .avatar-placeholder-sm { width: 28px; height: 28px; border-radius: 50%; }
+.user-avatar-thumb { object-fit: cover; }
+.avatar-placeholder-sm { background: color-mix(in srgb, var(--border-color) 40%, var(--card-bg)); display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
 .bar-list { display: flex; flex-direction: column; gap: 8px; }
 .bar-row { display: flex; align-items: center; gap: 10px; }
-.bar-uid { font-size: 12px; color: #888; width: 60px; flex-shrink: 0; }
-.bar-track { flex: 1; background: #f5f5f5; height: 12px; }
-.bar-fill { height: 100%; background: linear-gradient(to right, #c0392b, #e67e22); transition: width 0.4s; }
-.bar-count { font-size: 12px; color: #333; width: 30px; text-align: right; flex-shrink: 0; }
-
-.opinion-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
-.ov-mini {
-  border-left: 3px solid var(--ac);
-  background: var(--card-bg, #fff);
-  border: 1px solid #eee;
-  border-left: 3px solid var(--ac);
-  padding: 12px 16px;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.ov-mini-val { font-size: 24px; font-weight: 800; color: var(--ac); line-height: 1; }
-.ov-mini-label { font-size: 11px; color: #888; }
-
+.bar-uid { font-size: 12px; width: 60px; flex-shrink: 0; }
+.bar-track { flex: 1; background: color-mix(in srgb, var(--border-color) 30%, var(--card-bg)); height: 12px; }
+.bar-fill { height: 100%; background: linear-gradient(to right, var(--color-primary), var(--color-secondary), var(--color-accent-cool)); transition: width 0.4s ease; }
+.bar-count { font-size: 12px; color: var(--text-primary); width: 30px; text-align: right; flex-shrink: 0; }
+.metric-card { flex: 1; padding: 12px 16px; gap: 4px; border-left: 3px solid var(--ac); background: color-mix(in srgb, var(--ac) 8%, var(--card-bg)); }
+.metric-card--primary { --ac: var(--color-primary); }
+.metric-card--secondary { --ac: var(--color-secondary); }
+.metric-card--cool { --ac: var(--color-accent-cool); }
+.metric-card--mint { --ac: var(--color-accent-mint); }
+.metric-value { color: var(--ac); }
 .hot-words { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; align-content: flex-start; height: 180px; overflow: hidden; }
-.hot-word {
-  padding: 2px 8px; border-radius: 12px;
-  background: linear-gradient(135deg, rgba(192,57,43,0.08), rgba(41,128,185,0.08));
-  color: var(--text-primary, #333); cursor: default;
-  transition: transform 0.2s, background 0.2s;
-}
-.hot-word:hover { transform: scale(1.1); background: rgba(192,57,43,0.15); }
-
-.doc-status-row { display: flex; gap: 12px; }
-.ds-card {
-  flex: 1; padding: 16px 20px;
-  border: 1px solid #eee; border-top: 3px solid var(--ac);
-  display: flex; flex-direction: column; gap: 4px;
-}
-.ds-val { font-size: 28px; font-weight: 800; color: var(--ac); line-height: 1; }
-.ds-label { font-size: 12px; color: #888; }
-
+.hot-word { padding: 2px 8px; border-radius: 12px; color: var(--text-primary); cursor: default; transition: transform 0.2s ease; }
+.hot-word--primary { background: color-mix(in srgb, var(--color-primary) 12%, transparent); }
+.hot-word--secondary { background: color-mix(in srgb, var(--color-secondary) 12%, transparent); }
+.hot-word--cool { background: color-mix(in srgb, var(--color-accent-cool) 12%, transparent); }
+.hot-word:hover { transform: scale(1.08); }
 .china-map-area { width: 100%; height: 480px; }
+@media (max-width: 1280px) { .time-cards-row, .dist-grid, .opinion-overview { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { .stats-row, .doc-status-row { flex-direction: column; } .time-cards-row, .dist-grid, .opinion-overview { grid-template-columns: 1fr; } }
 </style>

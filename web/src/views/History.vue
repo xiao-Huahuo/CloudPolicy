@@ -466,9 +466,9 @@ onMounted(() => {
 }
 
 .import-btn {
-  background: #c0392b;
+  background: var(--color-primary);
   border: none;
-  border-bottom: 3px solid #922b21;
+  border-bottom: 3px solid var(--color-primary-dark);
   border-radius: 999px;
   color: #fff;
   padding: 7px 18px;
@@ -478,14 +478,15 @@ onMounted(() => {
 }
 
 .import-btn:hover {
-  background: #e74c3c;
-  border-bottom-color: #c0392b;
+  background: var(--color-primary-light);
+  border-bottom-color: var(--color-primary);
 }
 
 .top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 10px;
   margin-bottom: 30px;
 }
 
@@ -493,11 +494,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 15px;
+  padding-top: 6px;
 }
 
 .filter-label {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: bold;
 }
 
@@ -507,8 +509,9 @@ onMounted(() => {
 }
 
 .sort-tag {
-  background-color: #f5f5f5;
-  color: #666;
+  background-color: color-mix(in srgb, var(--color-primary) 7%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
+  color: var(--text-secondary);
   padding: 6px 16px;
   border-radius: var(--border-radius-pill);
   font-size: 13px;
@@ -516,8 +519,14 @@ onMounted(() => {
   transition: all 0.2s;
 }
 
+.sort-tag:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--card-bg));
+}
+
 .sort-tag.active {
-  background: #c0392b;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #fff;
   font-weight: bold;
 }
@@ -526,9 +535,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: #f5f5f5;
-  color: #666;
-  border: none;
+  background-color: color-mix(in srgb, var(--color-primary) 7%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
+  color: var(--text-secondary);
   padding: 8px 16px;
   border-radius: var(--border-radius-pill);
   font-size: 13px;
@@ -536,8 +545,13 @@ onMounted(() => {
   transition: all 0.2s;
 }
 
+.batch-action-btn:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--card-bg));
+}
+
 .batch-action-btn.active {
-  background-color: #000;
+  background-color: var(--color-primary);
   color: #fff;
 }
 
@@ -605,8 +619,8 @@ onMounted(() => {
 }
 
 .custom-checkbox.checked {
-  background-color: #c0392b;
-  border-color: #c0392b;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   color: #fff;
 }
 

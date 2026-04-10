@@ -13,12 +13,12 @@ import {
   TooltipComponent,
   LegendComponent,
   DatasetComponent,
-  TransformComponent
+  TransformComponent,
 } from 'echarts/components';
 import { LabelLayout } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
+import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 
-// 注册必须的组件
 echarts.use([
   TitleComponent,
   TooltipComponent,
@@ -27,142 +27,104 @@ echarts.use([
   TransformComponent,
   PieChart,
   LabelLayout,
-  CanvasRenderer
+  CanvasRenderer,
 ]);
 
 const props = defineProps({
-  chartData: {
-    type: Object,
-    default: () => ({})
-  }
+  chartData: { type: Object, default: () => ({}) },
 });
 
 const chartRef = ref(null);
 let myChart = null;
 let themeObserver = null;
 
-const isDarkTheme = () => document.documentElement.getAttribute('data-theme') === 'dark';
-
-// 初始化 ECharts
-const initChart = () => {
-  if (chartRef.value) {
-    if (myChart != null && myChart != "" && myChart != undefined) {
-      myChart.dispose();
-    }
-    myChart = echarts.init(chartRef.value);
-    updateChart();
-  }
-};
-
-// 更新图表配置
 const updateChart = () => {
   if (!myChart) return;
-  const dark = isDarkTheme();
 
-  // 将后端的 Object { "类型A": 10, "类型B": 5 } 转换为 ECharts 需要的 Array [{name: '类型A', value: 10}]
-  const dataArray = Object.entries(props.chartData || {}).map(([name, value]) => ({
-    name,
-    value
-  }));
-
-  // 如果没有数据，渲染一个空状态或者默认样式
+  const theme = getChartTheme();
+  const dataArray = Object.entries(props.chartData || {}).map(([name, value]) => ({ name, value }));
   if (dataArray.length === 0) {
     dataArray.push({ name: '暂无数据', value: 0 });
   }
 
-  const option = {
-    // 配合主色调：#d4ff80, #00e2dc, #002059，以及一些衍生过渡色
-    color: ['#c0392b', '#e67e22', '#f1c40f', '#7f8c8d', '#95a5a6', '#bdc3c7'],
+  myChart.setOption({
+    color: theme.palette,
     tooltip: {
       trigger: 'item',
-      formatter: '{b} : {c} 份 ({d}%)',
-      backgroundColor: dark ? 'rgba(20, 20, 20, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: dark ? '#3a3a3a' : '#eee',
+      formatter: '{b} : {c} 件 ({d}%)',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
       textStyle: {
-        color: dark ? '#f3f3f3' : '#333'
-      }
+        color: theme.textPrimary,
+      },
     },
-    // 将图例放在左上角或隐藏，这里选择隐藏，让图表主体更大
     legend: {
-      show: false
+      show: false,
     },
     series: [
       {
         name: '通知类型',
         type: 'pie',
-        // 'radius' 模式：扇区圆心角展现数据的百分比，半径展现数据的大小 (南丁格尔玫瑰图核心)
         roseType: 'radius',
-        radius: ['20%', '80%'], // 把饼图画得像甜甜圈一样饱满
+        radius: ['20%', '80%'],
         center: ['50%', '55%'],
         itemStyle: {
-          borderRadius: 8, // 叶片圆角，柔和边缘
+          borderRadius: 8,
           borderColor: 'transparent',
-          borderWidth: 0
+          borderWidth: 0,
         },
         label: {
           show: true,
-          formatter: '{b}\n{c} 份',
-          color: dark ? '#ffffff' : '#333',
+          formatter: '{b}\n{c} 件',
+          color: theme.dark ? '#ffffff' : theme.textPrimary,
           fontWeight: 'bold',
-          lineHeight: 20
+          lineHeight: 20,
         },
-        // 核心要求：每个叶片带有双折线，其中一段水平
         labelLine: {
           show: true,
-          length: 15,    // 第一段引导线长度（连接扇形）
-          length2: 30,   // 第二段引导线长度（水平线）
-          smooth: 0.2,   // 稍微带一点平滑
+          length: 15,
+          length2: 30,
+          smooth: 0.2,
           lineStyle: {
-            color: dark ? '#8a8a8a' : '#ccc',
-            width: 1.5
-          }
+            color: withAlpha(theme.textSecondary, theme.dark ? 0.74 : 0.42),
+            width: 1.5,
+          },
         },
-        data: dataArray.sort(function (a, b) { return a.value - b.value; }),
+        data: dataArray.sort((a, b) => a.value - b.value),
         animationType: 'expansion',
         animationEasing: 'cubicOut',
         animationDuration: 1200,
-        animationDelay: function (idx) { return idx * 80; },
+        animationDelay: (idx) => idx * 80,
         startAngle: 90,
         clockwise: true,
-      }
-    ]
-  };
-
-  myChart.setOption(option);
+      },
+    ],
+  }, true);
 };
 
-// 监听数据变化
-watch(() => props.chartData, () => {
-  nextTick(() => {
-    updateChart();
-  });
-}, { deep: true });
+const initChart = () => {
+  if (!chartRef.value) return;
+  myChart?.dispose();
+  myChart = echarts.init(chartRef.value);
+  updateChart();
+};
 
-// 监听窗口大小改变，重绘图表
 const handleResize = () => {
-  if (myChart) {
-    myChart.resize();
-  }
+  myChart?.resize();
 };
+
+watch(() => props.chartData, () => nextTick(updateChart), { deep: true });
 
 onMounted(() => {
   initChart();
-  themeObserver = new MutationObserver(() => {
-    updateChart();
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme'],
-  });
+  themeObserver = observeChartAppearance(() => nextTick(updateChart));
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
   themeObserver?.disconnect();
-  if (myChart) {
-    myChart.dispose();
-  }
+  myChart?.dispose();
 });
 </script>
 

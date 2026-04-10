@@ -11,52 +11,55 @@ import { useRouter } from 'vue-router';
 import * as echarts from 'echarts/core';
 import { TitleComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { getChartTheme, observeChartAppearance } from '@/utils/chartTheme';
 
 echarts.use([TitleComponent, TooltipComponent, CanvasRenderer]);
 
 const props = defineProps({
-  chartData: { type: Object, default: () => ({}) }
+  chartData: { type: Object, default: () => ({}) },
 });
 
 const router = useRouter();
 const chartRef = ref(null);
 const myChart = shallowRef(null);
 const loading = ref(true);
-
-const initChart = async () => {
-  try {
-    await import('echarts-wordcloud');
-    loading.value = false;
-    await nextTick();
-    if (chartRef.value) {
-      if (myChart.value) myChart.value.dispose();
-      myChart.value = echarts.init(chartRef.value);
-      updateChart();
-      myChart.value.on('click', (params) => {
-        if (params.name && params.name !== '暂无数据') {
-          router.push({ path: '/search', query: { q: params.name } });
-        }
-      });
-    }
-  } catch (error) {
-    console.error("加载 echarts-wordcloud 失败", error);
-  }
-};
+let themeObserver = null;
 
 const updateChart = () => {
   if (!myChart.value) return;
 
+  const theme = getChartTheme();
+  const colors = [
+    theme.primary,
+    theme.secondary,
+    theme.accentCool,
+    theme.accentMint,
+    theme.primaryLight,
+    theme.primaryDark,
+  ];
   const dataArray = Object.entries(props.chartData || {}).map(([name, value]) => ({ name, value }));
-  if (dataArray.length === 0) dataArray.push({ name: '暂无数据', value: 0 });
+  if (dataArray.length === 0) {
+    dataArray.push({ name: '暂无数据', value: 0 });
+  }
 
   myChart.value.setOption({
-    tooltip: { show: true, formatter: '{b}: {c} 次' },
+    tooltip: {
+      show: true,
+      formatter: '{b}: {c} 次',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
+      textStyle: { color: theme.textPrimary },
+    },
     series: [{
       type: 'wordCloud',
       shape: 'square',
       keepAspect: false,
-      left: 0, top: 0, right: 0, bottom: 0,
-      width: '100%', height: '100%',
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: '100%',
+      height: '100%',
       sizeRange: [14, 52],
       rotationRange: [-30, 30],
       rotationStep: 15,
@@ -66,29 +69,85 @@ const updateChart = () => {
       textStyle: {
         fontFamily: 'sans-serif',
         fontWeight: 'bold',
-        color() {
-          const colors = ['#c0392b', '#e74c3c', '#e67e22', '#8e44ad', '#2980b9', '#16a085', '#27ae60'];
-          return colors[Math.floor(Math.random() * colors.length)];
-        }
+        color: () => colors[Math.floor(Math.random() * colors.length)],
       },
-      emphasis: { focus: 'self', textStyle: { textShadowBlur: 5, textShadowColor: '#333' } },
-      data: dataArray
-    }]
+      emphasis: {
+        focus: 'self',
+        textStyle: {
+          textShadowBlur: 8,
+          textShadowColor: theme.dark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(17, 17, 17, 0.28)',
+        },
+      },
+      data: dataArray,
+    }],
   }, true);
 };
 
+const initChart = async () => {
+  try {
+    await import('echarts-wordcloud');
+    loading.value = false;
+    await nextTick();
+    if (chartRef.value) {
+      myChart.value?.dispose();
+      myChart.value = echarts.init(chartRef.value);
+      updateChart();
+      myChart.value.on('click', (params) => {
+        if (params.name && params.name !== '暂无数据') {
+          router.push({ path: '/search', query: { q: params.name } });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('加载 echarts-wordcloud 失败', error);
+  }
+};
+
+const handleResize = () => {
+  myChart.value?.resize();
+};
+
 watch(() => props.chartData, () => {
-  if (!loading.value) nextTick(() => updateChart());
+  if (!loading.value) {
+    nextTick(updateChart);
+  }
 }, { deep: true });
 
-const handleResize = () => { if (myChart.value) myChart.value.resize(); };
+onMounted(() => {
+  initChart();
+  themeObserver = observeChartAppearance(() => {
+    if (!loading.value) {
+      nextTick(updateChart);
+    }
+  });
+  window.addEventListener('resize', handleResize);
+});
 
-onMounted(() => { initChart(); window.addEventListener('resize', handleResize); });
-onUnmounted(() => { window.removeEventListener('resize', handleResize); if (myChart.value) myChart.value.dispose(); });
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+  themeObserver?.disconnect();
+  myChart.value?.dispose();
+});
 </script>
 
 <style scoped>
-.chart-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; }
-.echarts-container { flex: 1; width: 100%; min-height: 250px; }
-.placeholder-text { color: #999; font-size: 14px; text-align: center; padding: 20px; }
+.chart-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.echarts-container {
+  flex: 1;
+  width: 100%;
+  min-height: 250px;
+}
+
+.placeholder-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
 </style>

@@ -10,83 +10,94 @@ import * as echarts from 'echarts/core';
 import { ScatterChart } from 'echarts/charts';
 import { TooltipComponent, GridComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 
 echarts.use([ScatterChart, TooltipComponent, GridComponent, CanvasRenderer]);
 
 const props = defineProps({
-  chartData: { type: Array, default: () => [] }
+  chartData: { type: Array, default: () => [] },
 });
 
 const chartRef = ref(null);
 let myChart = null;
+let themeObserver = null;
 
 const updateChart = () => {
   if (!myChart) return;
-  const points = (props.chartData || []).map((item) => [
-    item.x || 0,
-    item.y || 0,
-    item.size || 8,
-    item.label || ''
-  ]);
 
-  const option = {
+  const theme = getChartTheme();
+  const points = (props.chartData || []).map((item, index) => ({
+    value: [item.x || 0, item.y || 0, item.size || 8, item.label || ''],
+    itemStyle: {
+      color: theme.palette[index % theme.palette.length],
+      opacity: 0.78,
+      borderColor: withAlpha(theme.cardBg, theme.dark ? 0.72 : 0.9),
+      borderWidth: 1,
+    },
+  }));
+
+  myChart.setOption({
     grid: { left: '6%', right: '6%', bottom: '10%', top: '8%', containLabel: true },
     tooltip: {
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
+      textStyle: { color: theme.textPrimary },
       formatter: (params) => {
         const [x, y, size, label] = params.value;
         return `长度: ${x}<br/>难度: ${y}<br/>权重: ${size}<br/>类型: ${label}`;
-      }
+      },
     },
     xAxis: {
       type: 'value',
       name: '文本长度',
-      axisLabel: { color: '#999' },
-      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
+      nameTextStyle: { color: theme.textSecondary },
+      axisLabel: { color: theme.textSecondary },
+      axisLine: { lineStyle: { color: theme.axisLine } },
+      splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } },
     },
     yAxis: {
       type: 'value',
       name: '综合难度',
+      nameTextStyle: { color: theme.textSecondary },
       min: 0,
       max: 3.5,
-      axisLabel: { color: '#999' },
-      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } }
+      axisLabel: { color: theme.textSecondary },
+      axisLine: { lineStyle: { color: theme.axisLine } },
+      splitLine: { lineStyle: { color: theme.splitLine, type: 'dashed' } },
     },
     series: [
       {
         type: 'scatter',
         data: points,
         symbolSize: (val) => val[2],
-        itemStyle: {
-          color: '#c0392b',
-          opacity: 0.7
-        }
-      }
-    ]
-  };
-  myChart.setOption(option, true);
+      },
+    ],
+  }, true);
 };
 
 const initChart = () => {
   if (!chartRef.value) return;
-  if (myChart) myChart.dispose();
+  myChart?.dispose();
   myChart = echarts.init(chartRef.value);
   updateChart();
 };
 
 const handleResize = () => {
-  if (myChart) myChart.resize();
+  myChart?.resize();
 };
 
 watch(() => props.chartData, () => nextTick(updateChart), { deep: true });
 
 onMounted(() => {
   initChart();
+  themeObserver = observeChartAppearance(() => nextTick(updateChart));
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  if (myChart) myChart.dispose();
+  themeObserver?.disconnect();
+  myChart?.dispose();
 });
 </script>
 

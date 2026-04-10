@@ -14,10 +14,11 @@ import {
   GridComponent,
   DatasetComponent,
   TransformComponent,
-  GraphicComponent
+  GraphicComponent,
 } from 'echarts/components';
 import { LabelLayout, UniversalTransition } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
+import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 
 echarts.use([
   TitleComponent,
@@ -25,92 +26,71 @@ echarts.use([
   GridComponent,
   DatasetComponent,
   TransformComponent,
-  GraphicComponent, // 必须要引入这个才能使用 graphic 绘制自定义图形
+  GraphicComponent,
   BarChart,
   LabelLayout,
   UniversalTransition,
-  CanvasRenderer
+  CanvasRenderer,
 ]);
 
 const props = defineProps({
-  chartData: {
-    type: Object,
-    default: () => ({})
-  }
+  chartData: { type: Object, default: () => ({}) },
 });
 
 const chartRef = ref(null);
 let myChart = null;
-
-const initChart = () => {
-  if (chartRef.value) {
-    if (myChart != null && myChart != "" && myChart != undefined) {
-      myChart.dispose();
-    }
-    myChart = echarts.init(chartRef.value);
-    updateChart();
-  }
-};
+let themeObserver = null;
 
 const updateChart = () => {
   if (!myChart) return;
 
-  const data = props.chartData || {};
-
+  const theme = getChartTheme();
   const categories = [
     { key: 'language_complexity', name: '语言' },
     { key: 'handling_complexity', name: '办理' },
-    { key: 'risk_level', name: '风险' }
+    { key: 'risk_level', name: '风险' },
   ];
-
   const levels = ['低', '中', '高'];
-
-  const barColors = [
-    '#f5b7b1', '#e74c3c', '#c0392b',  // 语言：低，中，高（浅红→深红）
-    '#fad7a0', '#e67e22', '#d35400',  // 办理：低，中，高（浅橙→深橙）
-    '#f9e79f', '#f1c40f', '#d4ac0d'   // 风险：低，中，高（浅黄→深黄）
-  ];
+  const levelColors = {
+    language_complexity: [withAlpha(theme.primary, 0.45), theme.primaryLight, theme.primary],
+    handling_complexity: [withAlpha(theme.secondary, 0.45), theme.secondary, theme.primaryDark],
+    risk_level: [withAlpha(theme.accentCool, 0.45), theme.accentCool, theme.accentMint],
+  };
 
   const xAxisData = [];
   const seriesData = [];
-  let colorIndex = 0;
-
-  categories.forEach((cat, index) => {
-    levels.forEach(level => {
-      xAxisData.push(`${cat.name}\n${level}`);
-      const dataKey = `${cat.key}-${level}`;
-      const val = data[dataKey] || 0;
-
+  categories.forEach((category) => {
+    levels.forEach((level, index) => {
+      xAxisData.push(`${category.name}\n${level}`);
       seriesData.push({
-        value: val,
+        value: props.chartData?.[`${category.key}-${level}`] || 0,
         itemStyle: {
-          color: barColors[colorIndex],
-          borderRadius: [4, 4, 0, 0]
-        }
+          color: levelColors[category.key][index],
+          borderRadius: [4, 4, 0, 0],
+        },
       });
-      colorIndex++;
     });
   });
 
-  const option = {
+  myChart.setOption({
     grid: {
       left: '0%',
       right: '0%',
-      bottom: '15%', // 留出空间给下方的横线和文字
+      bottom: '15%',
       top: '15%',
-      containLabel: true
+      containLabel: true,
     },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      formatter: function (params) {
+      formatter: (params) => {
         const item = params[0];
-        const parts = item.name.split('\n');
-        return `${parts[0]}复杂度 (${parts[1]}): <strong>${item.value}</strong> 篇`;
+        const [group, level] = item.name.split('\n');
+        return `${group}复杂度(${level}): <strong>${item.value}</strong> 篇`;
       },
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderColor: '#eee',
-      textStyle: { color: '#333' }
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
+      textStyle: { color: theme.textPrimary },
     },
     xAxis: {
       type: 'category',
@@ -118,16 +98,14 @@ const updateChart = () => {
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: {
-        color: '#666',
+        color: theme.textSecondary,
         fontSize: 11,
-        formatter: function(value) {
-          return value.split('\n')[1];
-        }
-      }
+        formatter: (value) => value.split('\n')[1],
+      },
     },
     yAxis: {
       type: 'value',
-      show: false, // 隐藏 Y 轴
+      show: false,
     },
     series: [
       {
@@ -137,72 +115,68 @@ const updateChart = () => {
         label: {
           show: true,
           position: 'top',
-          color: '#000',
+          color: theme.textPrimary,
           fontWeight: 'bold',
-          formatter: '{c}'
+          formatter: '{c}',
         },
-        animationDelay: function (idx) {
-          return idx * 50;
-        }
-      }
+        animationDelay: (idx) => idx * 50,
+      },
     ],
-    // 用 graphic 方式灵活且稳妥地在横轴下方绘制带横线的分组标签
     graphic: [
       {
         type: 'group',
         left: '5%',
         bottom: 0,
         children: [
-          { type: 'line', shape: { x1: 0, y1: 0, x2: 60, y2: 0 }, style: { stroke: '#ccc' } },
-          { type: 'text', style: { text: '语言', fill: '#666', font: '12px sans-serif', x: 18, y: 5 } }
-        ]
+          { type: 'line', shape: { x1: 0, y1: 0, x2: 60, y2: 0 }, style: { stroke: theme.axisLine } },
+          { type: 'text', style: { text: '语言', fill: theme.textSecondary, font: '12px sans-serif', x: 18, y: 5 } },
+        ],
       },
       {
         type: 'group',
-        left: 'center', // 居中
+        left: 'center',
         bottom: 0,
         children: [
-           { type: 'line', shape: { x1: -30, y1: 0, x2: 30, y2: 0 }, style: { stroke: '#ccc' } },
-           { type: 'text', style: { text: '办理', fill: '#666', font: '12px sans-serif', x: -12, y: 5 } }
-        ]
+          { type: 'line', shape: { x1: -30, y1: 0, x2: 30, y2: 0 }, style: { stroke: theme.axisLine } },
+          { type: 'text', style: { text: '办理', fill: theme.textSecondary, font: '12px sans-serif', x: -12, y: 5 } },
+        ],
       },
       {
-         type: 'group',
-         right: '5%',
-         bottom: 0,
-         children: [
-            { type: 'line', shape: { x1: 0, y1: 0, x2: 60, y2: 0 }, style: { stroke: '#ccc' } },
-            { type: 'text', style: { text: '风险', fill: '#666', font: '12px sans-serif', x: 18, y: 5 } }
-         ]
-      }
-    ]
-  };
-
-  myChart.setOption(option, true);
+        type: 'group',
+        right: '5%',
+        bottom: 0,
+        children: [
+          { type: 'line', shape: { x1: 0, y1: 0, x2: 60, y2: 0 }, style: { stroke: theme.axisLine } },
+          { type: 'text', style: { text: '风险', fill: theme.textSecondary, font: '12px sans-serif', x: 18, y: 5 } },
+        ],
+      },
+    ],
+  }, true);
 };
 
-watch(() => props.chartData, () => {
-  nextTick(() => {
-    updateChart();
-  });
-}, { deep: true });
+const initChart = () => {
+  if (!chartRef.value) return;
+  myChart?.dispose();
+  myChart = echarts.init(chartRef.value);
+  updateChart();
+};
 
 const handleResize = () => {
-  if (myChart) {
-    myChart.resize();
-  }
+  myChart?.resize();
 };
+
+watch(() => props.chartData, () => nextTick(updateChart), { deep: true });
 
 onMounted(() => {
   initChart();
+  themeObserver = observeChartAppearance(() => nextTick(updateChart));
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  if (myChart) {
-    myChart.dispose();
-  }
+  themeObserver?.disconnect();
+  myChart?.dispose();
 });
 </script>
 
