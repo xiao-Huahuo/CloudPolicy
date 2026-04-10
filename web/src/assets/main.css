@@ -46,6 +46,11 @@
   --home-upload-button-hover-bg: linear-gradient(145deg, var(--color-primary) 0%, var(--color-primary-light) 44%, var(--color-secondary) 100%);
   --home-upload-button-shadow: var(--color-primary-dark);
   --home-upload-button-glow: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --home-upload-button-solid-bg: var(--color-primary);
+  --home-upload-button-solid-hover-bg: var(--color-primary-light);
+  --home-upload-button-solid-shadow: var(--color-primary-dark);
+  --home-upload-button-solid-glow: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --home-upload-button-solid-text: #ffffff;
   --home-upload-hint-color: var(--text-secondary);
 
   /* 统一圆角 */
@@ -94,6 +99,7 @@
   --sidebar-active-border: rgba(95, 209, 255, 0.34);
   --scheme-toggle-gradient: linear-gradient(135deg, #ff8f7a 0%, #ffdb64 42%, #58cbff 100%);
   --scheme-toggle-glow: rgba(95, 209, 255, 0.42);
+  --home-upload-button-solid-text: #2b1821;
   --policy-title-color: #7a3046;
   --policy-title-shadow: 0 3px 14px rgba(255, 143, 122, 0.22);
   --policy-subtitle-color: #9f7d86;
@@ -119,6 +125,7 @@
   --sidebar-active-border: rgba(95, 209, 255, 0.36);
   --scheme-toggle-gradient: linear-gradient(135deg, #58cbff 0%, #5fd1ff 52%, #80fab0 100%);
   --scheme-toggle-glow: rgba(95, 209, 255, 0.44);
+  --home-upload-button-solid-text: #0b2233;
   --policy-title-color: #1f5b7e;
   --policy-title-shadow: 0 3px 14px rgba(88, 203, 255, 0.18);
   --policy-subtitle-color: #7792a6;

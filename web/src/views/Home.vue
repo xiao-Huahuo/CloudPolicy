@@ -102,9 +102,9 @@
                 subtitle="多模态 · 可视化 · 富呈现"
               />
               <div class="upload-buttons">
-                <button class="action-btn upload-round-btn upload-round-btn--local" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
-                <button class="action-btn upload-round-btn upload-round-btn--url" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
-                <button class="action-btn upload-round-btn upload-round-btn--shot" @click.stop="handleScreenshot" :disabled="loading">截图</button>
+                <button class="action-btn upload-round-btn" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
+                <button class="action-btn upload-round-btn" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
+                <button class="action-btn upload-round-btn" @click.stop="handleScreenshot" :disabled="loading">截图</button>
               </div>
               <p class="upload-hint">点击或拖拽上传 (支持文档、图片、PDF)</p>
             </div>
@@ -1814,6 +1814,11 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .upload-round-btn {
+  --upload-round-btn-bg: var(--home-upload-button-solid-bg);
+  --upload-round-btn-hover-bg: var(--home-upload-button-solid-hover-bg);
+  --upload-round-btn-shadow: var(--home-upload-button-solid-shadow);
+  --upload-round-btn-glow: var(--home-upload-button-solid-glow);
+  --upload-round-btn-text: var(--home-upload-button-solid-text);
   width: 98px;
   height: 98px;
   border-radius: 50% !important;
@@ -1824,30 +1829,6 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
     0 4px 0 var(--upload-round-btn-shadow, var(--home-upload-button-shadow)),
     0 14px 28px var(--upload-round-btn-glow, var(--home-upload-button-glow));
   padding: 0 !important;
-}
-
-.upload-round-btn--local {
-  --upload-round-btn-bg: #58cbff;
-  --upload-round-btn-hover-bg: #73d6ff;
-  --upload-round-btn-shadow: #2a79a4;
-  --upload-round-btn-glow: rgba(88, 203, 255, 0.34);
-  --upload-round-btn-text: #082033;
-}
-
-.upload-round-btn--url {
-  --upload-round-btn-bg: #80fab0;
-  --upload-round-btn-hover-bg: #9bffc3;
-  --upload-round-btn-shadow: #2c8c57;
-  --upload-round-btn-glow: rgba(128, 250, 176, 0.32);
-  --upload-round-btn-text: #0f281c;
-}
-
-.upload-round-btn--shot {
-  --upload-round-btn-bg: #2a79a4;
-  --upload-round-btn-hover-bg: #348ab8;
-  --upload-round-btn-shadow: #184a64;
-  --upload-round-btn-glow: rgba(42, 121, 164, 0.32);
-  --upload-round-btn-text: #ffffff;
 }
 
 /* Capsule button style (shared) */
