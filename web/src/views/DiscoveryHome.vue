@@ -354,7 +354,7 @@ const slideMetaPool = [
     title: '极速识别文件',
     desc: '上传通知、政策文件，AI 秒级提取关键信息',
     bg: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-    action: () => router.push('/'),
+    action: () => router.push('/home'),
   },
   {
     tag: '多版本改写',
@@ -447,7 +447,7 @@ const bricks = [
   { id: 1, name: '极速识别', desc: '上传文件即时解析', size: 'brick-lg', color: '#1565c0', hot: true, colSpan: 5, rowSpan: 4,
     iconProps: { viewBox: '0 0 24 24', width: '28', height: '28', stroke: '#fff', 'stroke-width': '2', fill: 'none' },
     iconPath: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>',
-    action: () => router.push('/'),
+    action: () => router.push('/home'),
   },
   { id: 2, name: '多版本改写', desc: '一键适配不同人群', size: 'brick-md', color: '#2e7d32', hot: true, colSpan: 3, rowSpan: 4,
     iconProps: { viewBox: '0 0 24 24', width: '24', height: '24', stroke: '#fff', 'stroke-width': '2', fill: 'none' },
@@ -783,10 +783,11 @@ const getComplexityClass = (item) => {
   height: 100%;
   overflow-y: auto;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #1a0a09 0%, #c0392b 40%, #2980b9 100%);
+  background: var(--discovery-page-bg);
   display: flex;
   flex-direction: column;
   gap: 14px;
+  transition: background 0.45s ease;
 }
 
 /* ── 顶部区域布局 ─────────────────────────────────────────────────────────── */

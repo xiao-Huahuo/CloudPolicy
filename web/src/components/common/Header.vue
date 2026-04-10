@@ -1,5 +1,5 @@
 ﻿<template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'appearance-transitioning': isAppearanceTransitioning }">
     <div class="header-left-controls">
     <!-- Hamburger button: only visible in icon mode -->
     <button v-if="isIconMode" class="icon-btn hamburger-btn" @click="$emit('update:isIconMode', false)" title="展开侧边栏">
@@ -121,7 +121,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
-import { useSettingsStore } from '@/stores/settings';
+import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
+import { COLOR_SCHEME_OPTIONS, useSettingsStore } from '@/stores/settings';
 
 defineProps({
   isIconMode: { type: Boolean, default: true },
@@ -135,17 +136,17 @@ const router = useRouter();
 const userStore = useUserStore();
 const settingsStore = useSettingsStore();
 
-const colorSchemes = [
-  { value: 'classic', label: '经典红' },
-  { value: 'wine-coral', label: '酒红珊瑚' },
-];
+const colorSchemes = COLOR_SCHEME_OPTIONS;
+const isAgentShell = computed(() => route.name === 'agent');
+const visibleSchemeValue = computed(() => (isAgentShell.value ? 'coral' : settingsStore.settings.color_scheme));
+const { isAppearanceTransitioning } = useAppearanceTransition([isAgentShell]);
 
 const isDark = ref(false);
 const isSchemeSwitching = ref(false);
 let themeObserver = null;
 
 const currentSchemeIndex = computed(() => {
-  const currentValue = settingsStore.settings.color_scheme;
+  const currentValue = visibleSchemeValue.value;
   const matchedIndex = colorSchemes.findIndex(item => item.value === currentValue);
   return matchedIndex >= 0 ? matchedIndex : 0;
 });
@@ -217,6 +218,8 @@ onBeforeUnmount(() => themeObserver?.disconnect());
 
 <style scoped>
 .app-header {
+  width: min(1100px, calc(100% - 32px), 66.666%);
+  margin: 12px auto 0;
   height: 56px;
   background: var(--header-bg);
   display: flex;
@@ -224,8 +227,10 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   justify-content: space-between;
   padding: 0 20px;
   flex-shrink: 0;
-  box-shadow: inset 0 -1px 0 var(--shell-glass-border);
-  transition: background 0.35s ease, box-shadow 0.35s ease;
+  border-radius: 999px;
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shell-shadow), inset 0 0 0 1px var(--shell-glass-border);
+  transition: background 0.45s ease, box-shadow 0.45s ease, color 0.35s ease;
 }
 
 .header-left-controls {
@@ -259,7 +264,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   border: 1px solid var(--shell-glass-border);
   border-radius: var(--border-radius-pill);
   padding: 5px 10px;
-  transition: background 0.3s, border-color 0.3s;
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 .search-bar:focus-within { background-color: var(--shell-glass-hover); }
 
@@ -319,7 +324,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   border: none;
   cursor: pointer;
   color: var(--shell-text-muted);
-  transition: color 0.2s;
+  transition: color 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,6 +345,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--shell-glass-border);
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 .header-avatar-placeholder {
@@ -351,6 +357,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   align-items: center;
   justify-content: center;
   color: var(--shell-text-muted);
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
 .login-capsule {
@@ -362,7 +369,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   font-size: 14px;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease;
 }
 .login-capsule:hover { background-color: var(--shell-glass-hover); }
 
@@ -384,7 +391,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   padding: 0;
   overflow: hidden;
   appearance: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.35s ease, background 0.35s ease, border-color 0.35s ease;
 }
 
 .scheme-switch::before {
@@ -406,6 +413,7 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   border: 1px solid rgba(255, 255, 255, 0.22);
   backdrop-filter: blur(3px);
   pointer-events: none;
+  transition: background 0.35s ease, border-color 0.35s ease;
 }
 
 .scheme-switch:hover {
@@ -510,4 +518,43 @@ onBeforeUnmount(() => themeObserver?.disconnect());
   width: 2.75em; height: auto; transition: var(--transition);
 }
 .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container { top: 0.312em; }
+
+@media (max-width: 1320px) {
+  .app-header {
+    width: min(calc(100% - 28px), 82%);
+  }
+
+  .search-section {
+    width: 240px;
+  }
+
+  .user-actions {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 920px) {
+  .app-header {
+    width: calc(100% - 20px);
+    padding: 0 14px;
+  }
+
+  .search-section {
+    width: 200px;
+  }
+
+  .user-actions {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-header {
+    width: calc(100% - 16px);
+  }
+
+  .search-section {
+    display: none;
+  }
+}
 </style>

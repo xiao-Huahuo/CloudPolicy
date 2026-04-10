@@ -16,6 +16,7 @@ const sidebarRef = ref(null);
 
 const isStandalonePage = computed(() => route.meta?.standalone === true);
 const isShowcasePage = computed(() => route.meta?.showcase === true);
+const shellColorScheme = computed(() => (route.name === 'agent' ? 'coral' : null));
 
 const openAuthModal = () => { showAuthModal.value = true; };
 onMounted(async () => {
@@ -46,7 +47,7 @@ onUnmounted(() => {
     </div>
   </template>
   <template v-else>
-    <div class="app-layout" :class="{ 'icon-mode': isIconMode }">
+    <div class="app-layout" :class="{ 'icon-mode': isIconMode }" :data-shell-scheme="shellColorScheme || undefined">
       <Sidebar ref="sidebarRef" :is-icon-mode="isIconMode" />
       <div class="content-wrapper">
         <Header

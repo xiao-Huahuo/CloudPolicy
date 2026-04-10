@@ -2,15 +2,23 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { apiClient, API_ROUTES } from '@/router/api_routes';
 
-const SUPPORTED_COLOR_SCHEMES = ['classic', 'wine-coral'];
+export const COLOR_SCHEME_OPTIONS = [
+  { value: 'classic', label: '经典红' },
+  { value: 'wine-coral', label: '酒红珊瑚' },
+  { value: 'coral', label: '珊瑚蓝' },
+];
+
+const SUPPORTED_COLOR_SCHEMES = COLOR_SCHEME_OPTIONS.map((item) => item.value);
 
 const normalizeColorScheme = (scheme) => (
   SUPPORTED_COLOR_SCHEMES.includes(scheme) ? scheme : 'classic'
 );
 
-const getNextColorSchemeValue = (scheme) => (
-  normalizeColorScheme(scheme) === 'wine-coral' ? 'classic' : 'wine-coral'
-);
+const getNextColorSchemeValue = (scheme) => {
+  const currentIndex = SUPPORTED_COLOR_SCHEMES.indexOf(normalizeColorScheme(scheme));
+  const nextIndex = (currentIndex + 1) % SUPPORTED_COLOR_SCHEMES.length;
+  return SUPPORTED_COLOR_SCHEMES[nextIndex];
+};
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref({

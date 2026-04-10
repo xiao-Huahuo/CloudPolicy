@@ -29,7 +29,8 @@ const router = createRouter({
     return { top: 0, left: 0 }
   },
   routes: [
-    { path: '/', name: 'home', component: Home },
+    { path: '/', redirect: '/agent' },
+    { path: '/home', name: 'home', component: Home },
     { path: '/discovery-home', name: 'discovery-home', component: DiscoveryHome, meta: { standalone: true } },
     { path: '/data-analysis-and-visualization', name: 'data-analysis-and-visualization', component: DataAnalysisAndVisualization },
     { path: '/history', name: 'history', component: History },
@@ -59,7 +60,7 @@ router.beforeEach(async (to, from, next) => {
     if (userStore.token && !userStore.user) {
       await userStore.fetchUser()
     }
-    if (!userStore.isAdmin) return next('/')
+    if (!userStore.isAdmin) return next('/agent')
   }
   next()
 })

@@ -15,7 +15,8 @@ import DiscoveryHome from '@/views/DiscoveryHome.vue'
 <style scoped>
 .sc-discovery {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a0a09 0%, #c0392b 40%, #2980b9 100%);
+  background: var(--discovery-page-bg);
+  transition: background 0.45s ease;
 }
 .sc-discovery-body { padding-top: 64px; }
 </style>

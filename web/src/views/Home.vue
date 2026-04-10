@@ -102,9 +102,9 @@
                 subtitle="多模态 · 可视化 · 富呈现"
               />
               <div class="upload-buttons">
-                <button class="action-btn upload-round-btn" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
-                <button class="action-btn upload-round-btn" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
-                <button class="action-btn upload-round-btn" @click.stop="handleScreenshot" :disabled="loading">截图</button>
+                <button class="action-btn upload-round-btn upload-round-btn--local" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
+                <button class="action-btn upload-round-btn upload-round-btn--url" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
+                <button class="action-btn upload-round-btn upload-round-btn--shot" @click.stop="handleScreenshot" :disabled="loading">截图</button>
               </div>
               <p class="upload-hint">点击或拖拽上传 (支持文档、图片、PDF)</p>
             </div>
@@ -1702,8 +1702,8 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .upload-area {
-  background: #fff;
-  border: 2px dashed #e0e0e0;
+  background: var(--home-upload-surface);
+  border: 2px dashed var(--home-upload-border);
   border-radius: 12px;
   padding: 48px 60px;
   text-align: center;
@@ -1717,7 +1717,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   position: relative;
   overflow: hidden;
 }
-.upload-area:hover { border-color: #c0392b; background: #fdf5f5; }
+.upload-area:hover { border-color: var(--home-upload-border-hover); background: var(--home-upload-surface-hover); }
 .upload-area.disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
 
 /* 卷轴装饰 */
@@ -1726,9 +1726,10 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   top: 0;
   bottom: 0;
   width: 40px;
-  background: linear-gradient(90deg, #b31217 0%, #d7263d 50%, #b31217 100%);
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+  background: var(--home-upload-scroll-gradient);
+  box-shadow: inset 0 0 12px rgba(8, 14, 24, 0.18), 0 0 18px var(--home-upload-button-glow);
   z-index: 1;
+  transition: background 0.35s ease, box-shadow 0.35s ease;
 }
 .left-scroll {
   left: 0;
@@ -1762,7 +1763,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 /* 打字机效果 */
 .upload-title-block :deep(.policy-title) {
   overflow: hidden;
-  border-right: 2px solid #c0392b;
+  border-right: 2px solid var(--home-upload-border-hover);
   white-space: nowrap;
   animation: typing 1.5s steps(4) 0.3s both, blink 0.75s step-end infinite;
 }
@@ -1797,17 +1798,20 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .upload-round-btn:nth-child(2) { animation: fadeInLeft 0.4s ease 0.15s both; }
 .upload-round-btn:nth-child(3) { animation: fadeInLeft 0.4s ease 0.25s both; }
 .action-btn {
-  background: #c0392b;
+  background: var(--upload-round-btn-bg, var(--home-upload-button-bg));
   border: none;
   border-radius: 0;
   padding: 8px 18px;
   font-size: 13px;
   font-weight: bold;
-  color: #fff;
+  color: var(--upload-round-btn-text, #fff);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
 }
-.action-btn:hover { background: #e74c3c; }
+.action-btn:hover {
+  background: var(--upload-round-btn-hover-bg, var(--home-upload-button-hover-bg));
+  transform: translateY(-1px);
+}
 
 .upload-round-btn {
   width: 98px;
@@ -1816,8 +1820,34 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 0 #922b21;
+  box-shadow:
+    0 4px 0 var(--upload-round-btn-shadow, var(--home-upload-button-shadow)),
+    0 14px 28px var(--upload-round-btn-glow, var(--home-upload-button-glow));
   padding: 0 !important;
+}
+
+.upload-round-btn--local {
+  --upload-round-btn-bg: #58cbff;
+  --upload-round-btn-hover-bg: #73d6ff;
+  --upload-round-btn-shadow: #2a79a4;
+  --upload-round-btn-glow: rgba(88, 203, 255, 0.34);
+  --upload-round-btn-text: #082033;
+}
+
+.upload-round-btn--url {
+  --upload-round-btn-bg: #80fab0;
+  --upload-round-btn-hover-bg: #9bffc3;
+  --upload-round-btn-shadow: #2c8c57;
+  --upload-round-btn-glow: rgba(128, 250, 176, 0.32);
+  --upload-round-btn-text: #0f281c;
+}
+
+.upload-round-btn--shot {
+  --upload-round-btn-bg: #2a79a4;
+  --upload-round-btn-hover-bg: #348ab8;
+  --upload-round-btn-shadow: #184a64;
+  --upload-round-btn-glow: rgba(42, 121, 164, 0.32);
+  --upload-round-btn-text: #ffffff;
 }
 
 /* Capsule button style (shared) */
@@ -1834,7 +1864,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 .capsule-btn:hover { background: #e74c3c !important; box-shadow: 0 2px 0 #922b21 !important; transform: translateY(1px); }
 .capsule-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-.upload-hint { font-size: 13px; color: #999; margin: 0; }
+.upload-hint { font-size: 13px; color: var(--home-upload-hint-color); margin: 0; }
 
 .url-float {
   position: absolute;

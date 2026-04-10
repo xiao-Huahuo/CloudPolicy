@@ -103,7 +103,7 @@ const openDetail = async (message) => {
   try {
     const res = await apiClient.get(`${API_ROUTES.CHAT_MESSAGE}${message.id}`);
     sessionStorage.setItem('restoredChatMessage', JSON.stringify(res.data));
-    router.push('/');
+    router.push('/home');
   } catch (e) {
     alert('打开详情失败');
   }
@@ -245,4 +245,3 @@ onMounted(fetchFavorites);
   animation: star-pop 0.4s ease forwards;
 }
 </style>
-

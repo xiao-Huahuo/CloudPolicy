@@ -1,6 +1,9 @@
 <template>
   <!-- Unified morphing sidebar -->
-  <div class="sidebar" :class="isIconMode ? 'sidebar-icon-mode' : 'sidebar-preview'">
+  <div
+    class="sidebar"
+    :class="[isIconMode ? 'sidebar-icon-mode' : 'sidebar-preview', { 'appearance-transitioning': isAppearanceTransitioning }]"
+  >
     <!-- Logo row: shown in preview mode -->
     <div class="logo" @click="goHome" v-show="!isIconMode">
       <img src="@/assets/photos/main-icon.png" alt="icon" class="logo-icon" v-if="hasIcon" @error="hasIcon = false" />
@@ -76,20 +79,24 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
+import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
 
 const props = defineProps({
   isIconMode: { type: Boolean, default: true },
 });
 
 const userStore = useUserStore();
+const route = useRoute();
 const router = useRouter();
 const hasIcon = ref(true);
 const showMore = ref(false);
 const showAbout = ref(false);
 const showPermission = ref(false);
 const showFaq = ref(false);
+const isAgentShell = computed(() => route.name === 'agent');
+const { isAppearanceTransitioning } = useAppearanceTransition([isAgentShell]);
 
 const navItems = [
   { to: '/', label: '主页', icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
@@ -106,6 +113,10 @@ const navItems = [
   { to: '/profile', label: '我的', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
   { to: '/admin', label: '管理员', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', adminOnly: true },
 ];
+
+if (navItems[0]) {
+  navItems[0].to = '/home';
+}
 
 const visibleNavItems = computed(() =>
   navItems.filter(item => {
@@ -142,7 +153,8 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
     border-radius 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
     padding 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.45s ease,
-    background 0.35s ease;
+    background 0.45s ease,
+    color 0.35s ease;
 }
 
 /* ── Preview mode ── */
@@ -190,6 +202,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   color: var(--shell-text);
   letter-spacing: 1px;
   flex-shrink: 0;
+  transition: color 0.35s ease;
 }
 .logo-icon { width: 24px; height: 24px; filter: brightness(0) invert(1); }
 
@@ -255,6 +268,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   border-top: 1px solid var(--shell-glass-border);
   flex-shrink: 0;
   position: relative;
+  transition: border-color 0.35s ease;
 }
 .login-btn {
   text-align: center;
@@ -264,7 +278,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   cursor: pointer;
   font-size: 14px;
   margin-bottom: 8px;
-  transition: background 0.2s;
+  transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
 .login-btn:hover { background: var(--shell-glass-hover); }
 .user-info {
@@ -281,6 +295,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   object-fit: cover;
   border: 1px solid var(--shell-glass-border);
   flex-shrink: 0;
+  transition: border-color 0.35s ease;
 }
 .avatar-placeholder {
   width: 28px;
@@ -291,6 +306,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 .username {
   font-size: 13px;
@@ -298,6 +314,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.35s ease;
 }
 .footer-actions {
   display: flex;
@@ -315,7 +332,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
 .footer-icon-btn:hover { background: var(--shell-glass-hover); color: var(--shell-text); }
 

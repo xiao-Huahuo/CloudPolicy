@@ -319,7 +319,7 @@ const handleImport = async (event) => {
     const res = await importChatMessage(file);
     sessionStorage.setItem('restoredChatMessage', JSON.stringify(res.data));
     await fetchMessages();
-    router.push('/');
+    router.push('/home');
   } catch (error) {
     alert(error.response?.data?.detail || '导入失败');
   } finally {
@@ -351,7 +351,7 @@ const restoreMessage = async (id) => {
   try {
     const res = await getChatMessage(id);
     sessionStorage.setItem('restoredChatMessage', JSON.stringify(res.data));
-    router.push('/');
+    router.push('/home');
   } catch (error) {
     alert(error.response?.data?.detail || '恢复失败');
   }
@@ -729,4 +729,3 @@ onMounted(() => {
   animation: slideInDown 0.35s ease both;
 }
 </style>
-

@@ -231,7 +231,7 @@ export const highlightCards = [
   {
     title: '可视化政策扫描图谱',
     description: '把散乱的原文和要点提取成结构化结果，让阅读像浏览地图一样轻松。',
-    route: '/',
+    route: '/home',
     gradient: 'linear-gradient(135deg, rgba(131,239,166,0.95), rgba(70,212,214,0.92))',
     tag: 'Scan Map',
     previewLabel: '阅读路径',

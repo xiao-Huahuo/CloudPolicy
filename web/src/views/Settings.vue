@@ -85,13 +85,14 @@
                 </div>
                 <div class="text-wrap">
                   <p class="name">全局配色方案</p>
-                  <p class="desc">切换经典红或首页同源的酒红珊瑚色系</p>
+                  <p class="desc">切换经典红、酒红珊瑚与智能体专用的珊瑚蓝色系</p>
                 </div>
               </div>
               <div class="setting-control">
                 <div class="toggle-group">
                   <button type="button" class="toggle-btn" :disabled="isColorSchemeUpdating" :class="{ active: settingsStore.settings.color_scheme === 'classic' }" @click.stop="handleColorSchemeChange('classic')">经典红</button>
                   <button type="button" class="toggle-btn" :disabled="isColorSchemeUpdating" :class="{ active: settingsStore.settings.color_scheme === 'wine-coral' }" @click.stop="handleColorSchemeChange('wine-coral')">酒红珊瑚</button>
+                  <button type="button" class="toggle-btn" :disabled="isColorSchemeUpdating" :class="{ active: settingsStore.settings.color_scheme === 'coral' }" @click.stop="handleColorSchemeChange('coral')">珊瑚蓝</button>
                 </div>
               </div>
             </div>
@@ -456,9 +457,11 @@ const openLoginModal = () => {
 
 .toggle-group {
   display: flex;
+  flex-wrap: wrap;
   background-color: #f5f5f5;
   border-radius: 8px;
   padding: 4px;
+  gap: 4px;
 }
 
 .toggle-btn {
