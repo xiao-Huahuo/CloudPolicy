@@ -554,8 +554,7 @@ docker pull python:3.12-slim-bookworm
     ├── UI_COMPATITY_PLAN.md                  # 【方案】页面色系切换与响应式适配计划
     ├── prompt.md                             # 【提示词文档】项目相关 Prompt 记录
     ├── 开发规范.md                            # 【规范】代码组织、协作与开发规范说明
-    └── assets/
-        └── Docker-Images.png                 # 【配图】Docker 镜像说明配图
+    └── assets/                               # 【配图】README说明配图
 ```
 ### API文档
 后端启动后，可通过 FastAPI 自带的文档页面查看和调试接口：
