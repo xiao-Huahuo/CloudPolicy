@@ -193,7 +193,7 @@
           <tbody>
             <tr v-for="user in users" :key="user.uid">
               <td>
-                <img v-if="user.avatar_url" :src="user.avatar_url" class="user-avatar-thumb" alt="avatar" />
+                <img v-if="resolveAvatarUrl(user.avatar_url)" :src="resolveAvatarUrl(user.avatar_url)" class="user-avatar-thumb" alt="avatar" />
                 <div v-else class="avatar-placeholder-sm">
                   <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -255,6 +255,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
 import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
+import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 echarts.use([LineChart, BarChart, PieChart, MapChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent, CanvasRenderer]);
 

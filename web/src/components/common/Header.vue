@@ -123,6 +123,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
 import { COLOR_SCHEME_OPTIONS, useSettingsStore } from '@/stores/settings';
+import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 defineProps({
   isIconMode: { type: Boolean, default: true },
@@ -190,10 +191,7 @@ const handleSearch = () => {
 };
 
 const displayAvatar = computed(() => {
-  if (!userStore.user?.avatar_url) return null;
-  const url = userStore.user.avatar_url;
-  if (url.startsWith('default:')) return `/src/assets/photos/default-avatars/${url.substring(8)}`;
-  return url;
+  return resolveAvatarUrl(userStore.user?.avatar_url);
 });
 
 const goBack = () => router.back();

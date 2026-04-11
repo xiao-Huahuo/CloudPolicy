@@ -210,6 +210,7 @@ import { useUserStore } from '@/stores/auth.js';
 import { useSettingsStore } from '@/stores/settings';
 import Modal from '@/components/common/Modal.vue';
 import AvatarEditor from '@/components/common/AvatarEditor.vue';
+import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -219,13 +220,7 @@ const showAvatarEditor = ref(false);
 const isColorSchemeUpdating = ref(false);
 
 const displayAvatar = computed(() => {
-    if (!userStore.user?.avatar_url) return null;
-    const url = userStore.user.avatar_url;
-    if (url.startsWith('default:')) {
-        const defaultName = url.substring(8);
-        return `/src/assets/photos/default-avatars/${defaultName}`;
-    }
-    return url;
+    return resolveAvatarUrl(userStore.user?.avatar_url);
 });
 
 onMounted(async () => {

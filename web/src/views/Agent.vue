@@ -441,11 +441,7 @@ const deleteConversation = async (conversationId) => {
 
 const getWsUrl = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const isDev = window.location.port === '5173';
-  if (isDev) {
-    return `${protocol}://127.0.0.1:8080/agent/ws?token=${encodeURIComponent(userStore.token)}`;
-  }
-  return `${protocol}://${window.location.host}/agent/ws?token=${encodeURIComponent(userStore.token)}`;
+  return `${protocol}://${window.location.host}/api/agent/ws?token=${encodeURIComponent(userStore.token)}`;
 };
 
 const handleSocketMessage = (raw) => {

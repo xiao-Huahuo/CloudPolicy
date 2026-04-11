@@ -411,3 +411,15 @@
 - [x] 将数据分析-我的-管理员 这三个界面适应现在的双色系结构.
 - [x] 删除掉sidebar和header的三色切换,用明暗切换的逻辑直接控制他们的两色切换(不需要灰色了);
   - 然后为整个应用补充敏感色系之外的第三色:酒红珊瑚色系,采取和首页一样的色系,并提供色系切换按钮(放在明暗切换按钮右边的一个新的小圆按钮里).
+- [x] 提供一个单独的下载embedding模型的脚本,并将脚本运行方法写在readme中?
+- [x] 解决 Docker 部署条件下无法显示头像(显示头像破碎)的问题.
+  解决方法:
+  1. 前端统一新增 `web/src/utils/avatar.js`,将 `default:xxx` 默认头像值解析为 Vite 打包后的真实静态资源 URL,不再直接访问 `/src/assets/...`.
+  2. `Profile.vue`、`Settings.vue`、`Header.vue`、`Sidebar.vue`、`ShowcaseHeader.vue`、`Admin.vue`、`AvatarEditor.vue` 等使用头像的页面统一改为调用该解析逻辑,避免容器部署后静态资源路径失效.
+  3. `web/nginx.conf` 增加 `/media/` 代理到后端,保证用户上传头像在 Docker + Nginx 场景下也能被正常访问.
+- [x] 解决 Docker 部署条件下 413 解析错误,智能体连接失败等问题.
+  解决方法:
+  1. `web/nginx.conf` 增加 `client_max_body_size 25m`,解决上传文件时被 Nginx 拦截导致的 413 问题.
+  2. Nginx 为 `/api/` 增加更长的超时和关闭代理缓冲,降低大文件解析和长耗时请求被中断的概率.
+  3. 前端 `Agent.vue` 的 WebSocket 地址统一改为 `/api/agent/ws`.
+  4. Nginx 同时代理 `/api/agent/ws` 和兼容旧路径 `/agent/ws`,解决浏览器缓存旧版前端资源时 WebSocket 被 SPA 路由吞掉、导致智能体连接失败的问题.

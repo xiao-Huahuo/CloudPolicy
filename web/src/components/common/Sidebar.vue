@@ -182,6 +182,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
+import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 const props = defineProps({
   isIconMode: { type: Boolean, default: true },
@@ -337,10 +338,7 @@ onBeforeUnmount(() => {
 });
 
 const displayAvatar = computed(() => {
-  const url = userStore.user?.avatar_url;
-  if (!url) return null;
-  if (url.startsWith('default:')) return `/src/assets/photos/default-avatars/${url.substring(8)}`;
-  return url;
+  return resolveAvatarUrl(userStore.user?.avatar_url);
 });
 
 const goHome = () => router.push('/showcase');

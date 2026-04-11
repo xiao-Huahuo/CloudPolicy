@@ -321,6 +321,7 @@ import { getChatMessage, getChatMessages } from '@/api/ai.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
 import { useSettingsStore } from '@/stores/settings.js';
+import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -385,12 +386,7 @@ const roleBadgeClass = computed(() => {
 });
 
 const displayAvatar = computed(() => {
-  const avatarUrl = userStore.user?.avatar_url;
-  if (!avatarUrl) return null;
-  if (avatarUrl.startsWith('default:')) {
-    return `/src/assets/photos/default-avatars/${avatarUrl.substring(8)}`;
-  }
-  return avatarUrl;
+  return resolveAvatarUrl(userStore.user?.avatar_url);
 });
 
 const confirmedTodos = computed(() => allTodos.value.filter((todo) => todo.is_confirmed));

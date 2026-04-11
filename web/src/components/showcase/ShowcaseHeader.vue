@@ -110,6 +110,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
 import { COLOR_SCHEME_OPTIONS, useSettingsStore } from '@/stores/settings';
+import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 const props = defineProps({
   transparentTop: {
@@ -186,12 +187,7 @@ const handleColorSchemeToggle = async () => {
 };
 
 const displayAvatar = computed(() => {
-  if (!userStore.user?.avatar_url) return null;
-  const url = userStore.user.avatar_url;
-  if (url.startsWith('default:')) {
-    return `/src/assets/photos/default-avatars/${url.substring(8)}`;
-  }
-  return url;
+  return resolveAvatarUrl(userStore.user?.avatar_url);
 });
 
 const emitLoginEvent = () => window.dispatchEvent(new CustomEvent('open-login-modal'));
