@@ -32,6 +32,8 @@ ENV/
 
 # IDE / OS
 .idea/
+.jbeval/
+.claude/
 .vscode/
 *.swp
 *.swo
