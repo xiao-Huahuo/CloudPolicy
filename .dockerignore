@@ -1,9 +1,78 @@
-**/dist
-**/build
-**/__pycache__
-.git
-.vscode
-.idea
-*.pyc
-.pytest_cache
-web/node_modules
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+site/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/*.log
+logs/*.log.*
+
+# Runtime data
+database.db
+database.db-shm
+database.db-wal
+*.sqlite
+*.sqlite3
+uploads/
+logs/
+mail_outbox/
+
+# App resources required in image
+!app/resources/db_init/
+!app/resources/db_init/**
+!app/resources/vector_init/
+!app/resources/vector_init/**
+!app/resources/sensitive/
+!app/resources/sensitive/**
+!app/resources/embedding/
+!app/resources/embedding/**
+
+
+# Frontend (Vue/Vite)
+web/node_modules/
+web/dist/
+web/.vite/
+web/coverage/
+web/.cache/
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/pnpm-debug.log*
+
+# Reports
+coverage.xml
+.junit.xml
+.VSCodeCounter

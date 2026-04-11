@@ -50,9 +50,9 @@ database.db-shm
 database.db-wal
 *.sqlite
 *.sqlite3
-chroma_store/
 uploads/
 logs/
+mail_outbox/
 
 # Frontend (Vue/Vite)
 web/node_modules/

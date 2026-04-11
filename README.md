@@ -80,52 +80,87 @@
 5.  **价值量化与呈现 (Egress)**：系统对比文本处理前后的字数与逻辑密度，计算“节省时间”数据并入库。前端 **ECharts** 实时轮询接口，动态渲染红蓝双线趋势图及高频材料词云。
 6.  **反馈闭环 (Feedback)**：用户对解析结果的收藏与纠错行为将反馈至数据库，持续优化智能体的政策解读精度。
 
-### 项目结构与文件职责
+### 项目结构
 ```shell
-CloudPolicy/
+.
 ├── app/                        # 后端核心 (FastAPI)
 │   ├── main.py                 # 【入口】程序主入口，FastAPI 初始化与路由挂载
+│   ├── agent_plugin/           # 【智能体插件】基于 LangGraph 的 Agent 通用插件，提供工具注册、记忆管理与流式输出功能
+│   │   ├── agent/              # 【智能体核心】AgentCore 类封装，支持工具调用、记忆访问与思考过程回调
+│   │   └── bootstrap.py        # 【配置注入】确保 Agent 插件配置正确加载到全局配置中心
 │   ├── ai/                     # 智能中枢层
-│   │   ├── analysis_agent.py   # 【核心】Agent 智能体：含 CoT 思考过程与结构化逻辑
-│   │   ├── document_parser.py  # 【多模态】文档解析器：支持 OCR 与多格式预处理
-│   │   └── request_llm.py      # 【接口】LLM 适配层：统一封装 Kimi/GPT 请求
-│   ├── api/                    
+│   ├── api/                    # 【接口层】API 路由定义与请求处理
 │   │   ├── deps.py             # 【鉴权】全局依赖：JWT 校验、权限控制与 DB Session
 │   │   └── routes/             # 【业务路由】admin, user, stats, news, todo 等
 │   ├── core/                   
+│   │   ├── cors.py             # 【安全】CORS 配置，限制跨域访问来源
+│   │   ├── database.py         # 【数据库】SQLite 数据库引擎初始化与 Session 管理
+│   │   ├── logging_config.py   # 【日志】全局日志配置，定义日志格式、级别与输出位置
+│   │   ├── security.py         # 【安全】鉴权工具函数：JWT 生成与验证、密码哈希等
 │   │   └── config.py           # 【配置中心】全局变量管理、安全算法及 SMTP 配置
 │   ├── models/                 # 【模型】基于 SQLModel 的数据库实体与 Pydantic 模式
+│   ├── schemas/                # 【数据传输对象】请求与响应的 Pydantic 模式定义
 │   ├── services/               # 【业务层】核心逻辑实现、复杂统计计算与邮件发送服务
-│   ├── db/                     # 【数据库】存储引擎初始化、连接池与 Session 管理
+│   ├── scripts/                # 【工具脚本】独立运行的数据初始化、测试脚本与管理命令
+│   ├── resources/              # 【静态资源】政策原文、办事百科等 RAG 检索数据存放目录,Embedding 模型文件等
 │   ├── requirements.txt        # 【环境】后端 Python 核心依赖库清单
 │   └── Dockerfile              # 后台Dockerfile配置
 ├── web/                        # 前端核心 (Vue3)
 │   ├── src/
-│   │   ├── main.js             # 【入口】前端初始化、全局插件与样式挂载
-│   │   ├── api/                
-│   │   │   └── index.js        # 【通信控制】Axios 拦截器封装与后端接口统一管理
+│   │   ├── api/                # 【API 封装】Axios 实例与后端接口函数封装
+│   │   ├── assets/             # 【静态资源】全局 CSS、图片等
 │   │   ├── router/             
+│   │   │   ├── api_routes.js   # 【接口路由】后端 API 路径统一管理
 │   │   │   └── index.js        # 【路由守卫】全站页面路由配置与权限导航拦截
 │   │   ├── stores/             
 │   │   │   ├── auth.js         # 【鉴权状态】用户登录态、Token 持久化与权限信息
 │   │   │   └── settings.js     # 【系统状态】主题切换、响应式布局参数管理
-│   │   ├── utils/              
-│   │   │   └── tts.js          # 【工具】Web Speech API 语音播报封装
+│   │   ├── utils/              # 【工具函数】全局通用函数，如时间格式化、文本处理等
+│   │   ├── composables/        # 组合式函数（全局功能封装）
 │   │   ├── components/         # 模块化组件（含 Analysis 图表、Home 登录、common 公共件）
-│   │   └── views/              # 页面视图（智能解析、发现页、数据中心、管理后台）
+│   │   ├── views/              # 页面视图（智能解析、发现页、数据中心、管理后台）
+│   │   ├── App.vue             # 【根组件】全局布局、主题切换与路由出口
+│   │   └── main.js             # 【入口】前端初始化、全局插件与样式挂载
+│   ├── super-components/       # 【超级组件】供设计用的单独组件,不在实际前端中使用
+│   ├── public/                 # 【公共资源】favicon、index.html 模板等
+│   ├── index.html              # 【模板】前端 HTML 模板，定义根元素与全局资源引入
+│   ├── jsconfig.js             # 【路径别名】前端路径别名配置，简化模块导入
 │   ├── vite.config.js          # 【构建】Vite 配置：开发代理设置与打包性能优化
+│   ├── vitest.config.js        # 【测试】Vitest 配置，定义测试环境与覆盖率规则
+│   ├── package.json            # 【环境】前端 Node.js 依赖库清单与脚本命令
+│   ├── package-lock.json       # 【环境锁定】前端依赖版本锁定文件，确保一致的构建环境
 │   ├── nginx.conf              # 【网关】Nginx配置
 │   └── Dockerfile              # 网页端Dockerfile配置
+├── doc/                        # 【文档】项目相关的设计文档、开发规范与工具使用说明
 ├── .env                        # 【变量】环境变量：存储 API Keys、数据库路径及邮件服务器私密信息
-├── .gitignore                  # 【版本控制】Git 忽略清单，排除敏感配置与临时文件
+├── .gitignore                  # 【版本控制】Git 忽略清单，排除敏感配置与临时文件息
+├── .dockerignore               # 【Docker】Docker 构建忽略清单，优化镜像构建上下文
 ├── README.md                   # 【文档】项目说明书、技术架构与启动指南
-├── TODO.md                     # 【路线图】开发进度跟踪与全功能设想清单
-├── database.db                 # 【存储】本地 SQLite 数据库文件
 ├── admin_original_data.json    # 【预置数据】系统初始化的政务公告测试数据集
-├── docker-compose.yml          # Docker-Compose自动部署配置
-└── project_tree.md             # 【结构】当前项目最新的目录树记录
+└── docker-compose.yml          # Docker-Compose自动部署配置
+```
+### 运行时生成目录
+
+以下目录和文件会在应用首次启动或运行过程中自动创建，不属于静态源码结构，也不建议纳入 Git 版本控制：
+
+```shell
+.
+├── uploads/                    # 【运行时数据】用户上传文件、导出内容与 Agent 插件持久化数据
+│   ├── avatars/                # 用户头像上传目录
+│   ├── docs/                   # 政策文档等文件上传目录
+│   ├── images/                 # 图片上传目录
+│   ├── chat_exports/           # 聊天导出文件目录
+│   └── agent_plugin/           # Agent 插件运行数据
+│       └── chroma/             # Chroma 向量数据库持久化目录
+├── logs/                       # 【运行时日志】应用日志目录，默认包含 app.log
+├── mail_outbox/                # 【本地邮件输出】未接入 SMTP 或本地调试时的邮件落盘目录
+├── database.db                 # 【运行时数据库】SQLite 主数据库文件
+├── database.db-shm             # SQLite 共享内存文件
+├── database.db-wal             # SQLite 预写日志文件
+└── AgentGraph.svg              # Agent 工作流图，启动时自动生成或覆盖
 ```
 
+说明：`uploads/`、`logs/`、`mail_outbox/` 会在后端启动时自动确保存在；`database.db*` 与 `AgentGraph.svg` 会在数据库初始化和 Agent 预热阶段按需生成。
 
 
 ---
@@ -358,6 +393,10 @@ docker pull node:16-alpine
 docker pull nginx:stable-alpine
 docker pull python:3.12-slim-bullseye
 ```
+0. 在Docker部署前,要么应该在本地先跑一次后端以下载Embedding,要么单独运行脚本以下载Embedding:
+    ```bash
+    python -m app.scripts.download_embedding
+    ```
 1.  **启动服务**:
     在项目根目录执行以下命令：
     ```bash

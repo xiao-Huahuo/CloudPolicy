@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: ./app/Dockerfile
     working_dir: /server
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload --reload-dir /server/app
     container_name: CloudPolicy_Service
     ports:
       - "${PORT:-8080}:8080"
@@ -21,7 +21,7 @@ services:
       DOCKER_DEPLOYMENT: true
       DEBUG: false
       HOST: 0.0.0.0
-      PORT: ${PORT}
+      PORT: ${PORT:-8080}
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM}
       ACCESS_TOKEN_EXPIRE_DAYS: ${ACCESS_TOKEN_EXPIRE_DAYS}
@@ -40,8 +40,8 @@ services:
       SMTP_USE_TLS: ${SMTP_USE_TLS}
       EMAIL_VERIFICATION_CODE_LENGTH: ${EMAIL_VERIFICATION_CODE_LENGTH}
       EMAIL_VERIFICATION_EXPIRE_MINUTES: ${EMAIL_VERIFICATION_EXPIRE_MINUTES}
-      PUBLIC_BASE_URL: http://10.133.130.115:8080 # 部署环境写本机局域网IP, 生产环境这个必须是真实域名/公网IP
-      FRONTEND_BASE_URL: http://10.133.130.115:5173 # 部署环境写本机局域网IP
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL_DOCKER:-http://127.0.0.1:8080}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL_DOCKER:-http://127.0.0.1}
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT}
       REDIS_DB_CACHE: ${REDIS_DB_CACHE}
@@ -64,12 +64,7 @@ services:
       AGENT_PLUGIN_RAG_SCORE_THRESHOLD: ${AGENT_PLUGIN_RAG_SCORE_THRESHOLD}
       AGENT_PLUGIN_SYSTEM_PROMPT: ${AGENT_PLUGIN_SYSTEM_PROMPT}
     volumes:
-      - ./app:/server/app/
-      - ./database.db:/server/database.db
-      - ./uploads:/server/uploads
-      - ./.env:/server/.env
-      - ./logs:/server/logs
-      - ./mail_outbox:/server/mail_outbox
+      - ./:/server
     depends_on:
       - redis
     restart: always
@@ -82,8 +77,6 @@ services:
     depends_on:
       - app
     restart: always
-    volumes:
-      - ./web:/app
-      - /app/node_modules      # 关键：不要让宿主机的 node_modules 覆盖容器内的
+
 volumes:
   redis_data:

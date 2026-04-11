@@ -1,8 +1,0 @@
-project_content.xml
-node_modules/
-.venv/
-.idea/
-.vscode/
-dist/
-build/
-database.db

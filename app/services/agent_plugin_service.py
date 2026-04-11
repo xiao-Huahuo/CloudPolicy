@@ -14,6 +14,7 @@ from app.agent_plugin.agent.config import AgentConfig
 from app.agent_plugin.agent.memory import GLOBAL_KNOWLEDGE_USER_ID
 from app.agent_plugin.bootstrap import ensure_agent_plugin_configured
 from app.core.config import GlobalConfig
+from app.scripts.download_embedding import ensure_agent_embedding_ready
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,9 @@ def ensure_agent_graph_svg_on_startup(overwrite: bool = True) -> None:
 
 
 def _ensure_agent_embedding_ready() -> None:
+    ensure_agent_embedding_ready(skip_if_disabled=True)
+    return
+
     if not GlobalConfig.AGENT_PLUGIN_ENABLED:
         return
 
