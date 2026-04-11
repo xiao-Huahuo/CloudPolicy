@@ -256,7 +256,7 @@ const handleColorSchemeChange = async (scheme) => {
 const handleLogout = () => {
   if (confirm('确定要退出登录吗？')) {
     userStore.logout();
-    router.push('/');
+    router.push('/showcase');
   }
 };
 

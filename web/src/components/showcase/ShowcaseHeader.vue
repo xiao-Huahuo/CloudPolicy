@@ -12,7 +12,7 @@
     <div class="sc-header-inner">
       <div class="sc-logo" @click="router.push('/showcase')">
         <img v-if="!noImg" src="@/assets/photos/main-icon.png" alt="" class="sc-logo-img" @error="noImg = true" />
-        <span>云上观策</span>
+        <span>云枢观策</span>
       </div>
 
       <nav class="sc-nav">
@@ -305,12 +305,8 @@ onBeforeUnmount(() => {
 .sc-logo-img {
   width: 28px;
   height: 28px;
+  object-fit: contain;
   filter: none;
-}
-
-.sc-header.transparent-top.top-light:not(.scrolled) .sc-logo-img,
-.sc-header.always-transparent.top-light .sc-logo-img {
-  filter: brightness(0) invert(1);
 }
 
 .sc-nav {

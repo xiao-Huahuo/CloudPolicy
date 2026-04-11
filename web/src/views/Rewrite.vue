@@ -174,7 +174,7 @@ const activeVersion = computed(() => {
 onMounted(async () => {
   if (!userStore.token) {
     alert("请先登录");
-    router.push('/');
+    router.push('/showcase');
     return;
   }
   // 加载历史记录供选择

@@ -3,7 +3,7 @@
     <div class="section-shell">
       <div class="footer-panel">
         <div class="footer-brand">
-          <span class="brand-tag">云上观策</span>
+          <span class="brand-tag">云枢观策</span>
           <h2>用一套真正现代的首页，结束这次重构。</h2>
           <p>
             现在首页已经拥有整屏切换、统一组件边界、动态视觉叙事与真实接口支撑。
@@ -18,7 +18,7 @@
         </div>
 
         <div class="footer-bottom">
-          <span>© 2026 云上观策. All rights reserved.</span>
+          <span>© 2026 云枢观策. All rights reserved.</span>
           <button class="back-top" @click="emitShowcaseGoto(0)">回到顶部</button>
         </div>
       </div>

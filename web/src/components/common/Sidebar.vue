@@ -6,7 +6,7 @@
   >
     <div class="logo" @click="goHome" v-show="!isIconMode">
       <img src="@/assets/photos/main-icon.png" alt="icon" class="logo-icon" v-if="hasIcon" @error="hasIcon = false" />
-      <span class="logo-text">云上观策</span>
+      <span class="logo-text">云枢观策</span>
     </div>
 
     <nav class="nav-list">
@@ -154,8 +154,8 @@
   <teleport to="body">
     <div v-if="showAbout" class="dialog-overlay" @click.self="showAbout = false">
       <div class="dialog">
-        <h3>关于云上观策</h3>
-        <p>云上观策是一个智能政策分析与知识管理平台，帮助用户高效获取、分析和管理政策信息。</p>
+        <h3>关于云枢观策</h3>
+        <p>云枢观策是一个智能政策分析与知识管理平台，帮助用户高效获取、分析和管理政策信息。</p>
         <button class="dialog-close" @click="showAbout = false">关闭</button>
       </div>
     </div>
@@ -413,7 +413,8 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
 .logo-icon {
   width: 24px;
   height: 24px;
-  filter: brightness(0) invert(1);
+  object-fit: contain;
+  filter: none;
 }
 
 .nav-list {

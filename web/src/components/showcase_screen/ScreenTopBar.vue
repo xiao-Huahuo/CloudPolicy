@@ -2,7 +2,7 @@
   <header class="screen-topbar">
     <div class="topbar-title-block">
       <span class="topbar-eyebrow">PUBLIC GOVERNANCE DATA SCREEN</span>
-      <h1 class="topbar-title">云上观策 · 公共数据分析大屏</h1>
+      <h1 class="topbar-title">云枢观策 · 公共数据分析大屏</h1>
       <p class="topbar-sub">珊瑚暖光与冷青信号共同驱动的展示型分析舞台</p>
     </div>
 

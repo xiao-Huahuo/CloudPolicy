@@ -29,7 +29,7 @@ const router = createRouter({
     return { top: 0, left: 0 }
   },
   routes: [
-    { path: '/', redirect: '/agent' },
+    { path: '/', redirect: '/showcase' },
     { path: '/home', name: 'home', component: Home },
     { path: '/discovery-home', name: 'discovery-home', component: DiscoveryHome, meta: { standalone: true } },
     { path: '/data-analysis-and-visualization', name: 'data-analysis-and-visualization', component: DataAnalysisAndVisualization },

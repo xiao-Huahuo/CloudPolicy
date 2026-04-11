@@ -17,12 +17,12 @@
           重构政策产品的第一印象
         </h1>
         <p class="hero-description">
-          云上观策把政策发布、公众理解、智能解析和意见反馈压缩进一个整屏叙事首页，
+          云枢观策把政策发布、公众理解、智能解析和意见反馈压缩进一个整屏叙事首页，
           让“政务系统”第一次看起来像真正完成过品牌设计的产品。
         </p>
 
         <div class="hero-actions">
-          <button class="hero-btn primary" @click="router.push('/')">立即体验</button>
+          <button class="hero-btn primary" @click="router.push('/agent')">立即体验</button>
           <button class="hero-btn ghost" @click="router.push('/showcase/discovery')">浏览政策广场</button>
         </div>
 

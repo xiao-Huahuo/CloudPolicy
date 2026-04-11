@@ -3,7 +3,7 @@
     <div class="section-shell">
       <div class="cta-panel">
         <span class="section-eyebrow">免费注册</span>
-        <h2>立即加入云上观策</h2>
+        <h2>立即加入云枢观策</h2>
         <p>用一套真正有气场的首页，承接你的政策内容、分析能力和品牌表达。</p>
 
         <div class="cta-metrics">
@@ -15,7 +15,7 @@
 
         <div class="cta-actions">
           <button class="cta-btn primary" @click="router.push('/register')">免费注册</button>
-          <button class="cta-btn ghost" @click="router.push('/')">进入系统</button>
+          <button class="cta-btn ghost" @click="router.push('/agent')">进入系统</button>
         </div>
       </div>
     </div>

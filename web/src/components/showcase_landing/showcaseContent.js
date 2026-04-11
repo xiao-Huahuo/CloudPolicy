@@ -292,5 +292,5 @@ export const footerLinks = [
   { label: '首页', route: '/showcase' },
   { label: '政策广场', route: '/showcase/discovery' },
   { label: '数据大屏', route: '/showcase/screen' },
-  { label: '进入系统', route: '/' },
+  { label: '进入系统', route: '/agent' },
 ]

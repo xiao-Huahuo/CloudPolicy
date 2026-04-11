@@ -573,7 +573,7 @@ async function handleAvatarSaved() {
 function handleLogout() {
   if (!confirm('确定要退出登录吗？')) return;
   userStore.logout();
-  router.push('/');
+  router.push('/showcase');
 }
 
 async function restoreHistory(id) {

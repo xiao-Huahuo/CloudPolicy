@@ -197,7 +197,7 @@ const displayAvatar = computed(() => {
 const goBack = () => router.back();
 const emitLoginEvent = () => window.dispatchEvent(new CustomEvent('open-login-modal'));
 const handleUserClick = () => { if (userStore.token) router.push('/profile'); };
-const handleLogout = () => { if (confirm('确定要退出登录吗？')) { userStore.logout(); router.push('/'); } };
+const handleLogout = () => { if (confirm('确定要退出登录吗？')) { userStore.logout(); router.push('/showcase'); } };
 
 const toggleNotification = async () => {
   if (!userStore.token) return;
