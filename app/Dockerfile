@@ -1,5 +1,5 @@
 # 1. 基础镜像
-FROM python:3.12-slim-bullseye
+FROM python:3.12-slim-bookworm
 
 # 2. 设置环境变量
 # 防止 python 产生 .pyc 文件，并让输出直接打印在控制台
