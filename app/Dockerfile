@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 5. 安装 Python 依赖
 # 先只拷贝 requirements.txt，利用 Docker 缓存层减少构建时间
 COPY ./app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Preinstall CPU-only PyTorch to avoid pulling large CUDA wheels in the image.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch \
+    && pip install --no-cache-dir -r requirements.txt
 
 # 6. 拷贝代码（虽然开发时会被 volumes 覆盖，但构建镜像仍需此步）
 # 明确拷贝 app 文件夹到 /server/app

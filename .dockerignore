@@ -50,15 +50,14 @@ uploads/
 logs/
 mail_outbox/
 
-# App resources required in image
+# App resources required in image / build context
 !app/resources/db_init/
 !app/resources/db_init/**
 !app/resources/vector_init/
 !app/resources/vector_init/**
 !app/resources/sensitive/
 !app/resources/sensitive/**
-!app/resources/embedding/
-!app/resources/embedding/**
+app/resources/embedding/
 
 
 # Frontend (Vue/Vite)
