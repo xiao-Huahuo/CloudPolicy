@@ -1,21 +1,5 @@
 ﻿<template>
   <div class="home-container">
-    <!-- 查看原文 Modal -->
-    <div v-if="showOriginalModal" class="modal-overlay" @click.self="showOriginalModal = false">
-      <div class="modal-box">
-        <div class="modal-header">
-          <span class="modal-title">原文内容</span>
-          <div class="modal-header-actions">
-            <a v-if="aiResponse?.file_url" :href="aiResponse.file_url" target="_blank" class="modal-file-btn">查看原文件</a>
-            <button class="modal-close" @click="showOriginalModal = false">✕</button>
-          </div>
-        </div>
-        <div class="modal-body">
-          <pre class="modal-text">{{ aiResponse?.original_text || '暂无原文内容' }}</pre>
-        </div>
-      </div>
-    </div>
-
     <div class="three-col-layout" :class="{ 'focus-mode': focusMode, 'right-collapsed': !rightDrawerOpen }">
 
       <!-- ── 左栏：历史抽屉 toggle ─────────────────────────────── -->
@@ -263,21 +247,12 @@
                 :links="kgPayload.links"
                 :dynamic-payload="kgPayload.dynamicPayload"
                 :visual-config="kgPayload.visualConfig"
+                :original-file-url="aiResponse?.file_url || ''"
+                :rewrite-targets="REWRITE_TARGETS"
+                :rewrite-loading="isRewriting"
+                :rewrite-enabled="Boolean(aiResponse?.id)"
+                @rewrite="rewriteTarget"
               />
-              <div class="rewrite-toolbar">
-                <span>切换改写版本：</span>
-                <div class="rewrite-buttons">
-                  <button class="rewrite-btn" @click="rewriteTarget('老人版')" :disabled="isRewriting">老人版</button>
-                  <button class="rewrite-btn" @click="rewriteTarget('学生版')" :disabled="isRewriting">学生版</button>
-                  <button class="rewrite-btn" @click="rewriteTarget('家属转述版')" :disabled="isRewriting">家属转述版</button>
-                  <button class="rewrite-btn" @click="rewriteTarget('极简版')" :disabled="isRewriting">极简版</button>
-                  <button class="rewrite-btn" @click="rewriteTarget('客服答复版')" :disabled="isRewriting">客服答复版</button>
-                </div>
-                <span v-if="isRewriting" class="rewriting-status">正在生成...</span>
-              </div>
-              <div class="mapping-section">
-                <button class="capsule-btn view-original-btn" @click="showOriginalModal = true">查看原文</button>
-              </div>
             </div>
           </div>
         </div>
@@ -435,7 +410,6 @@ const selectedHistoryId = ref(null);
 const selectedHistoryDetail = ref(null);
 const favoritesMap = ref({});
 const historyDrawerOpen = ref(false);
-const showOriginalModal = ref(false);
 
 // ── 右栏：中央文件 ────────────────────────────────────────────────────────────
 const centralDocs = ref([]);
@@ -452,6 +426,12 @@ const firstLine = (text) =>
     .split(/\r?\n/)
     .map((s) => s.trim())
     .find(Boolean) || '';
+const normalizeGraphSourceText = (text) =>
+  String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
 const extractTitleFromPayload = (payload) => {
   const seen = new Set();
   const walk = (obj, depth = 0) => {
@@ -499,8 +479,11 @@ const kgPayload = computed(() => {
   const analysis = aiResponse.value?.chat_analysis || {};
   const visual = aiResponse.value?.visual_config || analysis.visual_config || {};
   const dynamicPayload = aiResponse.value?.dynamic_payload || analysis.dynamic_payload || {};
+  const sourceText = normalizeGraphSourceText(
+    aiResponse.value?.original_text || analysis.original_text || aiResponse.value?.content || analysis.content || ''
+  );
   return {
-    content: aiResponse.value?.content || analysis.content || aiResponse.value?.original_text || '',
+    content: sourceText,
     nodes: aiResponse.value?.nodes || analysis.nodes || [],
     links: aiResponse.value?.links || analysis.links || [],
     dynamicPayload,
@@ -508,6 +491,7 @@ const kgPayload = computed(() => {
   };
 });
 const currentTitle = computed(() => getMessageTitle(aiResponse.value));
+const REWRITE_TARGETS = ['老人版', '学生版', '家属转述版', '极简版', '客服答复版'];
 
 // ── 示例数据 ──────────────────────────────────────────────────────────────────
 const EXAMPLE_META_MAP = {
@@ -2667,23 +2651,6 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .level-medium { color: #f57c00 !important; }
 .level-low { color: #43a047 !important; }
 
-.rewrite-toolbar { display: flex; flex-direction: column; gap: 8px; }
-.rewrite-toolbar span { color: #000; font-weight: bold; font-size: 13px; }
-.rewrite-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-.rewrite-btn { background: #fff; border: 1px solid #000; color: #000; padding: 5px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s; font-size: 12px; font-weight: 500; }
-.rewrite-btn:hover:not(:disabled) { background: var(--color-primary, #ffe066); border-color: var(--color-primary, #ffe066); }
-.rewrite-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.rewriting-status { font-size: 12px; color: #999; font-style: italic; font-weight: normal !important; }
-
-.original-text-section { flex: 1; display: flex; flex-direction: column; min-height: 150px; }
-.original-text-section h4 { margin: 0 0 8px; font-size: 14px; font-weight: bold; color: #000; }
-.original-content { flex: 1; background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 12px; color: #666; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-y: auto; max-height: 300px; }
-
-.mapping-section { padding-top: 12px; }
-.mapping-section h4 { margin: 0 0 6px; font-size: 13px; font-weight: bold; color: #000; }
-.mapping-section p { margin: 0; font-size: 12px; line-height: 1.5; color: #666; }
-.file-link { color: #00a8ff; text-decoration: underline; }
-
 /* ── 右栏：中央文件 ──────────────────────────────────────────────────────── */
 .right-panel-col {
   display: flex;
@@ -2881,72 +2848,4 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
-/* ── 查看原文 Modal ───────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.modal-box {
-  background: #fff;
-  border-radius: 12px;
-  width: min(720px, 90vw);
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-}
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid #eee;
-  flex-shrink: 0;
-}
-.modal-title { font-size: 15px; font-weight: 700; color: #111; }
-.modal-header-actions { display: flex; align-items: center; gap: 10px; }
-.modal-file-btn {
-  background: #c0392b;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  padding: 5px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-  box-shadow: 0 2px 0 #922b21;
-}
-.modal-file-btn:hover { background: #e74c3c; }
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  color: #888;
-  padding: 2px 6px;
-}
-.modal-close:hover { color: #333; }
-.modal-body { flex: 1; overflow-y: auto; padding: 20px; }
-.modal-text {
-  white-space: pre-wrap;
-  font-size: 13px;
-  color: #333;
-  line-height: 1.8;
-  margin: 0;
-  font-family: inherit;
-}
-
-.view-original-btn {
-  margin-top: 12px;
-  font-size: 13px;
-  padding: 8px 22px !important;
-}
-
 </style>

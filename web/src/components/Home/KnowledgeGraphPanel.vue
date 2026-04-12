@@ -1,5 +1,5 @@
 <template>
-  <div class="kg-panel">
+  <div ref="panelRef" class="kg-panel" :class="{ 'is-fullscreen': isFullscreen }">
     <div class="kg-toolbar">
       <div class="kg-tabs">
         <button class="kg-tab" :class="{ active: activeView === '2d' }" @click="activeView = '2d'">二维知识图谱</button>
@@ -13,7 +13,8 @@
           <span v-if="collapsedClusterCount">收拢 {{ collapsedClusterCount }}</span>
           <span>缩放 {{ graphZoom.toFixed(2) }}</span>
         </div>
-        <button class="kg-json-toggle" @click="showJson = !showJson">{{ showJson ? '隐藏 JSON' : '显示 JSON' }}</button>
+        <button v-if="activeView === '2d'" class="kg-toolbar-btn" @click="toggleFullscreen">{{ isFullscreen ? '退出全屏' : '图谱全屏' }}</button>
+        <button class="kg-toolbar-btn" @click="showJson = !showJson">{{ showJson ? '隐藏 JSON' : '显示 JSON' }}</button>
       </div>
     </div>
 
@@ -22,48 +23,133 @@
         <div v-show="activeView === '2d'" class="graph-2d-wrapper">
           <div ref="graph2DRef" class="graph-2d" @click.self="clearHighlight"></div>
           <div class="kg-ops-panel">
-            <input
-              v-model="searchQuery"
-              class="kg-search"
-              placeholder="搜索节点…"
-              @input="onSearch"
-            />
-            <div class="kg-depth-filter">
-              <div class="kg-depth-label">深度筛选</div>
-              <div class="kg-depth-buttons">
-                <button
-                  v-for="d in depthRange"
-                  :key="d"
-                  class="kg-depth-btn"
-                  :class="{ active: filterDepth === d }"
-                  :style="{ borderColor: depthColor(d), color: filterDepth === d ? '#fff' : depthColor(d), background: filterDepth === d ? depthColor(d) : 'transparent' }"
-                  @click="toggleDepthFilter(d)"
-                >{{ d }}</button>
+            <template v-if="sidePanelMode === 'query'">
+              <div class="kg-side-kicker">图谱查询</div>
+              <input
+                v-model="searchQuery"
+                class="kg-search"
+                placeholder="搜索节点…"
+                @input="onSearch"
+              />
+              <div class="kg-depth-filter">
+                <div class="kg-depth-label">深度筛选</div>
+                <div class="kg-depth-buttons">
+                  <button
+                    v-for="d in depthRange"
+                    :key="d"
+                    class="kg-depth-btn"
+                    :class="{ active: filterDepth === d }"
+                    :style="{ borderColor: depthColor(d), color: filterDepth === d ? '#fff' : depthColor(d), background: filterDepth === d ? depthColor(d) : 'transparent' }"
+                    @click="toggleDepthFilter(d)"
+                  >{{ d }}</button>
+                </div>
               </div>
-            </div>
-            <div v-if="clusterMetaMap.size" class="kg-cluster-tip">
-              <div class="kg-depth-label">自适应簇</div>
-              <div class="kg-cluster-copy">同级子节点过多的父节点会默认收拢，点击该节点可局部展开。</div>
-            </div>
+              <div v-if="clusterMetaMap.size" class="kg-cluster-tip">
+                <div class="kg-depth-label">自适应簇</div>
+                <div class="kg-cluster-copy">同级子节点过多的父节点会默认收拢，点击该节点可局部展开。</div>
+              </div>
+              <div v-if="rewriteTargetsSafe.length" class="kg-panel-section">
+                <div class="kg-section-heading">
+                  <div>
+                    <div class="kg-depth-label">转译版本</div>
+                    <div class="kg-cluster-copy">将当前解析结果改写成不同对象更容易理解的版本。</div>
+                  </div>
+                  <span v-if="rewriteLoading" class="kg-inline-status">正在生成...</span>
+                </div>
+                <div class="kg-rewrite-grid">
+                  <button
+                    v-for="target in rewriteTargetsSafe"
+                    :key="target"
+                    class="kg-rewrite-btn"
+                    :disabled="!rewriteEnabled || rewriteLoading"
+                    @click="triggerRewrite(target)"
+                  >{{ target }}</button>
+                </div>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="kg-source-panel">
+                <div class="kg-source-header">
+                  <div>
+                    <div class="kg-side-kicker">原文对照</div>
+                    <div class="kg-source-title">{{ activeSourceNodeTitle }}</div>
+                  </div>
+                  <button class="kg-back-btn" @click="switchToQueryPanel">返回查询</button>
+                </div>
+
+                <div class="kg-source-meta">
+                  <span v-if="selectedNode?.type" class="kg-source-pill">{{ selectedNode.type }}</span>
+                  <span v-if="selectedNodeDepth !== null" class="kg-source-pill">深度 {{ selectedNodeDepth }}</span>
+                  <a
+                    v-if="originalFileUrl"
+                    class="kg-source-link"
+                    :href="originalFileUrl"
+                    target="_blank"
+                    rel="noreferrer"
+                  >查看原文件</a>
+                </div>
+
+                <div class="kg-source-notice">{{ activeSourceNotice }}</div>
+
+                <div class="kg-panel-section">
+                  <div class="kg-depth-label">父节点</div>
+                  <div v-if="selectedParentNode" class="kg-node-chip-list">
+                    <button class="kg-node-chip" @click="focusNodeFromSidebar(selectedParentNode.id)">{{ formatNodeLabel(selectedParentNode) }}</button>
+                  </div>
+                  <div v-else class="kg-empty-hint">当前节点已经是根节点。</div>
+                </div>
+
+                <div class="kg-panel-section">
+                  <div class="kg-section-heading">
+                    <div class="kg-depth-label">子节点</div>
+                    <span v-if="selectedChildNodes.length" class="kg-inline-status">{{ selectedChildNodes.length }} 个</span>
+                  </div>
+                  <div v-if="visibleChildNodes.length" class="kg-node-chip-list">
+                    <button
+                      v-for="child in visibleChildNodes"
+                      :key="child.id"
+                      class="kg-node-chip"
+                      @click="focusNodeFromSidebar(child.id)"
+                    >{{ formatNodeLabel(child) }}</button>
+                  </div>
+                  <div v-else class="kg-empty-hint">当前节点没有子节点。</div>
+                  <div v-if="hiddenChildNodeCount" class="kg-inline-tip">其余 {{ hiddenChildNodeCount }} 个子节点可继续在图谱中展开查看。</div>
+                </div>
+
+                <div class="kg-panel-section kg-source-preview-section">
+                  <div class="kg-section-heading">
+                    <div class="kg-depth-label">原文出处</div>
+                    <button class="kg-text-link" @click="openTextView('source')">全文视图</button>
+                  </div>
+                  <div v-if="activeSourceHtml" class="kg-source-preview" v-html="activeSourceHtml"></div>
+                  <div v-else class="kg-empty-hint">当前节点暂时没有可定位的原文映射。</div>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
         <div v-show="activeView === 'text'" class="graph-text">
-          <div v-if="treeRoots.length" class="tree-list">
-            <details v-for="n1 in treeRoots" :key="n1.id" class="tree-node depth-1" :style="{ borderLeftColor: depthColor(1) }">
-              <summary class="tree-summary">{{ n1.label }}</summary>
-              <div v-if="treeChildren(n1.id).length" class="tree-children">
-                <details v-for="n2 in treeChildren(n1.id)" :key="n2.id" class="tree-node depth-2" :style="{ borderLeftColor: depthColor(2) }">
-                  <summary class="tree-summary">{{ n2.label }}</summary>
-                  <div v-if="treeChildren(n2.id).length" class="tree-children">
-                    <div v-for="n3 in treeChildren(n2.id)" :key="n3.id" class="tree-node depth-3" :style="{ borderLeftColor: depthColor(3) }">
-                      {{ n3.label }}
-                    </div>
-                  </div>
-                </details>
-              </div>
-            </details>
+          <div class="kg-text-toolbar">
+            <div class="kg-text-view-switch">
+              <button class="kg-text-mode-btn" :class="{ active: textMode === 'graph' }" @click="textMode = 'graph'">知识图谱式简化版</button>
+              <button class="kg-text-mode-btn" :class="{ active: textMode === 'source' }" :disabled="!hasSourceStructureTree" @click="openTextView('source')">原文结构化版</button>
+            </div>
+            <div class="kg-text-caption">{{ textModeDescription }}</div>
           </div>
-          <div v-else class="tree-empty" v-html="highlightedText"></div>
+          <div v-if="activeTextTree.length" class="tree-list tree-list-rich">
+            <GraphTextNode
+              v-for="node in activeTextTree"
+              :key="node.id"
+              :node="node"
+              :active-node-id="activeNodeId || ''"
+              :depth-color="depthColor"
+            />
+          </div>
+          <div v-else class="tree-empty-shell">
+            <div class="tree-empty-copy">{{ activeTextEmptyCopy }}</div>
+            <div class="tree-empty" v-html="highlightedText"></div>
+          </div>
         </div>
       </div>
 
@@ -83,7 +169,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as echarts from 'echarts/core';
 import { GraphChart } from 'echarts/charts';
 import { TooltipComponent } from 'echarts/components';
@@ -93,24 +179,34 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 echarts.use([GraphChart, TooltipComponent, CanvasRenderer]);
 
+const emit = defineEmits(['rewrite']);
+
 const props = defineProps({
   content: { type: String, default: '' },
   nodes: { type: Array, default: () => [] },
   links: { type: Array, default: () => [] },
   dynamicPayload: { type: Object, default: () => ({}) },
   visualConfig: { type: Object, default: () => ({}) },
+  originalFileUrl: { type: String, default: '' },
+  rewriteTargets: { type: Array, default: () => [] },
+  rewriteLoading: { type: Boolean, default: false },
+  rewriteEnabled: { type: Boolean, default: false },
 });
 
 const activeView = ref('2d');
+const textMode = ref('graph');
 const showJson = ref(false);
 const activeNodeId = ref(null);
 const highlightedNodeId = ref(null);
-const pendingClusterFocusId = ref(null);
+const sidePanelMode = ref('query');
+const panelRef = ref(null);
 const graph2DRef = ref(null);
 const graph3DRef = ref(null);
 const graphZoom = ref(1);
 const searchQuery = ref('');
 const filterDepth = ref(null);
+const isFullscreen = ref(false);
+const graphThemeVersion = ref(0);
 
 let chart2D = null;
 let themeObserver = null;
@@ -119,7 +215,7 @@ let animationFrame = null;
 let clusterFollowFrame = null;
 let isSyncingOverlayRoam = false;
 
-const DEPTH_COLORS = ['#e74c3c','#f1c40f','#2ecc71','#3498db','#9b59b6','#e67e22','#1abc9c'];
+const SOURCE_STRUCTURE_NODE_TYPES = new Set(['结构', '章节', '段落', '条目', '句子']);
 const CLUSTER_CHILD_THRESHOLD = 30;
 const CLUSTER_MIN_DOMINANT_TYPE_RATIO = 0.68;
 const CLUSTER_MIN_LEAF_RATIO = 0.62;
@@ -127,7 +223,8 @@ const CLUSTER_MAX_AVG_LABEL = 18;
 const MAIN_GRAPH_SERIES_ID = 'kg_main_graph';
 const CLUSTER_OVERLAY_SERIES_ID = 'kg_cluster_overlay';
 const GRAPH_DEFAULT_CENTER = ['50%', '50%'];
-const depthColor = (d) => DEPTH_COLORS[d % DEPTH_COLORS.length];
+const SOURCE_CONTEXT_RADIUS = 180;
+const MAX_RELATION_CHIPS = 24;
 
 const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -183,15 +280,103 @@ const pickPayloadTitle = (payload) => {
   return walk(payload);
 };
 
-const typeColor = (type, dark) => {
-  const map = {
-    主题: dark ? '#ff8b82' : '#c0392b', 对象: dark ? '#8fb2ff' : '#2f6fdd',
-    流程: dark ? '#7cd1ff' : '#1f97c9', 材料: dark ? '#a9d07b' : '#4f8f2f',
-    时间: dark ? '#ffd38f' : '#d18b27', 约束: dark ? '#c9a2ff' : '#8c57d1',
-    风险: dark ? '#ff9cab' : '#d94f68', 实体: dark ? '#aab3c2' : '#6c7a89',
-  };
-  return map[type] || (dark ? '#91a5ff' : '#356fe0');
+const readCssVar = (name, fallback = '') => {
+  if (typeof window === 'undefined' || !document?.documentElement) return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 };
+
+const parseColor = (value, fallback = [192, 57, 43]) => {
+  const raw = String(value || '').trim();
+  if (!raw) return [...fallback];
+  const hex = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const valueText = hex[1];
+    const normalized = valueText.length === 3
+      ? valueText.split('').map((char) => `${char}${char}`).join('')
+      : valueText;
+    return [
+      parseInt(normalized.slice(0, 2), 16),
+      parseInt(normalized.slice(2, 4), 16),
+      parseInt(normalized.slice(4, 6), 16),
+    ];
+  }
+  const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const values = rgb[1].split(',').map((part) => Number.parseFloat(part.trim()));
+    if (values.length >= 3 && values.slice(0, 3).every((item) => Number.isFinite(item)))
+      return values.slice(0, 3).map((item) => clamp(Math.round(item), 0, 255));
+  }
+  return [...fallback];
+};
+
+const mixColor = (base, target, ratio = 0.5) => (
+  [0, 1, 2].map((index) => Math.round(base[index] + ((target[index] - base[index]) * clamp(ratio, 0, 1))))
+);
+
+const colorToHex = (rgb) => `#${rgb.map((channel) => clamp(Math.round(channel), 0, 255).toString(16).padStart(2, '0')).join('')}`;
+const colorToRgba = (rgb, alpha = 1) => `rgba(${rgb.map((channel) => clamp(Math.round(channel), 0, 255)).join(', ')}, ${clamp(alpha, 0, 1)})`;
+
+const graphTheme = computed(() => {
+  graphThemeVersion.value;
+  const primary = parseColor(readCssVar('--color-primary', '#c0392b'));
+  const primaryLight = parseColor(readCssVar('--color-primary-light', '#e45846'), primary);
+  const primaryDark = parseColor(readCssVar('--color-primary-dark', '#8e231b'), primary);
+  const secondary = parseColor(readCssVar('--color-secondary', '#e67e22'), primaryLight);
+  const accentCool = parseColor(readCssVar('--color-accent-cool', '#58cbff'), secondary);
+  const accentMint = parseColor(readCssVar('--color-accent-mint', '#80fab0'), accentCool);
+  const text = parseColor(readCssVar('--text-primary', '#111111'), [17, 17, 17]);
+  const textSecondary = parseColor(readCssVar('--text-secondary', '#666666'), [102, 102, 102]);
+  const border = parseColor(readCssVar('--border-color', '#e0e0e0'), [224, 224, 224]);
+  const surface = parseColor(readCssVar('--card-bg', '#ffffff'), [255, 255, 255]);
+  const depthPalette = [
+    colorToHex(mixColor(primaryDark, primary, 0.34)),
+    colorToHex(primary),
+    colorToHex(mixColor(primaryLight, secondary, 0.42)),
+    colorToHex(secondary),
+    colorToHex(mixColor(secondary, accentCool, 0.56)),
+    colorToHex(accentCool),
+    colorToHex(mixColor(accentCool, accentMint, 0.55)),
+  ];
+  const dark = isDark();
+  return {
+    depthPalette,
+    tooltipBackground: dark ? colorToRgba(mixColor(surface, [0, 0, 0], 0.18), 0.94) : colorToRgba(surface, 0.96),
+    tooltipBorder: dark ? colorToRgba(border, 0.88) : colorToRgba(mixColor(border, primary, 0.12), 0.9),
+    tooltipText: colorToHex(text),
+    label: colorToHex(text),
+    labelMuted: colorToHex(textSecondary),
+    rootBorder: colorToRgba(mixColor(surface, primaryLight, dark ? 0.18 : 0.08), dark ? 0.85 : 0.92),
+    highlightBorder: colorToRgba(mixColor(surface, primaryLight, 0.42), 0.96),
+    collapsedBorder: colorToRgba(mixColor(surface, primary, dark ? 0.22 : 0.12), dark ? 0.84 : 0.72),
+    glow: colorToRgba(mixColor(primary, accentCool, 0.26), dark ? 0.34 : 0.24),
+    edgePositive: colorToRgba(mixColor(secondary, accentCool, 0.4), dark ? 0.72 : 0.62),
+    edgeNegative: colorToRgba(mixColor(primary, primaryLight, 0.34), dark ? 0.82 : 0.74),
+    edgeOverlay: colorToRgba(mixColor(primary, accentCool, 0.32), dark ? 0.7 : 0.56),
+    typePalette: {
+      主题: colorToHex(primary),
+      对象: colorToHex(accentCool),
+      流程: colorToHex(mixColor(secondary, accentCool, 0.28)),
+      材料: colorToHex(accentMint),
+      时间: colorToHex(mixColor(secondary, [255, 255, 255], 0.24)),
+      约束: colorToHex(mixColor(primaryDark, accentCool, 0.24)),
+      风险: colorToHex(mixColor(primary, [255, 255, 255], dark ? 0.08 : 0.18)),
+      实体: colorToHex(mixColor(textSecondary, accentCool, dark ? 0.1 : 0.18)),
+      结构: colorToHex(mixColor(border, secondary, 0.22)),
+      章节: colorToHex(mixColor(primaryDark, secondary, 0.36)),
+      段落: colorToHex(mixColor(secondary, accentMint, 0.26)),
+      条目: colorToHex(mixColor(accentCool, accentMint, 0.22)),
+      句子: colorToHex(mixColor(textSecondary, border, 0.22)),
+    },
+  };
+});
+
+const depthColor = (depthValue = 0) => {
+  const palette = graphTheme.value.depthPalette;
+  const normalized = Math.abs(Number(depthValue) || 0);
+  return palette[normalized % palette.length];
+};
+
+const typeColor = (type) => graphTheme.value.typePalette[type] || depthColor(1);
 
 const baseNodes = computed(() =>
   (props.nodes || []).map((item, idx) => ({
@@ -202,6 +387,7 @@ const baseNodes = computed(() =>
     layer: item?.layer ? String(item.layer) : '',
     group: item?.group ? String(item.group) : '',
     parent_id: item?.parent_id ? String(item.parent_id) : null,
+    properties: item?.properties && typeof item.properties === 'object' ? item.properties : {},
   })).filter((item) => item.label)
 );
 
@@ -388,6 +574,37 @@ const nodeTypes = computed(() => {
   return [...new Set(all)].slice(0, 10);
 });
 
+const rewriteTargetsSafe = computed(() =>
+  (Array.isArray(props.rewriteTargets) ? props.rewriteTargets : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+);
+
+const selectedNode = computed(() => nodeById.value.get(String(activeNodeId.value || '').trim()) || null);
+
+const selectedNodeDepth = computed(() => {
+  if (!selectedNode.value) return null;
+  const depthValue = graphHierarchy.value.depth.get(selectedNode.value.id);
+  return Number.isFinite(Number(depthValue)) ? Number(depthValue) : null;
+});
+
+const selectedParentNode = computed(() => {
+  if (!selectedNode.value) return null;
+  const parentId = graphHierarchy.value.parent.get(selectedNode.value.id);
+  return parentId ? nodeById.value.get(parentId) || null : null;
+});
+
+const selectedChildNodes = computed(() => {
+  if (!selectedNode.value) return [];
+  return (graphHierarchy.value.children.get(selectedNode.value.id) || [])
+    .map((id) => nodeById.value.get(id))
+    .filter(Boolean);
+});
+
+const visibleChildNodes = computed(() => selectedChildNodes.value.slice(0, MAX_RELATION_CHIPS));
+
+const hiddenChildNodeCount = computed(() => Math.max(0, selectedChildNodes.value.length - visibleChildNodes.value.length));
+
 const textMapping = computed(() => {
   const mapping = props.visualConfig?.text_mapping;
   return mapping && typeof mapping === 'object' ? mapping : {};
@@ -398,13 +615,19 @@ const prettyDynamicPayload = computed(() => JSON.stringify(props.dynamicPayload 
 const escapeHtml = (value) =>
   String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+const normalizeTextRange = (range, content = props.content || '') => {
+  if (!Array.isArray(range) || range.length < 2) return null;
+  const start = Number(range[0]);
+  const end = Number(range[1]);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || end > content.length) return null;
+  return { start, end };
+};
+
 const highlightedText = computed(() => {
   const content = props.content || '';
   const ranges = Object.entries(textMapping.value).map(([nodeId, range]) => {
-    if (!Array.isArray(range) || range.length < 2) return null;
-    const start = Number(range[0]); const end = Number(range[1]);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || end > content.length) return null;
-    return { nodeId, start, end };
+    const normalized = normalizeTextRange(range, content);
+    return normalized ? { nodeId, ...normalized } : null;
   }).filter(Boolean).sort((a, b) => a.start - b.start);
   if (!ranges.length) return escapeHtml(content);
   let cursor = 0; let html = '';
@@ -698,6 +921,9 @@ const depthRange = computed(() => {
 });
 
 const toggleDepthFilter = (d) => {
+  clearSimpleNodeEmphasis();
+  highlightedNodeId.value = null;
+  sidePanelMode.value = 'query';
   filterDepth.value = filterDepth.value === d ? null : d;
   applyHighlightOverlay();
 };
@@ -723,6 +949,308 @@ const formatNodeLabel = (node) => {
   return node?.label || '';
 };
 
+const getNodeTextRange = (nodeId) => {
+  const id = String(nodeId || '').trim();
+  const mapped = normalizeTextRange(textMapping.value?.[id]);
+  if (mapped) return mapped;
+  const node = nodeById.value.get(id);
+  return normalizeTextRange(node?.properties?.span || node?.properties?.source_span || node?.properties?.text_span);
+};
+
+const resolveSourceMatch = (nodeId) => {
+  const direct = getNodeTextRange(nodeId);
+  if (direct) return { matchNodeId: nodeId, relation: 'self', ...direct };
+
+  const descendants = [...(graphHierarchy.value.children.get(nodeId) || [])];
+  const seen = new Set(descendants);
+  while (descendants.length) {
+    const current = descendants.shift();
+    const mapped = getNodeTextRange(current);
+    if (mapped) return { matchNodeId: current, relation: 'child', ...mapped };
+    for (const child of (graphHierarchy.value.children.get(current) || [])) {
+      if (seen.has(child)) continue;
+      seen.add(child);
+      descendants.push(child);
+    }
+  }
+
+  let currentParent = graphHierarchy.value.parent.get(nodeId);
+  const parentSeen = new Set();
+  while (currentParent && !parentSeen.has(currentParent)) {
+    parentSeen.add(currentParent);
+    const mapped = getNodeTextRange(currentParent);
+    if (mapped) return { matchNodeId: currentParent, relation: 'parent', ...mapped };
+    currentParent = graphHierarchy.value.parent.get(currentParent);
+  }
+  return null;
+};
+
+const activeSourceMatch = computed(() => {
+  if (!selectedNode.value) return null;
+  return resolveSourceMatch(selectedNode.value.id);
+});
+
+const activeSourceMatchNode = computed(() => {
+  if (!activeSourceMatch.value?.matchNodeId) return null;
+  return nodeById.value.get(activeSourceMatch.value.matchNodeId) || null;
+});
+
+const activeSourceNodeTitle = computed(() => {
+  if (!selectedNode.value) return '未选中节点';
+  return formatNodeLabel(selectedNode.value) || '未命名节点';
+});
+
+const activeSourceNotice = computed(() => {
+  if (!selectedNode.value) return '点击图谱中的节点后，这里会展示原文出处。';
+  if (!activeSourceMatch.value) return '当前节点暂无直接原文映射，可以继续查看父子节点定位相关出处。';
+  if (activeSourceMatch.value.relation === 'self') return '已定位到该节点对应的原文出处。';
+  const matchLabel = activeSourceMatchNode.value ? `“${formatNodeLabel(activeSourceMatchNode.value)}”` : '关联节点';
+  if (activeSourceMatch.value.relation === 'child') return `当前节点暂无直接映射，已定位到子节点 ${matchLabel} 的原文出处。`;
+  return `当前节点暂无直接映射，已定位到父节点 ${matchLabel} 的原文出处。`;
+});
+
+const activeSourceHtml = computed(() => {
+  const content = props.content || '';
+  const match = activeSourceMatch.value;
+  if (!content || !match) return '';
+  const prefixStart = Math.max(0, match.start - SOURCE_CONTEXT_RADIUS);
+  const suffixEnd = Math.min(content.length, match.end + SOURCE_CONTEXT_RADIUS);
+  const prefix = prefixStart > 0 ? '…' : '';
+  const suffix = suffixEnd < content.length ? '…' : '';
+  return `${prefix}${escapeHtml(content.slice(prefixStart, match.start))}<mark class="kg-source-highlight">${escapeHtml(content.slice(match.start, match.end))}</mark>${escapeHtml(content.slice(match.end, suffixEnd))}${suffix}`;
+});
+
+const isSourceStructureNode = (node) => {
+  if (!node) return false;
+  const label = String(node.label || '').trim();
+  const type = String(node.type || '').trim();
+  return label === '原文结构' || SOURCE_STRUCTURE_NODE_TYPES.has(type) || node.properties?.source === 'original_text';
+};
+
+const sourceStructureRootId = computed(() => {
+  const exact = safeNodes.value.find((node) => String(node.label || '').trim() === '原文结构' && node.properties?.source === 'original_text');
+  if (exact?.id) return exact.id;
+  const rootId = rootNodeId.value;
+  return (graphHierarchy.value.children.get(rootId) || [])
+    .map((id) => nodeById.value.get(id))
+    .find((node) => node && isSourceStructureNode(node))?.id || null;
+});
+
+const sourceStructureNodeIds = computed(() => {
+  const ids = new Set();
+  if (!sourceStructureRootId.value) return ids;
+  ids.add(sourceStructureRootId.value);
+  for (const nodeId of collectDescendants(sourceStructureRootId.value, graphHierarchy.value.children)) ids.add(nodeId);
+  return ids;
+});
+
+const TEXT_WRAPPER_KEYS = new Set(['content', 'children', 'items', 'payload', 'dynamicpayload', 'dynamic_payload', 'data', 'text', 'result', 'value']);
+const TEXT_CONTENT_KEYS = ['title', 'heading', 'name', 'label', 'content', 'text', 'value', 'summary', 'desc', 'description', 'body'];
+
+const normalizeWrapperToken = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[\s"'`{}\[\]():：,]/g, '');
+
+const isGenericTextWrapper = (value) => {
+  const token = normalizeWrapperToken(value);
+  return TEXT_WRAPPER_KEYS.has(token) || token === 'contentroot' || token === 'rootcontent';
+};
+
+const decodeEscapedDisplayText = (value) => String(value ?? '')
+  .replace(/\\r\\n|\\n\\r|\\r/g, '\n')
+  .replace(/\\n/g, '\n')
+  .replace(/\\t/g, '  ')
+  .replace(/\\"/g, '"')
+  .replace(/\\\\/g, '\\');
+
+const tryParseJsonLabel = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw || !/^[\[{]/.test(raw)) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const extractDisplayTextFromUnknown = (value, depth = 0) => {
+  if (depth > 5 || value === null || value === undefined) return '';
+  if (typeof value === 'string') {
+    const decoded = decodeEscapedDisplayText(value).trim();
+    if (!decoded) return '';
+    const nested = tryParseJsonLabel(decoded);
+    if (nested && nested !== value) {
+      const nestedText = extractDisplayTextFromUnknown(nested, depth + 1);
+      if (nestedText) return nestedText;
+    }
+    return decoded;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => extractDisplayTextFromUnknown(item, depth + 1))
+      .filter(Boolean)
+      .join('\n');
+  }
+  if (typeof value === 'object') {
+    for (const key of TEXT_CONTENT_KEYS) {
+      if (!(key in value)) continue;
+      const hit = extractDisplayTextFromUnknown(value[key], depth + 1);
+      if (hit) return hit;
+    }
+    for (const [key, nestedValue] of Object.entries(value)) {
+      if (!TEXT_WRAPPER_KEYS.has(normalizeWrapperToken(key))) continue;
+      const hit = extractDisplayTextFromUnknown(nestedValue, depth + 1);
+      if (hit) return hit;
+    }
+    const scalarLines = Object.entries(value)
+      .map(([key, nestedValue]) => {
+        if (nestedValue === null || nestedValue === undefined) return '';
+        if (typeof nestedValue === 'object') return '';
+        const text = extractDisplayTextFromUnknown(nestedValue, depth + 1);
+        if (!text) return '';
+        return `${key}: ${text}`;
+      })
+      .filter(Boolean);
+    return scalarLines.join('\n');
+  }
+  return '';
+};
+
+const cleanTextTreeLabel = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (isGenericTextWrapper(raw)) return '';
+  const jsonContentKeyOnly = raw.match(/^\{\s*"?(content|data|payload|text)"?\s*\}$/i);
+  if (jsonContentKeyOnly) return '';
+  const wrappedKeyOnly = raw.match(/^[\[{(]\s*"?(content|data|payload|text)"?\s*[\]})]$/i);
+  if (wrappedKeyOnly) return '';
+  const parsed = tryParseJsonLabel(raw);
+  if (parsed) {
+    const extracted = extractDisplayTextFromUnknown(parsed);
+    if (extracted) return extracted;
+  }
+  return decodeEscapedDisplayText(raw);
+};
+
+const buildTextTree = (rootIds = [], options = {}) => {
+  const visit = (nodeId, depth = 1, visited = new Set()) => {
+    const id = String(nodeId || '').trim();
+    if (!id || visited.has(id)) return [];
+    const node = nodeById.value.get(id);
+    if (!node) return [];
+    if (typeof options.filter === 'function' && !options.filter(node)) return [];
+    const nextVisited = new Set(visited);
+    nextVisited.add(id);
+    const childIds = graphHierarchy.value.children.get(id) || [];
+    const buildChildren = (childDepth) => childIds.flatMap((childId) => visit(childId, childDepth, nextVisited));
+    const label = cleanTextTreeLabel(node.label);
+    if (options.flattenGenericWrappers && !label && childIds.length) {
+      return buildChildren(depth);
+    }
+    return [{
+      id,
+      depth,
+      label: label || node.label || '未命名节点',
+      children: buildChildren(depth + 1),
+    }];
+  };
+  return rootIds.flatMap((nodeId) => visit(nodeId, 1));
+};
+
+const buildContentFallbackTree = (content = '') => {
+  const raw = decodeEscapedDisplayText(String(content || '')).replace(/\r/g, '').trim();
+  if (!raw) return [];
+  const blocks = raw
+    .split(/\n\s*\n+/)
+    .map((block) => block.split('\n').map((line) => line.trim()).filter(Boolean))
+    .filter((lines) => lines.length);
+  return blocks.map((lines, index) => {
+    const headingLike = /^(第[一二三四五六七八九十百千万0-9]+[章节条款]|[一二三四五六七八九十0-9]+[、.．）)])/.test(lines[0]);
+    const children = lines.length > 1
+      ? lines.slice(headingLike ? 1 : 0).map((line, childIndex) => ({
+          id: `source_fallback_${index + 1}_${childIndex + 1}`,
+          depth: headingLike ? 2 : 2,
+          label: line,
+          children: [],
+        }))
+      : [];
+    return {
+      id: `source_fallback_${index + 1}`,
+      depth: 1,
+      label: headingLike ? lines[0] : shorten(lines.join(' / '), 160),
+      children,
+    };
+  });
+};
+
+const simplifiedTextTree = computed(() => {
+  const rootId = rootNodeId.value;
+  if (!rootId) return [];
+  const rootIds = (graphHierarchy.value.children.get(rootId) || [])
+    .filter((nodeId) => !sourceStructureNodeIds.value.has(nodeId));
+  return buildTextTree(rootIds, { flattenGenericWrappers: true });
+});
+
+const sourceStructuredTextTree = computed(() => {
+  if (sourceStructureRootId.value) {
+    const sourceTree = buildTextTree(graphHierarchy.value.children.get(sourceStructureRootId.value) || [], { flattenGenericWrappers: true });
+    if (sourceTree.length) return sourceTree;
+  }
+  return buildContentFallbackTree(props.content);
+});
+
+const hasSourceStructureTree = computed(() => sourceStructuredTextTree.value.length > 0);
+
+const activeTextTree = computed(() => (textMode.value === 'source' ? sourceStructuredTextTree.value : simplifiedTextTree.value));
+
+const textModeDescription = computed(() => {
+  if (textMode.value === 'source') return hasSourceStructureTree.value ? '按原文章节、段落和句群完整展开。' : '当前结果没有可用的原文结构节点。';
+  return '剥离原文结构节点后，保留语义关系树，适合快速通读。';
+});
+
+const activeTextEmptyCopy = computed(() => (
+  textMode.value === 'source'
+    ? '当前结果没有可用的原文结构节点，以下回退展示原文高亮全文。'
+    : hasSourceStructureTree.value
+      ? '当前结果没有可展开的语义节点树，可切换到“原文结构化版”继续查看。'
+      : '当前结果没有可展开的语义节点树，以下回退展示原文高亮全文。'
+));
+
+const openTextView = (mode = 'graph') => {
+  if (mode === 'source') {
+    textMode.value = hasSourceStructureTree.value ? 'source' : 'graph';
+  } else {
+    textMode.value = 'graph';
+  }
+  activeView.value = 'text';
+};
+
+const syncFullscreenState = () => {
+  const fullscreenElement = document.fullscreenElement;
+  isFullscreen.value = !!(fullscreenElement && panelRef.value && (fullscreenElement === panelRef.value || panelRef.value.contains(fullscreenElement)));
+  nextTick(() => {
+    chart2D?.resize();
+    resizeThreeRenderer();
+  });
+};
+
+const toggleFullscreen = async () => {
+  if (!panelRef.value || typeof panelRef.value.requestFullscreen !== 'function') return;
+  try {
+    if (document.fullscreenElement && isFullscreen.value && document.exitFullscreen) {
+      await document.exitFullscreen();
+    } else if (!document.fullscreenElement) {
+      await panelRef.value.requestFullscreen();
+    }
+  } catch (_) {
+    nextTick(() => {
+      chart2D?.resize();
+      resizeThreeRenderer();
+    });
+  }
+};
+
 const toggleClusterExpansion = (nodeId) => {
   if (!clusterMetaMap.value.has(nodeId)) return false;
   const next = new Set(userExpandedClusterIds.value);
@@ -737,6 +1265,41 @@ const toggleClusterExpansion = (nodeId) => {
   }
   userExpandedClusterIds.value = next;
   return true;
+};
+
+const switchToQueryPanel = () => {
+  sidePanelMode.value = 'query';
+};
+
+const triggerRewrite = (target) => {
+  const nextTarget = String(target || '').trim();
+  if (!nextTarget || !props.rewriteEnabled || props.rewriteLoading) return;
+  emit('rewrite', nextTarget);
+};
+
+const focusNodeById = (nodeId, options = {}) => {
+  const id = String(nodeId || '').trim();
+  if (!id || !nodeById.value.has(id)) return false;
+  const prevHighlightedId = highlightedNodeId.value;
+  const hadQueryFilters = !!searchQuery.value || filterDepth.value !== null;
+  activeNodeId.value = id;
+  highlightedNodeId.value = id;
+  searchQuery.value = '';
+  filterDepth.value = null;
+  sidePanelMode.value = 'source';
+  if (activeView.value !== '2d') return true;
+  const shouldRender = !!options.forceRender || hadQueryFilters || !findSeriesNodeRefsById(id).length;
+  if (shouldRender) {
+    nextTick(() => { render2DGraph(); });
+  } else {
+    applySimpleNodeEmphasis(id, prevHighlightedId);
+    applyHighlightOverlay();
+  }
+  return true;
+};
+
+const focusNodeFromSidebar = (nodeId) => {
+  focusNodeById(nodeId, { forceRender: true });
 };
 
 // ── 2D graph ───────────────────────────────────────────────────────────────
@@ -881,6 +1444,8 @@ const buildGraphNodeItem = (node, point, depthValue, dark, options = {}) => {
     };
   }
   const imp = clamp(Number(node.importance || 0.5), 0, 1);
+  const theme = graphTheme.value;
+  const fillColor = depthColor(depthValue);
   const baseDepthSize = Math.max(10, 26 - depthValue * 2.2 + imp * 8);
   const symbolSize = isRoot
     ? 52
@@ -894,7 +1459,7 @@ const buildGraphNodeItem = (node, point, depthValue, dark, options = {}) => {
   return {
     id: node.id,
     name: isRoot ? documentTitle.value : formatNodeLabel(node),
-    value: clusterCount ? `${node.type} 路 ${clusterCount} 涓瓙鑺傜偣` : node.type,
+    value: clusterCount ? `${node.type} · ${clusterCount} 个子节点` : node.type,
     clusterCount,
     x: point.x,
     y: point.y,
@@ -904,16 +1469,16 @@ const buildGraphNodeItem = (node, point, depthValue, dark, options = {}) => {
     isOverlayNode,
     symbolSize,
     itemStyle: {
-      color: depthColor(depthValue),
+      color: fillColor,
       opacity: 1,
-      borderWidth: isCollapsedCluster ? 2 : 0,
-      borderColor: isCollapsedCluster ? (dark ? 'rgba(255,255,255,0.72)' : 'rgba(17,17,17,0.28)') : 'transparent',
-      shadowBlur: isCollapsedCluster ? 14 : 0,
-      shadowColor: isCollapsedCluster ? (dark ? 'rgba(255,255,255,0.18)' : 'rgba(52,73,94,0.18)') : 'transparent',
+      borderWidth: isRoot ? 2.5 : isCollapsedCluster ? 2.2 : 1.1,
+      borderColor: isCollapsedCluster ? theme.collapsedBorder : isRoot ? theme.rootBorder : colorToRgba(parseColor(fillColor), dark ? 0.16 : 0.12),
+      shadowBlur: isCollapsedCluster ? 24 : isRoot ? 18 : 10,
+      shadowColor: isCollapsedCluster ? theme.glow : colorToRgba(parseColor(fillColor), dark ? 0.28 : 0.14),
     },
     label: {
       show: shouldShowNodeLabel(node),
-      color: dark ? '#f2f2f2' : '#333',
+      color: theme.label,
       fontSize: isRoot ? 13 : isOverlayNode ? 10 : 11,
       fontWeight: isRoot ? 700 : 400,
       formatter: () => shorten(isRoot ? documentTitle.value : formatNodeLabel(node), isRoot ? 38 : isOverlayNode ? 18 : 24),
@@ -921,19 +1486,21 @@ const buildGraphNodeItem = (node, point, depthValue, dark, options = {}) => {
   };
 };
 
-const buildEdgeItem = (link, dark, source = link.source, target = link.target, options = {}) => {
+const buildEdgeItem = (link, source = link.source, target = link.target, options = {}) => {
   const {
     ignoreForceLayout = false,
     widthScale = 1,
     opacity = 0.85,
+    tone = 'main',
   } = options;
+  const theme = graphTheme.value;
   return {
     source,
     target,
     value: link.relation,
     ignoreForceLayout,
     lineStyle: {
-      color: link.logic_type === 'negative' ? '#e74c3c' : dark ? '#9da5b3' : '#7f8c8d',
+      color: link.logic_type === 'negative' ? theme.edgeNegative : tone === 'overlay' ? theme.edgeOverlay : theme.edgePositive,
       type: link.logic_type === 'negative' ? 'dashed' : 'solid',
       width: (0.7 + clamp(Number(link.strength || 0.6), 0, 1) * 2.2) * widthScale,
       opacity,
@@ -941,7 +1508,7 @@ const buildEdgeItem = (link, dark, source = link.source, target = link.target, o
     label: {
       show: shouldShowEdgeLabel(link),
       formatter: () => shorten(link.relation, 10),
-      color: dark ? '#d6d6d6' : '#666',
+      color: theme.labelMuted,
       fontSize: 10,
     },
   };
@@ -1037,35 +1604,20 @@ const startClusterFollowerSync = () => {
   tick();
 };
 
-const focusClusterInView = (clusterId) => {
-  if (!chart2D || !graph2DRef.value || !clusterId) return;
+const getCurrentGraphRoamState = () => {
+  const fallback = {
+    center: [...GRAPH_DEFAULT_CENTER],
+    zoom: clamp(Number(graphZoom.value || 1), 0.2, 2.8),
+  };
+  if (!chart2D) return fallback;
   const option = chart2D.getOption?.();
   const series = (Array.isArray(option?.series) ? option.series : []).find((item) => item?.id === MAIN_GRAPH_SERIES_ID);
-  const data = Array.isArray(series?.data) ? series.data : [];
-  const target = data.find((item) => String(item?.id || '') === String(clusterId));
-  const mainSeriesIndex = getSeriesIndex(MAIN_GRAPH_SERIES_ID);
-  if (!target || mainSeriesIndex < 0) return;
-  let pixel = null;
-  try {
-    pixel = chart2D.convertToPixel({ seriesIndex: mainSeriesIndex }, [Number(target.x || 0), Number(target.y || 0)]);
-  } catch {
-    pixel = null;
-  }
-  if (!Array.isArray(pixel) || pixel.length < 2) return;
-  const rect = graph2DRef.value.getBoundingClientRect();
-  const desiredX = rect.width * 0.72;
-  const desiredY = rect.height * 0.5;
-  const dx = desiredX - pixel[0];
-  const dy = desiredY - pixel[1];
-  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-    chart2D.dispatchAction({ type: 'graphRoam', seriesIndex: mainSeriesIndex, dx, dy });
-  }
-  const zoomFactor = 0.82;
-  const nextZoom = clamp(graphZoom.value * zoomFactor, 0.2, 2.8);
-  if (nextZoom < graphZoom.value - 0.02) {
-    chart2D.dispatchAction({ type: 'graphRoam', seriesIndex: mainSeriesIndex, zoom: zoomFactor, originX: desiredX, originY: desiredY });
-    graphZoom.value = nextZoom;
-  }
+  if (!series) return fallback;
+  const center = Array.isArray(series.center) && series.center.length >= 2
+    ? [series.center[0], series.center[1]]
+    : fallback.center;
+  const zoom = clamp(Number(series.zoom || fallback.zoom), 0.2, 2.8);
+  return { center, zoom };
 };
 
 const findSeriesNodeRefsById = (nodeId) => {
@@ -1145,18 +1697,19 @@ const decorateDisplayedNode = (item, livePositions, dark) => {
   const matchesSearch = query && src?.label?.toLowerCase().includes(query);
   const matchesDepth = filterDepth.value !== null && depthValue === filterDepth.value;
   const descendants = highlightedNodeId.value ? getDescendants(highlightedNodeId.value) : null;
+  const theme = graphTheme.value;
 
   let color = baseCol;
   let opacity = 1;
-  let borderWidth = isCollapsedCluster ? 3 : 0;
-  let borderColor = isCollapsedCluster ? (dark ? 'rgba(255,255,255,0.72)' : 'rgba(17,17,17,0.28)') : 'transparent';
+  let borderWidth = isCollapsedCluster ? 3 : 1.1;
+  let borderColor = isCollapsedCluster ? theme.collapsedBorder : colorToRgba(parseColor(baseCol), dark ? 0.16 : 0.12);
   let labelShow = shouldShowNodeLabel(src || { id, importance: 0.5 });
 
   if (highlightedNodeId.value) {
     if (id === highlightedNodeId.value) {
       color = baseCol;
       borderWidth = 4;
-      borderColor = '#fff';
+      borderColor = theme.highlightBorder;
       opacity = 1;
     } else if (descendants?.has(id)) {
       opacity = 0.85;
@@ -1166,7 +1719,7 @@ const decorateDisplayedNode = (item, livePositions, dark) => {
     }
   } else if (matchesSearch || matchesDepth) {
     borderWidth = 3;
-    borderColor = '#fff';
+    borderColor = theme.highlightBorder;
     opacity = 1;
   } else if (query || filterDepth.value !== null) {
     opacity = 0.2;
@@ -1182,7 +1735,7 @@ const decorateDisplayedNode = (item, livePositions, dark) => {
     label: {
       ...item.label,
       show: labelShow,
-      color: dark ? '#f2f2f2' : '#333',
+      color: theme.label,
       fontSize: isRoot ? 14 : item?.isOverlayNode ? 10 : 12,
       fontWeight: isRoot ? 700 : 400,
     },
@@ -1217,8 +1770,10 @@ const applyHighlightOverlay = () => {
 };
 
 const onSearch = () => {
+  clearSimpleNodeEmphasis();
   highlightedNodeId.value = null;
   filterDepth.value = null;
+  sidePanelMode.value = 'query';
   nextTick(() => { render2DGraph(); });
 };
 
@@ -1228,14 +1783,17 @@ const clearHighlight = () => {
   highlightedNodeId.value = null;
   searchQuery.value = '';
   filterDepth.value = null;
+  sidePanelMode.value = 'query';
   if (hadSearchOrDepth) nextTick(() => { render2DGraph(); });
 };
 
 const render2DGraph = () => {
   if (!graph2DRef.value) return;
   stopClusterFollowerSync();
+  const preservedRoam = getCurrentGraphRoamState();
   if (!chart2D) chart2D = echarts.init(graph2DRef.value);
   else chart2D.clear();
+  graphZoom.value = preservedRoam.zoom;
   const dark = isDark();
   const rootId = rootNodeId.value;
   const hierarchy = buildParentDepthMap(graphNodes.value, graphLinks.value, rootId);
@@ -1325,7 +1883,7 @@ const render2DGraph = () => {
       const key = `${sourceId}__${targetId}__${link.relation || ''}__${link.logic_type || ''}`;
       if (edgeKeys.has(key)) return;
       edgeKeys.add(key);
-      overlayEdgeData.push(buildEdgeItem(link, dark, sourceId, targetId, { widthScale: 0.88, opacity: 0.78 }));
+      overlayEdgeData.push(buildEdgeItem(link, sourceId, targetId, { widthScale: 0.88, opacity: 0.78, tone: 'overlay' }));
       edgeRefs.push({ source: sourceId, target: targetId });
     };
 
@@ -1376,6 +1934,8 @@ const render2DGraph = () => {
     const imp = clamp(Number(node.importance || 0.5), 0, 1);
     const pos = posMap.get(node.id) || { x: 0, y: 0 };
     const d = Number(depth.get(node.id) ?? 0);
+    const theme = graphTheme.value;
+    const fillColor = depthColor(d);
     const baseDepthSize = Math.max(10, 26 - d * 2.2 + imp * 8);
     const symbolSize = isRoot
       ? 52
@@ -1398,16 +1958,16 @@ const render2DGraph = () => {
       symbolSize,
       draggable: node.id !== rootId,
       itemStyle: {
-        color: depthColor(d),
+        color: fillColor,
         opacity: 1,
-        borderWidth: isCollapsedCluster ? 2 : 0,
-        borderColor: isCollapsedCluster ? (dark ? 'rgba(255,255,255,0.72)' : 'rgba(17,17,17,0.28)') : 'transparent',
-        shadowBlur: isCollapsedCluster ? 14 : 0,
-        shadowColor: isCollapsedCluster ? (dark ? 'rgba(255,255,255,0.18)' : 'rgba(52,73,94,0.18)') : 'transparent',
+        borderWidth: isRoot ? 2.6 : isCollapsedCluster ? 2.2 : 1.1,
+        borderColor: isCollapsedCluster ? theme.collapsedBorder : isRoot ? theme.rootBorder : colorToRgba(parseColor(fillColor), dark ? 0.16 : 0.12),
+        shadowBlur: isCollapsedCluster ? 24 : isRoot ? 18 : 10,
+        shadowColor: isCollapsedCluster ? theme.glow : colorToRgba(parseColor(fillColor), dark ? 0.28 : 0.14),
       },
       label: {
         show: shouldShowNodeLabel(node),
-        color: dark ? '#f2f2f2' : '#333',
+        color: theme.label,
         fontSize: isRoot ? 13 : 11,
         fontWeight: isRoot ? 700 : 400,
         formatter: () => shorten(isRoot ? documentTitle.value : formatNodeLabel(node), isRoot ? 38 : 24),
@@ -1421,12 +1981,12 @@ const render2DGraph = () => {
     value: link.relation,
     ignoreForceLayout: false,
     lineStyle: {
-      color: link.logic_type === 'negative' ? '#e74c3c' : dark ? '#9da5b3' : '#7f8c8d',
+      color: link.logic_type === 'negative' ? graphTheme.value.edgeNegative : graphTheme.value.edgePositive,
       type: link.logic_type === 'negative' ? 'dashed' : 'solid',
       width: 0.7 + clamp(Number(link.strength || 0.6), 0, 1) * 2.2,
       opacity: 0.85,
     },
-    label: { show: shouldShowEdgeLabel(link), formatter: () => shorten(link.relation, 10), color: dark ? '#d6d6d6' : '#666', fontSize: 10 },
+    label: { show: shouldShowEdgeLabel(link), formatter: () => shorten(link.relation, 10), color: graphTheme.value.labelMuted, fontSize: 10 },
   }));
   const series = [{
     id: MAIN_GRAPH_SERIES_ID,
@@ -1434,8 +1994,8 @@ const render2DGraph = () => {
     layout: 'force',
     layoutAnimation: true,
     roam: true,
-    center: [...GRAPH_DEFAULT_CENTER],
-    zoom: clamp(graphZoom.value || 1, 0.2, 2.8),
+    center: [...preservedRoam.center],
+    zoom: preservedRoam.zoom,
     data: nodeData,
     links: edgeData,
     edgeSymbol: ['none', 'arrow'],
@@ -1454,8 +2014,8 @@ const render2DGraph = () => {
       type: 'graph',
       layout: 'none',
       roam: true,
-      center: [...GRAPH_DEFAULT_CENTER],
-      zoom: clamp(graphZoom.value || 1, 0.2, 2.8),
+      center: [...preservedRoam.center],
+      zoom: preservedRoam.zoom,
       data: overlayNodeData,
       links: overlayEdgeData,
       edgeSymbol: ['none', 'arrow'],
@@ -1471,9 +2031,9 @@ const render2DGraph = () => {
     animationDurationUpdate: 350,
     tooltip: {
       trigger: 'item',
-      backgroundColor: dark ? 'rgba(20,20,20,0.95)' : 'rgba(255,255,255,0.95)',
-      borderColor: dark ? '#444' : '#ddd',
-      textStyle: { color: dark ? '#f2f2f2' : '#333' },
+      backgroundColor: graphTheme.value.tooltipBackground,
+      borderColor: graphTheme.value.tooltipBorder,
+      textStyle: { color: graphTheme.value.tooltipText },
       formatter: (params) => {
         if (params.dataType === 'edge') return `${params.data.value || '关系'}`;
         const clusterLine = params.data?.clusterCount ? `<br/>默认收拢 ${params.data.clusterCount} 个子节点` : '';
@@ -1488,21 +2048,11 @@ const render2DGraph = () => {
     if (params.dataType === 'node' && params.data?.id && !params.data?.isClusterAnchor) {
       const id = params.data.id;
       if (toggleClusterExpansion(id)) {
-        highlightedNodeId.value = null;
-        activeNodeId.value = id;
-        searchQuery.value = '';
-        filterDepth.value = null;
-        pendingClusterFocusId.value = id;
-        nextTick(() => { render2DGraph(); });
+        focusNodeById(id, { forceRender: true });
         return;
       }
-      if (highlightedNodeId.value === id) { clearHighlight(); return; }
-      const prevHighlightedId = highlightedNodeId.value;
-      highlightedNodeId.value = id;
-      activeNodeId.value = id;
-      searchQuery.value = '';
-      filterDepth.value = null;
-      applySimpleNodeEmphasis(id, prevHighlightedId);
+      if (highlightedNodeId.value === id && sidePanelMode.value === 'source') { clearHighlight(); return; }
+      focusNodeById(id);
     } else if (params.dataType !== 'edge') {
       clearHighlight();
     }
@@ -1529,11 +2079,6 @@ const render2DGraph = () => {
   });
 
   applyHighlightOverlay();
-  if (pendingClusterFocusId.value) {
-    const focusId = pendingClusterFocusId.value;
-    pendingClusterFocusId.value = null;
-    nextTick(() => { focusClusterInView(focusId); });
-  }
   startClusterFollowerSync();
 };
 
@@ -1619,9 +2164,10 @@ const rebuildThreeGraph = () => {
   for (const link of links) {
     const source = threeNodeMeshes.get(link.source); const target = threeNodeMeshes.get(link.target);
     if (!source || !target) continue;
+    const lineColor = link.logic_type === 'negative' ? graphTheme.value.edgeNegative : graphTheme.value.edgePositive;
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([source.position.clone(), target.position.clone()]),
-      new THREE.LineBasicMaterial({ color: link.logic_type === 'negative' ? 0xe74c3c : (dark ? 0x95a0ad : 0x7f8c8d), transparent: true, opacity: 0.75 })
+      new THREE.LineBasicMaterial({ color: new THREE.Color(lineColor), transparent: true, opacity: 0.75 })
     );
     threeScene.add(line); threeEdgeRefs.push({ line, sourceId: link.source, targetId: link.target });
   }
@@ -1634,7 +2180,7 @@ const refreshThreeStyles = () => {
     const node = safeNodes.value.find((n) => n.id === id); if (!node || !mesh.material) continue;
     mesh.material.color.set(typeColor(node.type, dark));
     const isActive = id === activeNodeId.value;
-    mesh.material.emissive = new THREE.Color(isActive ? '#e74c3c' : '#000000');
+    mesh.material.emissive = new THREE.Color(isActive ? graphTheme.value.edgeNegative : '#000000');
     mesh.material.emissiveIntensity = isActive ? 0.8 : 0.0;
   }
 };
@@ -1691,22 +2237,89 @@ const startThreeAnimation = () => {
 const stopThreeAnimation = () => { if (!animationFrame) return; cancelAnimationFrame(animationFrame); animationFrame = null; };
 
 // ── tree view ──────────────────────────────────────────────────────────────
-const treeRoots = computed(() => {
-  const rootId = rootNodeId.value;
-  return (graphHierarchy.value.children.get(rootId) || []).map((id) => nodeById.value.get(id)).filter(Boolean);
+const GraphTextNode = defineComponent({
+  name: 'GraphTextNode',
+  props: {
+    node: { type: Object, required: true },
+    activeNodeId: { type: String, default: '' },
+    depthColor: { type: Function, required: true },
+  },
+  setup(componentProps) {
+    return () => {
+      const depth = Number(componentProps.node?.depth || 1);
+      const tone = componentProps.depthColor(depth);
+      const classes = ['tree-node', `depth-${Math.min(depth, 12)}`, { active: componentProps.activeNodeId === componentProps.node?.id }];
+      const children = Array.isArray(componentProps.node?.children) ? componentProps.node.children : [];
+      const active = componentProps.activeNodeId === componentProps.node?.id;
+      const rowStyle = {
+        display: 'block',
+        background: active ? 'color-mix(in srgb, var(--color-primary) 4%, var(--card-bg))' : 'var(--card-bg)',
+        border: `1px solid ${active ? 'color-mix(in srgb, var(--color-primary) 34%, var(--border-color))' : 'var(--border-color)'}`,
+        borderLeft: `3px solid ${tone}`,
+        borderRadius: '6px',
+        padding: '8px 12px',
+        color: 'var(--text-primary)',
+        boxSizing: 'border-box',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        lineHeight: '1.7',
+      };
+      const summaryStyle = {
+        ...rowStyle,
+        cursor: 'pointer',
+        fontWeight: 600,
+        userSelect: 'none',
+        listStyle: 'none',
+        margin: 0,
+      };
+      const childrenStyle = {
+        marginTop: '8px',
+        paddingLeft: '12px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      };
+      const arrowStyle = {
+        display: 'inline-block',
+        width: '12px',
+        marginRight: '4px',
+        fontSize: '10px',
+        opacity: 0.6,
+      };
+      if (children.length) {
+        return h('details', { class: classes, open: true }, [
+          h('summary', { class: 'tree-summary', style: summaryStyle }, [
+            h('span', { style: arrowStyle }, '▼'),
+            h('span', componentProps.node.label || '未命名节点'),
+          ]),
+          h('div', { class: 'tree-children', style: childrenStyle }, children.map((child) => h(GraphTextNode, {
+            key: child.id,
+            node: child,
+            activeNodeId: componentProps.activeNodeId,
+            depthColor: componentProps.depthColor,
+          }))),
+        ]);
+      }
+      return h('div', { class: [...classes, 'is-leaf'], style: rowStyle }, componentProps.node.label || '未命名节点');
+    };
+  },
 });
-
-const treeChildren = (parentId) => {
-  return (graphHierarchy.value.children.get(parentId) || []).map((id) => nodeById.value.get(id)).filter(Boolean);
-};
 
 // ── watchers & lifecycle ───────────────────────────────────────────────────
 watch(
   () => [props.nodes, props.links, props.content, props.visualConfig, props.dynamicPayload],
   () => {
-    if (!safeNodes.value.length) return;
+    if (!safeNodes.value.length) {
+      sidePanelMode.value = 'query';
+      highlightedNodeId.value = null;
+      activeNodeId.value = null;
+      return;
+    }
     userExpandedClusterIds.value = new Set([...userExpandedClusterIds.value].filter((id) => clusterMetaMap.value.has(id)));
     graphZoom.value = clamp(Number(props.visualConfig?.initial_zoom ?? 1), 0.2, 2.8);
+    if (textMode.value === 'source' && !hasSourceStructureTree.value) textMode.value = 'graph';
+    sidePanelMode.value = 'query';
+    highlightedNodeId.value = null;
     if (!activeNodeId.value || !nodeById.value.has(activeNodeId.value)) {
       activeNodeId.value = props.visualConfig?.focus_node || rootNodeId.value || safeNodes.value[0].id;
     }
@@ -1726,9 +2339,15 @@ watch(showJson, () => nextTick(() => { chart2D?.resize(); resizeThreeRenderer();
 
 onMounted(() => {
   if (safeNodes.value.length) activeNodeId.value = props.visualConfig?.focus_node || rootNodeId.value || safeNodes.value[0].id;
+  sidePanelMode.value = 'query';
   render2DGraph(); rebuildThreeGraph();
-  themeObserver = new MutationObserver(() => { render2DGraph(); refreshThreeStyles(); });
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  document.addEventListener('fullscreenchange', syncFullscreenState);
+  themeObserver = new MutationObserver(() => {
+    graphThemeVersion.value += 1;
+    render2DGraph();
+    refreshThreeStyles();
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-color-scheme'] });
   if (graph2DRef.value) {
     resizeObserver = new ResizeObserver(() => { chart2D?.resize(); resizeThreeRenderer(); });
     resizeObserver.observe(graph2DRef.value);
@@ -1739,6 +2358,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopThreeAnimation();
   stopClusterFollowerSync();
+  document.removeEventListener('fullscreenchange', syncFullscreenState);
   threeRenderer?.domElement?.removeEventListener('pointerdown', onThreePointerDown);
   disposeThreeGraph(); threeControls?.dispose?.(); threeRenderer?.dispose?.();
   threeScene = threeCamera = threeControls = threeRenderer = null;
@@ -1747,95 +2367,540 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.kg-panel { display: flex; flex-direction: column; gap: 12px; min-height: 920px; }
-.kg-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.kg-tabs { display: flex; gap: 8px; }
-.kg-tab { background: #f3f3f3; border: 1px solid #e0e0e0; color: #444; padding: 6px 12px; font-size: 12px; cursor: pointer; }
-.kg-tab.active { background: #111; color: #fff; border-color: #111; }
-.kg-tab-disabled { background: #f3f3f3; border: 1px solid #e0e0e0; color: #bbb; padding: 6px 12px; font-size: 12px; cursor: not-allowed; }
-.kg-actions { display: flex; align-items: center; gap: 10px; }
-.kg-meta { display: flex; gap: 10px; color: #888; font-size: 12px; }
-.kg-json-toggle { background: #fff; border: 1px solid #ddd; color: #333; padding: 6px 10px; font-size: 12px; cursor: pointer; }
-
-.kg-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-height: 840px; }
-.kg-content.json-open { grid-template-columns: minmax(0, 1fr) 360px; }
-.kg-main { border: 1px solid #e6e6e6; background: #fff; min-height: 840px; position: relative; }
-
-.graph-2d-wrapper { position: relative; width: 100%; height: 840px; display: flex; }
-.graph-2d { flex: 1; height: 840px; }
-
-/* ops panel */
-.kg-ops-panel {
-  width: 200px; flex-shrink: 0; border-left: 1px solid #ececec;
-  padding: 12px 10px; display: flex; flex-direction: column; gap: 14px;
-  background: #fafafa; box-sizing: border-box;
+.kg-panel {
+  --kg-panel-border: color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
+  --kg-panel-shadow: 0 22px 48px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --kg-card-surface:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 7%, transparent), transparent 42%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 3%, var(--card-bg)), var(--card-bg));
+  --kg-graph-surface:
+    radial-gradient(circle at 12% 16%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--color-secondary) 12%, transparent), transparent 24%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 3%, var(--card-bg)), color-mix(in srgb, var(--color-secondary) 3%, var(--card-bg)));
+  --kg-soft-border: color-mix(in srgb, var(--color-primary) 9%, var(--border-color));
+  --kg-button-bg: color-mix(in srgb, var(--color-primary) 6%, var(--card-bg));
+  --kg-button-bg-hover: color-mix(in srgb, var(--color-primary) 12%, var(--card-bg));
+  --kg-button-border: color-mix(in srgb, var(--color-primary) 18%, var(--border-color));
+  --kg-button-text: var(--text-primary);
+  --kg-button-shadow: 0 10px 18px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 920px;
 }
-.kg-search {
-  width: 100%; padding: 6px 12px; border-radius: 999px;
-  border: 1px solid #ddd; font-size: 12px; outline: none; background: #fff;
+
+.kg-panel.is-fullscreen {
+  min-height: 100vh;
+  padding: 14px;
+  background: var(--content-bg);
   box-sizing: border-box;
 }
-.kg-search:focus { border-color: #3498db; }
-.kg-depth-label { font-size: 11px; color: #888; margin-bottom: 6px; }
-.kg-depth-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
-.kg-depth-btn {
-  padding: 3px 9px; border-radius: 999px; border: 1.5px solid; font-size: 12px;
-  cursor: pointer; background: transparent; transition: all 0.15s;
-}
-.kg-cluster-tip {
-  border: 1px solid #ececec; border-radius: 10px; padding: 10px 10px 8px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,247,247,0.96));
-}
-.kg-cluster-copy { font-size: 12px; line-height: 1.6; color: #666; }
 
-/* text / tree view */
-.graph-text { width: 100%; height: 840px; overflow-y: auto; padding: 14px; box-sizing: border-box; }
-.tree-list { display: flex; flex-direction: column; gap: 8px; }
+.kg-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kg-tabs,
+.kg-actions,
+.kg-text-view-switch,
+.kg-node-chip-list,
+.kg-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kg-tab,
+.kg-tab-disabled,
+.kg-toolbar-btn,
+.kg-text-mode-btn,
+.kg-back-btn,
+.kg-rewrite-btn,
+.kg-node-chip {
+  border: 1px solid var(--kg-button-border);
+  background: var(--kg-button-bg);
+  color: var(--kg-button-text);
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  box-shadow: var(--kg-button-shadow);
+}
+
+.kg-tab,
+.kg-tab-disabled,
+.kg-toolbar-btn,
+.kg-text-mode-btn,
+.kg-back-btn,
+.kg-rewrite-btn {
+  border-radius: 999px;
+}
+
+.kg-node-chip {
+  border-radius: 12px;
+  text-align: left;
+  box-shadow: none;
+}
+
+.kg-tab:hover,
+.kg-toolbar-btn:hover,
+.kg-text-mode-btn:hover:not(:disabled),
+.kg-back-btn:hover,
+.kg-rewrite-btn:hover:not(:disabled),
+.kg-node-chip:hover {
+  transform: translateY(-1px);
+  background: var(--kg-button-bg-hover);
+  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--border-color));
+}
+
+.kg-tab.active,
+.kg-text-mode-btn.active {
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 58%, var(--color-secondary) 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.kg-tab-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.kg-text-mode-btn:disabled,
+.kg-toolbar-btn:disabled,
+.kg-rewrite-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kg-meta {
+  display: flex;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.kg-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-height: 840px;
+}
+
+.kg-content.json-open { grid-template-columns: minmax(0, 1fr) 360px; }
+
+.kg-main,
+.kg-json {
+  border: 1px solid var(--kg-panel-border);
+  background: var(--kg-card-surface);
+  box-shadow: var(--kg-panel-shadow);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.kg-main {
+  min-height: 840px;
+  position: relative;
+}
+
+.graph-2d-wrapper {
+  position: relative;
+  width: 100%;
+  height: 840px;
+  display: flex;
+  background: var(--kg-graph-surface);
+}
+
+.graph-2d-wrapper::before,
+.graph-2d-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.graph-2d-wrapper::before {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border-color) 60%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.14;
+}
+
+.graph-2d-wrapper::after {
+  background:
+    radial-gradient(circle at center, transparent 55%, color-mix(in srgb, var(--color-primary) 10%, transparent) 100%);
+  opacity: 0.5;
+}
+
+.graph-2d {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  height: 840px;
+}
+
+.kg-ops-panel {
+  position: relative;
+  z-index: 2;
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--kg-panel-border);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-bg) 92%, transparent), color-mix(in srgb, var(--color-primary) 6%, var(--card-bg)));
+  backdrop-filter: blur(16px);
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.kg-side-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.kg-search {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--kg-button-border);
+  font-size: 12px;
+  outline: none;
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.kg-search:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.kg-depth-filter,
+.kg-panel-section,
+.kg-source-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kg-source-panel {
+  gap: 14px;
+  min-height: 0;
+}
+
+.kg-section-heading,
+.kg-source-header,
+.kg-text-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kg-text-toolbar {
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.kg-text-caption,
+.kg-inline-status,
+.kg-inline-tip,
+.kg-empty-hint,
+.kg-depth-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.kg-text-caption,
+.kg-inline-tip,
+.kg-empty-hint {
+  line-height: 1.6;
+}
+
+.kg-cluster-tip,
+.kg-source-notice {
+  border: 1px solid var(--kg-soft-border);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+}
+
+.kg-cluster-copy {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.kg-rewrite-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.kg-source-title,
+.tree-summary-title {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.kg-source-title {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.kg-source-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.kg-source-pill,
+.tree-summary-badge,
+.tree-summary-meta,
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.kg-source-pill,
+.tree-summary-badge,
+.tree-summary-meta {
+  padding: 3px 8px;
+  border: 1px solid var(--kg-soft-border);
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+}
+
+.kg-source-pill,
+.tree-summary-meta {
+  color: var(--text-secondary);
+}
+
+.tree-summary-badge {
+  color: color-mix(in srgb, var(--color-primary-dark) 76%, var(--text-primary));
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--card-bg));
+}
+
+.kg-source-link,
+.kg-text-link {
+  font-size: 12px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.kg-source-link:hover,
+.kg-text-link:hover { text-decoration: underline; }
+
+.kg-source-preview {
+  min-height: 220px;
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  color: var(--text-primary);
+  font-size: 12px;
+  border: 1px solid var(--kg-soft-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.kg-source-preview-section {
+  flex: 1;
+  min-height: 0;
+}
+
+.graph-text {
+  width: 100%;
+  height: 840px;
+  overflow-y: auto;
+  padding: 14px;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .tree-node {
-  background: #fff; border: 1px solid #e8e8e8; border-left: 3px solid;
-  border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #333;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
 }
-.tree-summary { cursor: pointer; font-weight: 600; user-select: none; list-style: none; }
+
+.tree-node.is-leaf {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 500;
+}
+
+.tree-summary {
+  display: block;
+}
+
 .tree-summary::-webkit-details-marker { display: none; }
-.tree-summary::before { content: '▶ '; font-size: 10px; opacity: 0.6; }
-details[open] > .tree-summary::before { content: '▼ '; }
-.tree-children { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; padding-left: 12px; }
-.tree-empty { white-space: pre-wrap; line-height: 1.7; color: #333; }
 
-.kg-json { border: 1px solid #e6e6e6; background: #fafafa; min-height: 840px; display: flex; flex-direction: column; }
-.kg-json-title { padding: 8px 12px; font-size: 12px; color: #666; border-bottom: 1px solid #ececec; flex-shrink: 0; }
-.kg-json pre { margin: 0; padding: 10px 12px; overflow: auto; font-size: 12px; color: #555; flex: 1; }
+.tree-node.active > .tree-summary,
+.tree-node.is-leaf.active {
+  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--border-color));
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--card-bg));
+}
 
-.kg-legend { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #666; }
+.tree-children {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 12px;
+}
+
+.tree-empty-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tree-empty-copy {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tree-empty {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, var(--color-primary) 8%);
+  border-radius: 8px;
+  background: var(--card-bg);
+  padding: 14px;
+}
+
+.kg-json {
+  min-height: 840px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kg-json-title {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--kg-soft-border);
+  flex-shrink: 0;
+}
+
+.kg-json pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  font-size: 12px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.legend-item {
+  padding: 4px 10px;
+  color: var(--text-secondary);
+  border: 1px solid var(--kg-soft-border);
+  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+}
+
 .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
 
-:deep(.kg-entity) { background: #fff2cd; border-radius: 4px; padding: 0 2px; }
-:deep(.kg-entity.active) { background: #ffd8d2; outline: 1px solid #e74c3c; }
+:deep(.kg-entity) {
+  background: color-mix(in srgb, var(--color-secondary) 26%, transparent);
+  border-radius: 4px;
+  padding: 0 2px;
+}
 
-:global([data-theme="dark"]) .kg-main { background: #1f1f1f; border-color: #333; }
-:global([data-theme="dark"]) .kg-tab { background: #1a1a1a; border-color: #333; color: #ddd; }
-:global([data-theme="dark"]) .kg-tab.active { background: #c0392b; border-color: #c0392b; }
-:global([data-theme="dark"]) .kg-tab-disabled { background: #1a1a1a; border-color: #333; color: #555; }
-:global([data-theme="dark"]) .kg-json-toggle { background: #1a1a1a; border-color: #333; color: #ddd; }
-:global([data-theme="dark"]) .kg-meta { color: #bbb; }
-:global([data-theme="dark"]) .kg-ops-panel { background: #1a1a1a; border-color: #333; }
-:global([data-theme="dark"]) .kg-search { background: #111; border-color: #444; color: #eee; }
-:global([data-theme="dark"]) .kg-cluster-tip { background: linear-gradient(180deg, rgba(37,37,37,0.94), rgba(28,28,28,0.98)); border-color: #333; }
-:global([data-theme="dark"]) .kg-cluster-copy { color: #b8b8b8; }
-:global([data-theme="dark"]) .tree-node { background: #1e1e1e; border-color: #333; color: #eee; }
-:global([data-theme="dark"]) .tree-empty { color: #ececec; }
-:global([data-theme="dark"]) .graph-text { color: #ececec; }
-:global([data-theme="dark"]) .kg-json { background: #1b1b1b; border-color: #333; }
-:global([data-theme="dark"]) .kg-json-title { color: #ccc; border-color: #333; }
-:global([data-theme="dark"]) .kg-json pre { color: #d8d8d8; }
-:global([data-theme="dark"]) .legend-item { color: #cfcfcf; }
-:global([data-theme="dark"]) .kg-entity { background: #3f3320; }
-:global([data-theme="dark"]) .kg-entity.active { background: #5a2b31; outline-color: #e74c3c; }
+:deep(.kg-entity.active) {
+  background: color-mix(in srgb, var(--color-primary) 24%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--color-primary) 62%, transparent);
+}
+
+:deep(.kg-source-highlight) {
+  background: color-mix(in srgb, var(--color-secondary) 24%, transparent);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+:global([data-theme="dark"]) .kg-panel {
+  --kg-panel-shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
+  --kg-button-shadow: 0 12px 22px rgba(0, 0, 0, 0.26);
+}
+
+:global([data-theme="dark"]) .graph-2d-wrapper::before { opacity: 0.08; }
+
+:global([data-theme="dark"]) .graph-2d-wrapper::after { opacity: 0.32; }
+
+:global([data-theme="dark"]) .kg-entity {
+  background: color-mix(in srgb, var(--color-secondary) 18%, rgba(255, 255, 255, 0.04));
+}
+
+:global([data-theme="dark"]) .kg-entity.active {
+  background: color-mix(in srgb, var(--color-primary) 20%, rgba(255, 255, 255, 0.05));
+}
+
+:global([data-theme="dark"]) .kg-source-highlight {
+  background: color-mix(in srgb, var(--color-secondary) 18%, rgba(255, 255, 255, 0.04));
+}
+
+.kg-panel.is-fullscreen .kg-content { min-height: calc(100vh - 104px); }
+
+.kg-panel.is-fullscreen .kg-main,
+.kg-panel.is-fullscreen .kg-json,
+.kg-panel.is-fullscreen .graph-2d-wrapper,
+.kg-panel.is-fullscreen .graph-2d,
+.kg-panel.is-fullscreen .graph-text {
+  min-height: calc(100vh - 150px);
+  height: calc(100vh - 150px);
+}
 
 @media (max-width: 1280px) {
   .kg-content.json-open { grid-template-columns: minmax(0, 1fr); }
   .kg-json { min-height: 260px; }
-  .kg-ops-panel { width: 160px; }
+  .kg-ops-panel { width: 236px; }
+}
+
+@media (max-width: 980px) {
+  .graph-2d-wrapper {
+    flex-direction: column;
+    height: auto;
+    min-height: 840px;
+  }
+
+  .graph-2d {
+    min-height: 540px;
+    height: 540px;
+  }
+
+  .kg-ops-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--kg-panel-border);
+  }
 }
 </style>

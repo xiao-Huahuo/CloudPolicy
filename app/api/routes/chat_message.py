@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Upload
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlmodel import Session
 
-from app.ai.document_parser import parse_document, build_graph_from_dynamic_payload
+from app.ai.document_parser import parse_document, build_graph_from_dynamic_payload, build_visual_config_for_graph
 from app.api.deps import get_current_user, get_current_user_from_token_value
 from app.core.database import get_session
 from app.models.user import User
@@ -96,15 +96,16 @@ def create_chat_message(
     if (not parsed_payload.get("nodes")) and isinstance(parsed_payload.get("dynamic_payload"), dict) and parsed_payload["dynamic_payload"]:
         nodes, links = build_graph_from_dynamic_payload(
             parsed_payload["dynamic_payload"],
-            source_text=parsed_payload.get("content") or parsed_payload.get("original_text") or "",
+            source_text=parsed_payload.get("original_text") or parsed_payload.get("content") or "",
         )
         parsed_payload["nodes"] = nodes
         parsed_payload["links"] = links
-        if not isinstance(parsed_payload.get("visual_config"), dict):
-            parsed_payload["visual_config"] = {}
-        parsed_payload["visual_config"].setdefault("focus_node", nodes[0]["id"] if nodes else None)
-        parsed_payload["visual_config"].setdefault("initial_zoom", 1.0)
-        parsed_payload["visual_config"].setdefault("text_mapping", {})
+    parsed_payload["visual_config"] = build_visual_config_for_graph(
+        parsed_payload.get("visual_config"),
+        parsed_payload.get("nodes") or [],
+        links=parsed_payload.get("links") or [],
+        source_text=parsed_payload.get("original_text") or parsed_payload.get("content") or "",
+    )
     parsed_payload["file_url"] = chat_in.file_url or parsed_payload.get("file_url")
     analysis_payload = chat_message_service.build_chat_analysis_payload(
         parse_mode=parse_mode,

@@ -372,6 +372,205 @@ def _basic_visual_config(raw: Any, nodes: list[dict]) -> dict:
     }
 
 
+def _normalize_span_value(value: Any, text_length: int) -> list[int] | None:
+    if not isinstance(value, (list, tuple)) or len(value) < 2:
+        return None
+    try:
+        start = int(value[0])
+        end = int(value[1])
+    except (TypeError, ValueError):
+        return None
+    if start < 0 or end <= start or end > text_length:
+        return None
+    return [start, end]
+
+
+def _node_mapping_candidates(node: dict[str, Any]) -> list[str]:
+    props = node.get("properties") if isinstance(node.get("properties"), dict) else {}
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def push(value: Any) -> None:
+        text = _normalize_text(str(value or ""))
+        if not text:
+            return
+        if len(text) < 4 and not re.search(r"[\u4e00-\u9fa5]{2,}", text):
+            return
+        if text in seen:
+            return
+        seen.add(text)
+        candidates.append(text)
+
+    push(node.get("label"))
+    for key in (
+        "source_text",
+        "source_quote",
+        "text",
+        "snippet",
+        "excerpt",
+        "quote",
+        "evidence",
+        "summary",
+        "content",
+        "raw",
+    ):
+        push(props.get(key))
+    return candidates
+
+
+def _find_text_span(source_text: str, candidate: str) -> list[int] | None:
+    text = _normalize_text(source_text)
+    query = _normalize_text(candidate)
+    if not text or not query:
+        return None
+
+    idx = text.find(query)
+    if idx >= 0:
+        return [idx, idx + len(query)]
+
+    fragments = [
+        piece.strip()
+        for piece in re.split(r"[，,；;：:\n/|]", query)
+        if piece and piece.strip()
+    ]
+    fragments.sort(key=len, reverse=True)
+    for fragment in fragments[:6]:
+        if len(fragment) < 6 and not re.search(r"[\u4e00-\u9fa5]{3,}", fragment):
+            continue
+        idx = text.find(fragment)
+        if idx >= 0:
+            return [idx, idx + len(fragment)]
+    return None
+
+
+def _build_parent_children_index(nodes: list[dict], links: list[dict]) -> tuple[dict[str, str | None], dict[str, list[str]]]:
+    node_ids = {str(node.get("id") or "") for node in nodes}
+    parent_map: dict[str, str | None] = {}
+    root_id = _pick_graph_root_id(nodes, links)
+    if root_id:
+        parent_map[root_id] = None
+
+    for node in nodes:
+        node_id = str(node.get("id") or "")
+        parent_id = str(node.get("parent_id") or "").strip()
+        if node_id and parent_id and parent_id in node_ids and parent_id != node_id and node_id not in parent_map:
+            parent_map[node_id] = parent_id
+
+    for link in links:
+        source = str(link.get("source") or "").strip()
+        target = str(link.get("target") or "").strip()
+        if not source or not target or source == target:
+            continue
+        if source not in node_ids or target not in node_ids:
+            continue
+        parent_map.setdefault(target, source)
+
+    if root_id:
+        for node in nodes:
+            node_id = str(node.get("id") or "")
+            if node_id and node_id != root_id:
+                parent_map.setdefault(node_id, root_id)
+
+    children_map: dict[str, list[str]] = {}
+    for child_id, parent_id in parent_map.items():
+        if not parent_id:
+            continue
+        children_map.setdefault(parent_id, []).append(child_id)
+    return parent_map, children_map
+
+
+def build_text_mapping_for_graph(
+    nodes: list[dict],
+    *,
+    source_text: str,
+    links: list[dict] | None = None,
+    base_mapping: dict[str, Any] | None = None,
+) -> dict[str, list[int]]:
+    text = _normalize_text(source_text)
+    if not text or not nodes:
+        return {}
+
+    links = links or []
+    text_length = len(text)
+    mapping: dict[str, list[int]] = {}
+
+    if isinstance(base_mapping, dict):
+        for node_id, span in base_mapping.items():
+            normalized = _normalize_span_value(span, text_length)
+            if normalized:
+                mapping[str(node_id)] = normalized
+
+    for node in nodes:
+        node_id = str(node.get("id") or "").strip()
+        if not node_id or node_id in mapping:
+            continue
+        props = node.get("properties") if isinstance(node.get("properties"), dict) else {}
+        direct_span = (
+            _normalize_span_value(props.get("span"), text_length)
+            or _normalize_span_value(props.get("source_span"), text_length)
+            or _normalize_span_value(props.get("text_span"), text_length)
+        )
+        if direct_span:
+            mapping[node_id] = direct_span
+            continue
+        for candidate in _node_mapping_candidates(node):
+            hit = _find_text_span(text, candidate)
+            if hit:
+                mapping[node_id] = hit
+                break
+
+    parent_map, children_map = _build_parent_children_index(nodes, links)
+    resolved: dict[str, list[int]] = dict(mapping)
+
+    def resolve_from_descendants(node_id: str, visiting: set[str] | None = None) -> list[int] | None:
+        if node_id in resolved:
+            return resolved[node_id]
+        visiting = visiting or set()
+        if node_id in visiting:
+            return None
+        visiting.add(node_id)
+        spans: list[list[int]] = []
+        for child_id in children_map.get(node_id, []):
+            child_span = resolve_from_descendants(child_id, visiting)
+            if child_span:
+                spans.append(child_span)
+        visiting.remove(node_id)
+        if not spans:
+            return None
+        merged = [min(span[0] for span in spans), max(span[1] for span in spans)]
+        resolved[node_id] = merged
+        return merged
+
+    for node in nodes:
+        node_id = str(node.get("id") or "").strip()
+        if not node_id or node_id in resolved:
+            continue
+        resolve_from_descendants(node_id)
+
+    root_id = _pick_graph_root_id(nodes, links)
+    if root_id and text_length:
+        resolved[root_id] = [0, text_length]
+
+    return resolved
+
+
+def build_visual_config_for_graph(
+    raw: Any,
+    nodes: list[dict],
+    *,
+    links: list[dict] | None = None,
+    source_text: str = "",
+) -> dict:
+    cfg = _basic_visual_config(raw, nodes)
+    cfg["text_mapping"] = build_text_mapping_for_graph(
+        nodes,
+        source_text=source_text,
+        links=links or [],
+        base_mapping=cfg.get("text_mapping"),
+    )
+    return cfg
+
+
 def _slug(text: str) -> str:
     return re.sub(r"[^0-9a-zA-Z\u4e00-\u9fa5]+", "_", str(text or "").strip()).strip("_") or "node"
 
@@ -961,7 +1160,12 @@ def parse_document(original_text: str, user_id: int, progress_cb=None) -> tuple[
                 links,
                 source_text=content or text,
             )
-        visual_config = _basic_visual_config(raw_dict.get("visual_config"), nodes)
+        visual_config = build_visual_config_for_graph(
+            raw_dict.get("visual_config"),
+            nodes,
+            links=links,
+            source_text=text,
+        )
         if callable(progress_cb):
             try:
                 progress_cb(80, "结果整理中")
@@ -1006,7 +1210,12 @@ def parse_document(original_text: str, user_id: int, progress_cb=None) -> tuple[
             "nodes": nodes,
             "links": links,
             "dynamic_payload": dynamic_payload,
-            "visual_config": {"focus_node": (nodes[0]["id"] if nodes else None), "initial_zoom": 1.0, "text_mapping": {}},
+            "visual_config": build_visual_config_for_graph(
+                {"focus_node": (nodes[0]["id"] if nodes else None), "initial_zoom": 1.0, "text_mapping": {}},
+                nodes,
+                links=links,
+                source_text=text,
+            ),
         }, parse_mode
 
 

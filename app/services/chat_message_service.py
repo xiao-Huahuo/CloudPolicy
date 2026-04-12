@@ -11,7 +11,7 @@ from fastapi import UploadFile
 from sqlmodel import Session, select
 
 from app.ai.analysis_agent import analyze_complexity_and_type
-from app.ai.document_parser import rewrite_document
+from app.ai.document_parser import rewrite_document, build_visual_config_for_graph
 from app.core.config import GlobalConfig
 from app.models.chat_message import ChatMessage
 from app.services import history_service
@@ -73,11 +73,12 @@ def serialize_message(message: ChatMessage) -> dict[str, Any]:
     # DO NOT CHANGE: dynamic_payload must come from raw LLM output only.
     # Never inject fixed business fields or schema templates here.
     data["dynamic_payload"] = analysis.get("dynamic_payload") if isinstance(analysis.get("dynamic_payload"), dict) else {}
-    data["visual_config"] = analysis.get("visual_config") or {
-        "focus_node": None,
-        "initial_zoom": 1.0,
-        "text_mapping": {},
-    }
+    data["visual_config"] = build_visual_config_for_graph(
+        analysis.get("visual_config"),
+        data["nodes"],
+        links=data["links"],
+        source_text=message.original_text or data["content"] or "",
+    )
     data["estimated_time_saved_minutes"] = estimate_message_time_saved(message)
     return data
 
