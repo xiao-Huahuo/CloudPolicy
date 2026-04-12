@@ -94,7 +94,10 @@ def create_chat_message(
     if not isinstance(parsed_payload.get("dynamic_payload"), dict):
         parsed_payload["dynamic_payload"] = {}
     if (not parsed_payload.get("nodes")) and isinstance(parsed_payload.get("dynamic_payload"), dict) and parsed_payload["dynamic_payload"]:
-        nodes, links = build_graph_from_dynamic_payload(parsed_payload["dynamic_payload"])
+        nodes, links = build_graph_from_dynamic_payload(
+            parsed_payload["dynamic_payload"],
+            source_text=parsed_payload.get("content") or parsed_payload.get("original_text") or "",
+        )
         parsed_payload["nodes"] = nodes
         parsed_payload["links"] = links
         if not isinstance(parsed_payload.get("visual_config"), dict):

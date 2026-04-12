@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 MAX_PARSE_CHARS = 6000
 _JSON_SCHEMA_SUPPORTED: bool | None = None
+GRAPH_MIN_NODES = 600
+GRAPH_MAX_NODES = 5000
+GRAPH_MAX_DEPTH = 12
+PAYLOAD_DICT_SCAN_LIMIT = 200
+PAYLOAD_LIST_SCAN_LIMIT = 200
+SOURCE_SENTENCE_CHARS = 96
 
 
 def _normalize_text(text: str) -> str:
@@ -405,7 +411,333 @@ def _pick_payload_title(payload: Any) -> str:
     return title or "文档"
 
 
-def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list[dict], list[dict]]:
+def _estimate_graph_node_budget(payload: Any, source_text: str = "") -> int:
+    try:
+        payload_size = len(json.dumps(payload, ensure_ascii=False))
+    except Exception:
+        payload_size = 0
+    text_size = len(source_text or "")
+    budget = 600 + min(3400, text_size // 28) + min(1000, payload_size // 18)
+    return max(GRAPH_MIN_NODES, min(GRAPH_MAX_NODES, budget))
+
+
+def _pick_graph_root_id(nodes: list[dict], links: list[dict]) -> str | None:
+    if not nodes:
+        return None
+    node_ids = {str(node.get("id") or "") for node in nodes}
+    parentless = [
+        node
+        for node in nodes
+        if not node.get("parent_id") or str(node.get("parent_id")) not in node_ids
+    ]
+    if parentless:
+        ranked = sorted(parentless, key=lambda item: float(item.get("importance") or 0.0), reverse=True)
+        return str(ranked[0].get("id") or "") or None
+    targets = {str(link.get("target") or "") for link in links}
+    roots = [node for node in nodes if str(node.get("id") or "") not in targets]
+    if roots:
+        ranked = sorted(roots, key=lambda item: float(item.get("importance") or 0.0), reverse=True)
+        return str(ranked[0].get("id") or "") or None
+    ranked = sorted(nodes, key=lambda item: float(item.get("importance") or 0.0), reverse=True)
+    return str(ranked[0].get("id") or "") or None
+
+
+def _outline_level(text: str) -> int | None:
+    value = str(text or "").strip()
+    if not value:
+        return None
+    patterns = (
+        (r"^\d+(?:\.\d+){2,}[、.．]?", 4),
+        (r"^\d+\.\d+[、.．]?", 3),
+        (r"^[一二三四五六七八九十百千]+[、.．]", 1),
+        (r"^[（(][一二三四五六七八九十百千]+[）)]", 2),
+        (r"^\d+[、.．]", 2),
+        (r"^[（(]?\d+[）)]", 3),
+        (r"^[A-Za-z][、.)]", 4),
+    )
+    for pattern, level in patterns:
+        if re.match(pattern, value):
+            return level
+    return None
+
+
+def _iter_source_blocks(source_text: str) -> list[dict[str, Any]]:
+    blocks: list[dict[str, Any]] = []
+    lines: list[dict[str, Any]] = []
+    cursor = 0
+
+    def flush() -> None:
+        nonlocal lines
+        if not lines:
+            return
+        blocks.append(
+            {
+                "start": lines[0]["start"],
+                "end": lines[-1]["end"],
+                "text": "\n".join(item["text"] for item in lines).strip(),
+                "lines": list(lines),
+            }
+        )
+        lines = []
+
+    for raw_line in source_text.splitlines(True):
+        line = raw_line[:-1] if raw_line.endswith("\n") else raw_line
+        stripped = line.strip()
+        line_end = cursor + len(line)
+        if stripped:
+            line_start = cursor + (len(line) - len(line.lstrip()))
+            lines.append({"start": line_start, "end": line_end, "text": stripped})
+        else:
+            flush()
+        cursor += len(raw_line)
+    flush()
+    return blocks
+
+
+def _split_block_sentences(text: str, base_start: int) -> list[dict[str, Any]]:
+    parts: list[dict[str, Any]] = []
+    for match in re.finditer(r"[^。！？!?；;\n]+[。！？!?；;]?|[^\n]+", text):
+        segment = match.group(0).strip()
+        if not segment:
+            continue
+        parts.append(
+            {
+                "start": base_start + match.start(),
+                "end": base_start + match.end(),
+                "text": segment,
+            }
+        )
+    if len(parts) <= 1:
+        return []
+
+    merged: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for part in parts:
+        if current is None:
+            current = dict(part)
+            continue
+        candidate = f'{current["text"]}{part["text"]}'
+        if len(candidate) > SOURCE_SENTENCE_CHARS:
+            merged.append(current)
+            current = dict(part)
+            continue
+        current["end"] = part["end"]
+        current["text"] = candidate
+    if current:
+        merged.append(current)
+    return [item for item in merged if item["text"].strip()]
+
+
+def _append_source_text_structure(
+    nodes: list[dict],
+    links: list[dict],
+    *,
+    source_text: str,
+    attach_to: str | None,
+    max_nodes: int,
+) -> None:
+    text = _normalize_text(source_text)
+    if not text or len(nodes) >= max_nodes:
+        return
+
+    blocks = _iter_source_blocks(text)
+    if not blocks:
+        return
+
+    seen_nodes = {str(node.get("id") or "") for node in nodes}
+    seen_edges = {
+        (str(link.get("source") or ""), str(link.get("target") or ""), str(link.get("relation") or ""))
+        for link in links
+    }
+
+    def unique_id(base: str) -> str:
+        candidate = base
+        suffix = 2
+        while candidate in seen_nodes:
+            candidate = f"{base}_{suffix}"
+            suffix += 1
+        return candidate
+
+    def add_node(
+        node_id: str,
+        label: str,
+        node_type: str,
+        importance: float,
+        parent_id: str | None,
+        properties: dict[str, Any],
+    ) -> bool:
+        if node_id in seen_nodes or len(nodes) >= max_nodes:
+            return False
+        seen_nodes.add(node_id)
+        nodes.append(
+            {
+                "id": node_id,
+                "label": str(label)[:120],
+                "type": node_type,
+                "importance": max(0.2, min(1.0, importance)),
+                "layer": "L3",
+                "group": "source_text",
+                "parent_id": parent_id,
+                "properties": properties,
+            }
+        )
+        return True
+
+    def add_edge(source: str, target: str, relation: str, strength: float) -> None:
+        if source not in seen_nodes or target not in seen_nodes:
+            return
+        key = (source, target, relation)
+        if key in seen_edges:
+            return
+        seen_edges.add(key)
+        links.append(
+            {
+                "source": source,
+                "target": target,
+                "relation": relation,
+                "logic_type": "positive",
+                "strength": max(0.2, min(1.0, strength)),
+                "evidence": None,
+            }
+        )
+
+    source_root_id = unique_id("source_text_root")
+    if add_node(
+        source_root_id,
+        "原文结构",
+        "结构",
+        0.86,
+        attach_to,
+        {"source": "original_text", "span": [0, len(text)]},
+    ) and attach_to:
+        add_edge(attach_to, source_root_id, "展开", 0.56)
+
+    heading_stack: dict[int, str] = {0: source_root_id}
+    current_parent_id = source_root_id
+
+    def nearest_heading_parent(level: int) -> str:
+        for idx in range(level - 1, -1, -1):
+            if idx in heading_stack:
+                return heading_stack[idx]
+        return source_root_id
+
+    def add_paragraph(block: dict[str, Any], parent_id: str, block_index: int) -> None:
+        if len(nodes) >= max_nodes:
+            return
+        paragraph_id = unique_id(f"source_paragraph_{block_index}")
+        paragraph_text = block["text"].replace("\n", " / ").strip()
+        if not add_node(
+            paragraph_id,
+            paragraph_text,
+            "段落",
+            0.56,
+            parent_id,
+            {"source": "original_text", "span": [block["start"], block["end"]]},
+        ):
+            return
+        add_edge(parent_id, paragraph_id, "展开", 0.46)
+
+        short_lines = [item for item in block["lines"] if len(item["text"]) <= 48]
+        if len(block["lines"]) > 1 and len(short_lines) >= min(len(block["lines"]), 2):
+            for line_index, line in enumerate(block["lines"], start=1):
+                if len(nodes) >= max_nodes:
+                    break
+                line_id = unique_id(f"source_line_{block_index}_{line_index}")
+                if add_node(
+                    line_id,
+                    line["text"],
+                    "条目",
+                    0.48,
+                    paragraph_id,
+                    {"source": "original_text", "span": [line["start"], line["end"]]},
+                ):
+                    add_edge(paragraph_id, line_id, "细分", 0.42)
+            return
+
+        for sentence_index, sentence in enumerate(_split_block_sentences(block["text"], block["start"]), start=1):
+            if len(nodes) >= max_nodes:
+                break
+            if sentence["text"].strip() == block["text"].strip():
+                continue
+            sentence_id = unique_id(f"source_sentence_{block_index}_{sentence_index}")
+            if add_node(
+                sentence_id,
+                sentence["text"],
+                "句子",
+                0.42,
+                paragraph_id,
+                {"source": "original_text", "span": [sentence["start"], sentence["end"]]},
+            ):
+                add_edge(paragraph_id, sentence_id, "细分", 0.38)
+
+    for block_index, block in enumerate(blocks, start=1):
+        if len(nodes) >= max_nodes:
+            break
+        first_line = block["lines"][0]["text"] if block["lines"] else ""
+        level = _outline_level(first_line)
+        is_heading = level is not None and (len(block["lines"]) == 1 or len(first_line) <= 48)
+        if is_heading:
+            parent_id = nearest_heading_parent(level)
+            section_id = unique_id(f"source_section_{block_index}")
+            if add_node(
+                section_id,
+                block["text"].replace("\n", " / "),
+                "章节",
+                max(0.46, 0.74 - level * 0.06),
+                parent_id,
+                {"source": "original_text", "span": [block["start"], block["end"]]},
+            ):
+                add_edge(parent_id, section_id, "条目", 0.5)
+                heading_stack = {k: v for k, v in heading_stack.items() if k < level}
+                heading_stack[level] = section_id
+                current_parent_id = section_id
+            if len(block["lines"]) > 1:
+                add_paragraph(
+                    {
+                        "start": block["lines"][1]["start"],
+                        "end": block["lines"][-1]["end"],
+                        "text": "\n".join(item["text"] for item in block["lines"][1:]).strip(),
+                        "lines": block["lines"][1:],
+                    },
+                    current_parent_id,
+                    block_index,
+                )
+            continue
+
+        add_paragraph(block, current_parent_id, block_index)
+
+
+def _supplement_existing_graph_with_source_text(
+    nodes: list[dict],
+    links: list[dict],
+    *,
+    source_text: str,
+    max_nodes: int | None = None,
+) -> tuple[list[dict], list[dict]]:
+    if not nodes or not source_text:
+        return nodes, links
+    budget = max_nodes or _estimate_graph_node_budget({}, source_text)
+    budget = max(budget, len(nodes))
+    merged_nodes = [
+        {
+            **node,
+            "properties": dict(node.get("properties") or {}),
+        }
+        for node in nodes
+    ]
+    merged_links = [dict(link) for link in links]
+    root_id = _pick_graph_root_id(merged_nodes, merged_links)
+    _append_source_text_structure(
+        merged_nodes,
+        merged_links,
+        source_text=source_text,
+        attach_to=root_id,
+        max_nodes=budget,
+    )
+    return merged_nodes, merged_links
+
+
+def _build_graph_from_payload(payload: dict, max_nodes: int | None = None, source_text: str = "") -> tuple[list[dict], list[dict]]:
     """
     核心原则（禁止动摇）：
     仅按 JSON 结构生成图谱，不做任何固定业务字段推断。
@@ -413,13 +745,15 @@ def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list
     if not isinstance(payload, dict) or not payload:
         return [], []
 
+    limit = max_nodes or _estimate_graph_node_budget(payload, source_text)
     nodes: list[dict] = []
     links: list[dict] = []
     seen_nodes: set[str] = set()
     seen_edges: set[tuple[str, str, str]] = set()
+    seen_containers: set[int] = set()
 
-    def add_node(node_id: str, label: str, layer: int, importance: float) -> bool:
-        if node_id in seen_nodes or len(nodes) >= max_nodes:
+    def add_node(node_id: str, label: str, layer: int, importance: float, parent_id: str | None = None) -> bool:
+        if node_id in seen_nodes or len(nodes) >= limit:
             return False
         seen_nodes.add(node_id)
         nodes.append(
@@ -430,7 +764,7 @@ def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list
                 "importance": max(0.2, min(1.0, importance)),
                 "layer": f"L{min(layer, 3)}",
                 "group": "payload",
-                "parent_id": None,
+                "parent_id": parent_id,
                 "properties": {},
             }
         )
@@ -459,24 +793,36 @@ def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list
     add_node(root_id, root_label, 0, 0.98)
 
     def walk(value: Any, parent_id: str, key_hint: str, depth: int) -> None:
-        if len(nodes) >= max_nodes or depth > 6:
+        if len(nodes) >= limit or depth > GRAPH_MAX_DEPTH:
             return
 
         if isinstance(value, dict):
-            for k, v in list(value.items())[:40]:
+            oid = id(value)
+            if oid in seen_containers:
+                return
+            seen_containers.add(oid)
+            for index, (k, v) in enumerate(value.items(), start=1):
+                if index > PAYLOAD_DICT_SCAN_LIMIT or len(nodes) >= limit:
+                    break
                 if str(k) in {"text_blocks", "raw_text_preview"}:
                     continue
                 child_id = f"{parent_id}_{_slug(k)}_{depth}"
-                if add_node(child_id, str(k), depth, 0.82 - depth * 0.08):
+                if add_node(child_id, str(k), depth, 0.82 - depth * 0.08, parent_id):
                     add_edge(parent_id, child_id, "", 0.7 - depth * 0.06)
                 walk(v, child_id, str(k), depth + 1)
             return
 
         if isinstance(value, list):
-            for idx, item in enumerate(value[:24], start=1):
+            oid = id(value)
+            if oid in seen_containers:
+                return
+            seen_containers.add(oid)
+            for idx, item in enumerate(value, start=1):
+                if idx > PAYLOAD_LIST_SCAN_LIMIT or len(nodes) >= limit:
+                    break
                 title = f"{key_hint}#{idx}" if key_hint else f"item_{idx}"
                 child_id = f"{parent_id}_item_{idx}_{depth}"
-                if add_node(child_id, title, depth, 0.78 - depth * 0.08):
+                if add_node(child_id, title, depth, 0.78 - depth * 0.08, parent_id):
                     add_edge(parent_id, child_id, "", 0.66 - depth * 0.06)
                 walk(item, child_id, key_hint, depth + 1)
             return
@@ -485,22 +831,26 @@ def _build_graph_from_payload(payload: dict, max_nodes: int = 220) -> tuple[list
         if not text:
             return
         leaf_id = f"{parent_id}_{_slug(text[:36])}_{depth}"
-        if add_node(leaf_id, text[:120], depth, 0.72 - depth * 0.08):
+        if add_node(leaf_id, text[:120], depth, 0.72 - depth * 0.08, parent_id):
             add_edge(parent_id, leaf_id, "", 0.6 - depth * 0.05)
 
     walk(payload, root_id, "payload", 1)
-    for item in nodes:
-        if item["id"] != root_id:
-            item["parent_id"] = item["id"].rsplit("_", 2)[0] if "_" in item["id"] else root_id
+    _append_source_text_structure(
+        nodes,
+        links,
+        source_text=source_text,
+        attach_to=root_id,
+        max_nodes=limit,
+    )
     return nodes, links
 
 
-def build_graph_from_dynamic_payload(payload: dict) -> tuple[list[dict], list[dict]]:
+def build_graph_from_dynamic_payload(payload: dict, source_text: str = "") -> tuple[list[dict], list[dict]]:
     """
     Public helper for callers that need structural graph generation
     from freeform dynamic payload.
     """
-    return _build_graph_from_payload(payload)
+    return _build_graph_from_payload(payload, source_text=source_text)
 
 
 def _freeform_prompt() -> str:
@@ -604,7 +954,13 @@ def parse_document(original_text: str, user_id: int, progress_cb=None) -> tuple[
                 pass
 
         if not nodes and dynamic_payload:
-            nodes, links = _build_graph_from_payload(dynamic_payload)
+            nodes, links = _build_graph_from_payload(dynamic_payload, source_text=content or text)
+        elif nodes:
+            nodes, links = _supplement_existing_graph_with_source_text(
+                nodes,
+                links,
+                source_text=content or text,
+            )
         visual_config = _basic_visual_config(raw_dict.get("visual_config"), nodes)
         if callable(progress_cb):
             try:
@@ -639,7 +995,7 @@ def parse_document(original_text: str, user_id: int, progress_cb=None) -> tuple[
         dynamic_payload = generate_dynamic_payload_freeform(text) if text else {}
         if not isinstance(dynamic_payload, dict) or not dynamic_payload:
             dynamic_payload = _as_displayable_fallback_payload("", text) if text else {}
-        nodes, links = _build_graph_from_payload(dynamic_payload) if dynamic_payload else ([], [])
+        nodes, links = _build_graph_from_payload(dynamic_payload, source_text=text) if dynamic_payload else ([], [])
         low_quality_keys = {"parse_warning", "raw_excerpt", "text"}
         recovered = bool(dynamic_payload) and not set(dynamic_payload.keys()).issubset(low_quality_keys)
         parse_mode = "fallback_recovered" if recovered else "fallback_fast"
