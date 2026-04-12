@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from typing import Any, Callable, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -43,6 +44,7 @@ _STREAM_BREAK_CHARS = {
 _STREAM_MAX_CHUNK_SIZE = 9
 _STREAM_CHUNK_DELAY_SECONDS = 0.018
 _TRACE_QUEUE_DONE = object()
+_FILE_REF_RE = re.compile(r"(/media/(?:docs|images|avatars)/[^\s\"'<>]+)")
 
 
 def _iter_stream_chunks(text: str, max_chunk_size: int = _STREAM_MAX_CHUNK_SIZE):
@@ -255,6 +257,15 @@ async def agent_ws(websocket: WebSocket, token: str = Query(...)):
                 message = (data.get("message") or "").strip()
                 if not message:
                     continue
+                file_refs = [match.rstrip(".,;:)]}>") for match in _FILE_REF_RE.findall(message)]
+                logger.info(
+                    "agent ws request meta user_id=%s conversation_id=%s mode=%s file_url=%s file_refs=%s",
+                    user.uid,
+                    data.get("conversation_id"),
+                    data.get("mode"),
+                    data.get("file_url"),
+                    json.dumps(file_refs, ensure_ascii=False),
+                )
 
                 conversation_id = data.get("conversation_id")
                 if not conversation_id:

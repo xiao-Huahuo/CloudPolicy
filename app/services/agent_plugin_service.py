@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from threading import Thread
 from threading import Lock
@@ -23,6 +24,11 @@ _LOCK = Lock()
 _AGENT_CORE: AgentCore | None = None
 _INGEST_LOCK = Lock()
 _INGEST_STARTED = False
+_FILE_REF_RE = re.compile(r"(/media/(?:docs|images|avatars)/[^\s\"'<>]+)")
+_FILE_PARSE_LINE_RE = re.compile(r"^【文件解析】.*$", re.MULTILINE)
+_FILE_REF_LINE_RE = re.compile(r"^【文件引用】.*$", re.MULTILINE)
+_AGENT_PROMPT_SOFT_LIMIT = 2200
+_AGENT_PROMPT_HARD_LIMIT = 3200
 
 
 def _console(text: str) -> None:
@@ -244,6 +250,93 @@ def _extract_evidence_from_tool_output(tool_name: str, output: str) -> list[dict
     return evidence
 
 
+def _extract_display_from_tool_output(tool_name: str, output: str) -> list[dict[str, Any]]:
+    if not output:
+        return []
+    payload = _try_parse_json_object(output)
+    if not isinstance(payload, dict) or not payload.get("ok"):
+        return []
+    raw_cards = payload.get("display")
+    if not isinstance(raw_cards, list):
+        return []
+
+    cards: list[dict[str, Any]] = []
+    for card in raw_cards:
+        if not isinstance(card, dict):
+            continue
+        normalized = dict(card)
+        normalized.setdefault("source_tool", tool_name)
+        cards.append(normalized)
+    return cards
+
+
+def _compact_text(text: str, limit: int = 240) -> str:
+    normalized = " ".join(str(text or "").split()).strip()
+    if not normalized:
+        return ""
+    return normalized if len(normalized) <= limit else f"{normalized[: limit - 3]}..."
+
+
+def _extract_file_refs(prompt: str) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for match in _FILE_REF_RE.findall(str(prompt or "")):
+        item = match.rstrip(".,;:)]}>")
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        refs.append(item)
+    return refs
+
+
+def _build_agent_prompt(prompt: str) -> tuple[str, dict[str, Any]]:
+    raw = str(prompt or "").strip()
+    meta = {
+        "original_length": len(raw),
+        "final_length": len(raw),
+        "prompt_compacted": False,
+        "file_ref_count": len(_extract_file_refs(raw)),
+    }
+    if not raw:
+        return raw, meta
+
+    file_refs = _extract_file_refs(raw)
+    if len(raw) <= _AGENT_PROMPT_SOFT_LIMIT:
+        return raw, meta
+
+    leading_text = raw
+    marker_positions = [idx for idx in (raw.find("【文件解析】"), raw.find("【文件引用】")) if idx >= 0]
+    if marker_positions:
+        leading_text = raw[: min(marker_positions)].strip()
+    leading_text = _compact_text(leading_text, limit=360)
+
+    file_parse_lines = _FILE_PARSE_LINE_RE.findall(raw)[:6]
+    file_ref_lines = _FILE_REF_LINE_RE.findall(raw)[:6]
+
+    parts: list[str] = []
+    if leading_text:
+        parts.append(leading_text)
+    parts.extend(file_parse_lines)
+    parts.extend(file_ref_lines)
+
+    if file_refs:
+        parts.append("文档正文过长，已在入口处省略。请优先根据上述文件引用调用上传文件解析工具，再基于文件内容回答。")
+    else:
+        parts.append("输入正文过长，已在入口处截断。请基于保留内容先完成回答。")
+        remaining = raw[len(leading_text) :] if leading_text and raw.startswith(leading_text) else raw
+        remaining = remaining.strip()
+        if remaining:
+            parts.append(_compact_text(remaining, limit=1400))
+
+    compacted = "\n\n".join(part for part in parts if part).strip()
+    if len(compacted) > _AGENT_PROMPT_HARD_LIMIT:
+        compacted = compacted[:_AGENT_PROMPT_HARD_LIMIT].rstrip()
+
+    meta["final_length"] = len(compacted)
+    meta["prompt_compacted"] = compacted != raw
+    return compacted, meta
+
+
 def run_agent_plugin(
     user_id: int,
     prompt: str,
@@ -258,6 +351,7 @@ def run_agent_plugin(
         "structured": None,
         "parse_mode": None,
         "evidence": [],
+        "display_cards": [],
     }
 
     if not GlobalConfig.AGENT_PLUGIN_ENABLED:
@@ -267,12 +361,39 @@ def run_agent_plugin(
     assistant_reply = ""
     tool_calls: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]] = []
+    display_cards: list[dict[str, Any]] = []
     seen = set()
+    display_seen = set()
+    agent_prompt, prompt_meta = _build_agent_prompt(prompt)
+    if prompt_meta.get("prompt_compacted"):
+        logger.info(
+            "Agent prompt compacted user_id=%s thread_id=%s original_length=%s final_length=%s file_ref_count=%s",
+            user_id,
+            thread_id,
+            prompt_meta.get("original_length"),
+            prompt_meta.get("final_length"),
+            prompt_meta.get("file_ref_count"),
+        )
+        if trace_callback:
+            trace_callback(
+                {
+                    "tool": "agent_prompt_compactor",
+                    "input": json.dumps(
+                        {
+                            "original_length": prompt_meta.get("original_length"),
+                            "final_length": prompt_meta.get("final_length"),
+                            "file_ref_count": prompt_meta.get("file_ref_count"),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    "output": "已压缩超长输入，保留文件引用，优先走文件工具解析。",
+                }
+            )
 
     try:
         core = _get_agent_core()
         for raw_chunk in core.stream_run(
-            prompt=prompt,
+            prompt=agent_prompt,
             user_id=str(user_id),
             thread_id=thread_id,
             mode=mode,
@@ -313,15 +434,23 @@ def run_agent_plugin(
                     trace_callback(normalized)
 
             for tr in payload.get("tool_results", []) or []:
-                output = str(tr.get("output", "")).strip()
-                if not output:
+                preview_output = str(tr.get("output", "")).strip()
+                full_output = str(tr.get("full_output") or preview_output).strip()
+                if not full_output and not preview_output:
                     continue
                 tool_name = tr.get("name", "tool")
+                output = preview_output or full_output
+                for card in _extract_display_from_tool_output(str(tool_name), full_output):
+                    key = json.dumps(card, ensure_ascii=False, sort_keys=True, default=str)
+                    if key in display_seen:
+                        continue
+                    display_seen.add(key)
+                    display_cards.append(card)
                 matched = False
                 for item in reversed(tool_calls):
                     if item.get("tool") == tool_name and not item.get("output"):
                         item["output"] = output
-                        evidence.extend(_extract_evidence_from_tool_output(str(tool_name), output))
+                        evidence.extend(_extract_evidence_from_tool_output(str(tool_name), full_output))
                         matched = True
                         if trace_callback:
                             trace_callback(item)
@@ -329,7 +458,7 @@ def run_agent_plugin(
                 if not matched:
                     fallback = {"tool": tool_name, "input": "{}", "output": output}
                     tool_calls.append(fallback)
-                    evidence.extend(_extract_evidence_from_tool_output(str(tool_name), output))
+                    evidence.extend(_extract_evidence_from_tool_output(str(tool_name), full_output))
                     if trace_callback:
                         trace_callback(fallback)
 
@@ -351,4 +480,5 @@ def run_agent_plugin(
     base_result["structured"] = structured
     base_result["parse_mode"] = parse_mode
     base_result["evidence"] = evidence
+    base_result["display_cards"] = display_cards
     return base_result

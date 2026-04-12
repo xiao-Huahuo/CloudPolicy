@@ -6,9 +6,7 @@
         <p class="panel-eyebrow">Run Inspector</p>
         <h2>推理与工具轨迹</h2>
       </div>
-      <button v-if="isMobile" class="close-btn" type="button" @click="$emit('close')">
-        关闭
-      </button>
+      <button v-if="isMobile" class="close-btn" type="button" @click="$emit('close')">关闭</button>
     </div>
 
     <section class="summary-grid">
@@ -87,11 +85,120 @@
       </div>
       <div v-else class="placeholder-text">本轮没有命中知识库证据。</div>
     </section>
+
+    <section class="inspector-section">
+      <div class="section-title">展示卡片</div>
+      <div v-if="displayCards.length" class="display-card-list">
+        <button
+          v-for="(card, index) in displayCards"
+          :key="`${card.title || card.type || 'card'}-${index}`"
+          class="display-card-button"
+          type="button"
+          @click="openDisplayCard(card)"
+        >
+          <div class="display-card-head">
+            <strong>{{ card.title || displayTypeLabel(card.type) }}</strong>
+            <span>{{ displayPlacementLabel(card.placement) }}</span>
+          </div>
+          <p>{{ card.subtitle || displayTypeLabel(card.type) }}</p>
+        </button>
+      </div>
+      <div v-else class="placeholder-text">当前没有可展示的图谱或数据卡片。</div>
+    </section>
   </aside>
+
+  <teleport to="body">
+    <div v-if="activeModalCard" class="display-modal-overlay" @click.self="closeDisplayPanels">
+      <div class="display-modal">
+        <div class="display-shell-header">
+          <div>
+            <p class="panel-eyebrow">Display Card</p>
+            <h3>{{ activeModalCard.title || displayTypeLabel(activeModalCard.type) }}</h3>
+          </div>
+          <button class="display-close-btn" type="button" @click="closeDisplayPanels">关闭</button>
+        </div>
+        <div class="display-shell-body">
+          <KnowledgeGraphPanel
+            v-if="activeModalCard.type === 'knowledge_graph'"
+            :content="activeModalCard.payload?.content || ''"
+            :nodes="activeModalCard.payload?.nodes || []"
+            :links="activeModalCard.payload?.links || []"
+            :dynamic-payload="activeModalCard.payload?.dynamic_payload || {}"
+            :visual-config="activeModalCard.payload?.visual_config || {}"
+          />
+          <div v-else class="display-fallback">暂不支持该弹窗卡片类型。</div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="activeDrawerCard" class="display-drawer-backdrop" @click="closeDisplayPanels"></div>
+    <aside v-if="activeDrawerCard" class="display-drawer" :class="{ mobile: isMobile }">
+      <div class="display-shell-header">
+        <div>
+          <p class="panel-eyebrow">Display Card</p>
+          <h3>{{ activeDrawerCard.title || displayTypeLabel(activeDrawerCard.type) }}</h3>
+        </div>
+        <button class="display-close-btn" type="button" @click="closeDisplayPanels">关闭</button>
+      </div>
+      <div class="display-shell-body drawer-body">
+        <template v-if="activeDrawerCard.type === 'original_text'">
+          <a
+            v-if="activeDrawerCard.payload?.file_url"
+            class="display-file-link"
+            :href="activeDrawerCard.payload.file_url"
+            target="_blank"
+            rel="noreferrer"
+          >
+            查看原文件
+          </a>
+          <pre class="display-pre">{{ activeDrawerCard.payload?.content || '暂无内容' }}</pre>
+        </template>
+
+        <template v-else-if="activeDrawerCard.type === 'table'">
+          <div class="display-table-wrap">
+            <table class="display-table">
+              <thead>
+                <tr>
+                  <th v-for="column in activeDrawerCard.payload?.columns || []" :key="column.key">
+                    {{ column.label || column.key }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, rowIndex) in activeDrawerCard.payload?.rows || []" :key="rowIndex">
+                  <td v-for="column in activeDrawerCard.payload?.columns || []" :key="column.key">
+                    {{ formatDisplayValue(row?.[column.key]) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+
+        <template v-else-if="activeDrawerCard.type === 'metric_board'">
+          <div class="display-metric-grid">
+            <article
+              v-for="(item, index) in activeDrawerCard.payload?.items || []"
+              :key="`${item.label || 'metric'}-${index}`"
+              class="display-metric-item"
+            >
+              <span>{{ item.label || '指标' }}</span>
+              <strong>{{ item.value }}{{ item.unit || '' }}</strong>
+            </article>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="display-fallback">暂不支持该侧栏卡片类型。</div>
+        </template>
+      </div>
+    </aside>
+  </teleport>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
+import KnowledgeGraphPanel from '@/components/Home/KnowledgeGraphPanel.vue';
 
 const props = defineProps({
   open: { type: Boolean, default: true },
@@ -108,11 +215,19 @@ const props = defineProps({
 
 defineEmits(['close']);
 
+const activeModalCard = ref(null);
+const activeDrawerCard = ref(null);
+const lastAutoOpenSignature = ref('');
+
 const runModeLabel = computed(() => (props.runMode === 'chat' ? 'Chat' : 'Agent'));
 const toolEntries = computed(() => props.traceTimeline.filter((item) => item.kind === 'tool'));
 const thoughtEntries = computed(() => props.traceTimeline.filter((item) => item.kind === 'thought'));
 const toolCount = computed(() => props.agentResult?.tool_calls?.length || toolEntries.value.length || 0);
 const evidenceCount = computed(() => props.agentResult?.evidence?.length || 0);
+const displayCards = computed(() =>
+  Array.isArray(props.agentResult?.display_cards) ? props.agentResult.display_cards : []
+);
+
 const confidenceText = computed(() => {
   const value = props.agentResult?.confidence;
   return typeof value === 'number' ? `${Math.round(value * 100)}%` : '待生成';
@@ -129,9 +244,70 @@ const normalizedEvidence = computed(() =>
   (props.agentResult?.evidence || []).map((item) => ({
     title: item.title || item.source || item.category || '知识条目',
     snippet: item.snippet || item.content || '暂无片段',
-    scoreText:
-      typeof item.score === 'number' ? `相似度 ${item.score.toFixed(3)}` : '相似度待定',
+    scoreText: typeof item.score === 'number' ? `相似度 ${item.score.toFixed(3)}` : '相似度待定',
   }))
+);
+
+const displayTypeLabel = (type) => {
+  const mapping = {
+    knowledge_graph: '知识图谱',
+    original_text: '原文预览',
+    table: '结果表格',
+    metric_board: '指标看板',
+  };
+  return mapping[String(type || '')] || '展示卡片';
+};
+
+const displayPlacementLabel = (placement) =>
+  String(placement || 'modal') === 'right_drawer' ? '侧栏' : '弹窗';
+
+const closeDisplayPanels = () => {
+  activeModalCard.value = null;
+  activeDrawerCard.value = null;
+};
+
+const selectPrimaryDisplayCard = (cards) => {
+  if (!Array.isArray(cards) || !cards.length) return null;
+  return cards.find((card) => card?.type === 'knowledge_graph') || cards[0] || null;
+};
+
+const openDisplayCard = (card) => {
+  closeDisplayPanels();
+  const placement = String(card?.placement || 'modal');
+  if (placement === 'right_drawer' && card?.type !== 'knowledge_graph') {
+    activeDrawerCard.value = card;
+    return;
+  }
+  activeModalCard.value = card;
+};
+
+const formatDisplayValue = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (Array.isArray(value)) return value.join('、');
+  if (typeof value === 'object') return JSON.stringify(value, null, 2);
+  return String(value);
+};
+
+watch(
+  () => props.agentResult,
+  (result) => {
+    const cards = Array.isArray(result?.display_cards) ? result.display_cards : [];
+    if (!cards.length) {
+      lastAutoOpenSignature.value = '';
+      closeDisplayPanels();
+      return;
+    }
+
+    const signature = JSON.stringify(cards);
+    if (signature === lastAutoOpenSignature.value) return;
+
+    lastAutoOpenSignature.value = signature;
+    closeDisplayPanels();
+
+    const primaryCard = selectPrimaryDisplayCard(cards);
+    if (primaryCard) openDisplayCard(primaryCard);
+  },
+  { deep: true }
 );
 </script>
 
@@ -227,14 +403,16 @@ const normalizedEvidence = computed(() =>
   color: rgba(17, 39, 76, 0.48);
 }
 
-.inspector-header h2 {
+.inspector-header h2,
+.display-shell-header h3 {
   margin-top: 6px;
   font-size: 20px;
   line-height: 1.2;
   color: #10213f;
 }
 
-.close-btn {
+.close-btn,
+.display-close-btn {
   border: none;
   border-radius: 999px;
   padding: 8px 12px;
@@ -252,7 +430,8 @@ const normalizedEvidence = computed(() =>
 .summary-card,
 .timeline-card,
 .evidence-card,
-.summary-text {
+.summary-text,
+.display-card-button {
   background: rgba(255, 255, 255, 0.62);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.58);
@@ -302,20 +481,23 @@ const normalizedEvidence = computed(() =>
 .summary-text,
 .timeline-card p,
 .evidence-card p,
-.placeholder-text {
+.placeholder-text,
+.display-card-button p {
   font-size: 13px;
   line-height: 1.75;
 }
 
 .timeline-list,
-.evidence-list {
+.evidence-list,
+.display-card-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .timeline-meta,
-.evidence-head {
+.evidence-head,
+.display-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -323,22 +505,30 @@ const normalizedEvidence = computed(() =>
 }
 
 .timeline-meta span,
-.evidence-head strong {
+.evidence-head strong,
+.display-card-head strong {
   font-size: 13px;
   font-weight: 700;
 }
 
 .timeline-meta small,
-.evidence-head span {
+.evidence-head span,
+.display-card-head span {
   font-size: 11px;
   color: rgba(23, 49, 89, 0.56);
 }
 
 .timeline-card p,
-.evidence-card p {
+.evidence-card p,
+.display-card-button p {
   margin: 10px 0 0;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.display-card-button {
+  padding: 14px;
+  text-align: left;
 }
 
 .placeholder-text {
@@ -348,6 +538,177 @@ const normalizedEvidence = computed(() =>
   color: rgba(23, 49, 89, 0.58);
 }
 
+.display-modal-overlay,
+.display-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 18, 34, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.display-modal-overlay {
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.display-drawer-backdrop {
+  z-index: 119;
+}
+
+.display-modal,
+.display-drawer {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 255, 0.9)),
+    linear-gradient(150deg, rgba(131, 180, 255, 0.16), rgba(255, 255, 255, 0));
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 28px 60px rgba(14, 30, 62, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.display-modal {
+  width: min(96vw, 1360px);
+  height: min(90vh, 980px);
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.display-drawer {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 121;
+  width: min(42vw, 560px);
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.display-drawer.mobile {
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  bottom: 12px;
+  width: auto;
+}
+
+.display-shell-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(135, 168, 224, 0.18);
+}
+
+.display-shell-body {
+  height: calc(100% - 88px);
+  overflow: auto;
+}
+
+.drawer-body {
+  padding: 18px 20px 20px;
+}
+
+.display-file-link {
+  display: inline-flex;
+  margin-bottom: 12px;
+  color: #1e63d7;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.display-pre {
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #173159;
+}
+
+.display-table-wrap {
+  overflow: auto;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+}
+
+.display-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.display-table th,
+.display-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(135, 168, 224, 0.14);
+  font-size: 13px;
+  color: #173159;
+  vertical-align: top;
+}
+
+.display-table th {
+  position: sticky;
+  top: 0;
+  background: rgba(244, 248, 255, 0.96);
+  font-weight: 700;
+}
+
+.display-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.display-metric-item {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.display-metric-item span {
+  font-size: 12px;
+  color: rgba(23, 49, 89, 0.58);
+}
+
+.display-metric-item strong {
+  font-size: 20px;
+  color: #10213f;
+}
+
+.display-fallback {
+  padding: 24px;
+  color: #173159;
+}
+
+.display-shell-body :deep(.kg-panel) {
+  min-height: 100%;
+}
+
+.display-shell-body :deep(.kg-content),
+.display-shell-body :deep(.kg-main),
+.display-shell-body :deep(.graph-2d-wrapper),
+.display-shell-body :deep(.graph-2d),
+.display-shell-body :deep(.graph-text),
+.display-shell-body :deep(.kg-json) {
+  min-height: 720px;
+  height: 720px;
+}
 </style>
 
 <style>
@@ -364,7 +725,9 @@ const normalizedEvidence = computed(() =>
 [data-theme='dark'] .inspector-panel .panel-eyebrow,
 [data-theme='dark'] .inspector-panel .timeline-meta small,
 [data-theme='dark'] .inspector-panel .evidence-head span,
-[data-theme='dark'] .inspector-panel .placeholder-text {
+[data-theme='dark'] .inspector-panel .display-card-head span,
+[data-theme='dark'] .inspector-panel .placeholder-text,
+[data-theme='dark'] .display-metric-item span {
   color: rgba(237, 244, 255, 0.58);
 }
 
@@ -374,7 +737,15 @@ const normalizedEvidence = computed(() =>
 [data-theme='dark'] .inspector-panel .summary-text,
 [data-theme='dark'] .inspector-panel .timeline-card,
 [data-theme='dark'] .inspector-panel .evidence-card,
-[data-theme='dark'] .inspector-panel .close-btn {
+[data-theme='dark'] .inspector-panel .display-card-button,
+[data-theme='dark'] .inspector-panel .close-btn,
+[data-theme='dark'] .display-shell-header h3,
+[data-theme='dark'] .display-close-btn,
+[data-theme='dark'] .display-pre,
+[data-theme='dark'] .display-table th,
+[data-theme='dark'] .display-table td,
+[data-theme='dark'] .display-metric-item strong,
+[data-theme='dark'] .display-fallback {
   color: #edf4ff;
 }
 
@@ -382,12 +753,23 @@ const normalizedEvidence = computed(() =>
 [data-theme='dark'] .inspector-panel .summary-text,
 [data-theme='dark'] .inspector-panel .timeline-card,
 [data-theme='dark'] .inspector-panel .evidence-card,
+[data-theme='dark'] .inspector-panel .display-card-button,
 [data-theme='dark'] .inspector-panel .placeholder-text,
-[data-theme='dark'] .inspector-panel .close-btn {
+[data-theme='dark'] .inspector-panel .close-btn,
+[data-theme='dark'] .display-modal,
+[data-theme='dark'] .display-drawer,
+[data-theme='dark'] .display-pre,
+[data-theme='dark'] .display-table-wrap,
+[data-theme='dark'] .display-metric-item,
+[data-theme='dark'] .display-close-btn {
   background:
     linear-gradient(180deg, rgba(15, 25, 43, 0.92), rgba(12, 20, 34, 0.84)),
     linear-gradient(150deg, rgba(63, 118, 255, 0.08), rgba(40, 188, 172, 0.05));
   border-color: rgba(118, 156, 255, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-theme='dark'] .display-table th {
+  background: rgba(16, 26, 44, 0.96);
 }
 </style>

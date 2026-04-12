@@ -1,0 +1,42 @@
+from __future__ import annotations
+
+from typing import Any
+
+
+TOOL_CATALOG: list[dict[str, Any]] = [
+    {"name": "query_long_term_memory", "category": "memory", "min_role": "normal", "side_effect": False, "description": "查询当前用户长时记忆"},
+    {"name": "parse_local_file", "category": "file", "min_role": "normal", "side_effect": False, "description": "读取项目内文本文件"},
+    {"name": "get_my_todos", "category": "workspace", "min_role": "normal", "side_effect": False, "description": "查看我的待办"},
+    {"name": "create_todos_from_chat", "category": "workspace", "min_role": "normal", "side_effect": True, "description": "从对话创建待办草稿"},
+    {"name": "confirm_todo", "category": "workspace", "min_role": "normal", "side_effect": True, "description": "确认待办草稿"},
+    {"name": "search_policy_documents", "category": "policy", "min_role": "normal", "side_effect": False, "description": "按分类或关键词查询政策文档"},
+    {"name": "search_policy_documents_by_query", "category": "policy", "min_role": "normal", "side_effect": False, "description": "按关键词检索政策文档"},
+    {"name": "recommend_policy_documents", "category": "policy", "min_role": "normal", "side_effect": False, "description": "推荐政策文档"},
+    {"name": "get_user_settings", "category": "workspace", "min_role": "normal", "side_effect": False, "description": "查看用户设置"},
+    {"name": "update_user_settings", "category": "workspace", "min_role": "normal", "side_effect": True, "description": "更新用户设置"},
+    {"name": "search_chat_history", "category": "history", "min_role": "normal", "side_effect": False, "description": "搜索历史解析记录"},
+    {"name": "search_chat_messages_fulltext", "category": "history", "min_role": "normal", "side_effect": False, "description": "按全文检索历史解析消息"},
+    {"name": "get_chat_message_detail", "category": "history", "min_role": "normal", "side_effect": False, "description": "查看单条历史解析详情"},
+    {"name": "get_news_digest", "category": "news", "min_role": "normal", "side_effect": False, "description": "获取政务热点摘要"},
+    {"name": "search_news_tool", "category": "news", "min_role": "normal", "side_effect": False, "description": "按关键词搜索新闻"},
+    {"name": "list_favorites", "category": "workspace", "min_role": "normal", "side_effect": False, "description": "查看收藏"},
+    {"name": "add_favorite", "category": "workspace", "min_role": "normal", "side_effect": True, "description": "新增收藏"},
+    {"name": "get_my_stats", "category": "stats", "min_role": "normal", "side_effect": False, "description": "查看我的解析统计"},
+    {"name": "build_metric_cards", "category": "stats", "min_role": "normal", "side_effect": False, "description": "生成指标卡展示"},
+    {"name": "rewrite_for_audience", "category": "workspace", "min_role": "normal", "side_effect": True, "description": "按目标受众改写历史消息"},
+    {"name": "inspect_agent_runtime", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "检查 Agent 运行时和可用工具"},
+    {"name": "list_available_tools", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "列出当前用户可用工具"},
+    {"name": "get_user_permission_scope", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "查看当前用户权限范围"},
+    {"name": "debug_query_zero_results", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "诊断为什么查询结果为 0"},
+    {"name": "unified_search_tool", "category": "search", "min_role": "normal", "side_effect": False, "description": "执行全局统一搜索"},
+    {"name": "list_user_uploaded_files", "category": "file", "min_role": "normal", "side_effect": False, "description": "列出最近上传的文件和导出快照"},
+    {"name": "parse_uploaded_document", "category": "file", "min_role": "normal", "side_effect": False, "description": "解析上传的文档文件"},
+    {"name": "parse_uploaded_image_ocr", "category": "file", "min_role": "normal", "side_effect": False, "description": "对上传的图片执行 OCR"},
+    {"name": "build_document_knowledge_graph", "category": "graph", "min_role": "normal", "side_effect": False, "description": "从文本构建知识图谱"},
+    {"name": "get_message_knowledge_graph", "category": "graph", "min_role": "normal", "side_effect": False, "description": "读取历史解析消息中的知识图谱"},
+    {"name": "show_knowledge_graph_modal", "category": "graph", "min_role": "normal", "side_effect": False, "description": "生成图谱小窗展示卡片"},
+    {"name": "get_admin_analysis_overview", "category": "admin", "min_role": "admin", "side_effect": False, "description": "获取管理员全局分析总览"},
+    {"name": "build_admin_metric_cards", "category": "admin", "min_role": "admin", "side_effect": False, "description": "生成管理员系统指标卡"},
+    {"name": "get_admin_user_role_distribution", "category": "admin", "min_role": "admin", "side_effect": False, "description": "查看用户角色分布"},
+    {"name": "get_admin_policy_review_overview", "category": "admin", "min_role": "admin", "side_effect": False, "description": "查看政策审核状态概览"},
+]

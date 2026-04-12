@@ -1,5 +1,7 @@
 import json
+import logging
 import re
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from sqlmodel import Session, select
@@ -8,6 +10,42 @@ from app.ai.document_parser import parse_document
 from app.models.chat_message import ChatMessage
 from app.models.settings import Settings
 from app.services import chat_message_service, agent_plugin_service
+from app.services.agent_tool_services.base import knowledge_graph_display, original_text_display
+
+logger = logging.getLogger(__name__)
+
+_FILE_REF_RE = re.compile(r"(/media/(?:docs|images|avatars)/[^\s\"'<>]+)")
+_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif"}
+_UPLOAD_PARSE_MARKERS = (
+    "\u3010\u6587\u4ef6\u89e3\u6790\u3011",
+    "\u3010\u6587\u4ef6\u5f15\u7528\u3011",
+    "\u3010\u56fe\u7247\u89e3\u6790\u3011",
+    "\u3010\u56fe\u7247\u5f15\u7528\u3011",
+)
+_OCR_INTENT_KEYWORDS = (
+    "ocr",
+    "\u63d0\u53d6\u6587\u5b57",
+    "\u63d0\u53d6\u6587\u672c",
+    "\u63d0\u53d6\u56fe\u7247\u6587\u5b57",
+    "\u63d0\u53d6\u56fe\u4e2d\u6587\u5b57",
+    "\u8bc6\u522b\u6587\u5b57",
+    "\u8bc6\u522b\u56fe\u7247\u6587\u5b57",
+    "\u56fe\u7247\u8f6c\u6587\u5b57",
+    "\u8f6c\u6210\u6587\u5b57",
+    "\u539f\u6837\u63d0\u53d6",
+)
+_GRAPH_INTENT_KEYWORDS = (
+    "\u56fe\u8c31",
+    "\u53ef\u89c6\u5316",
+    "\u7ed3\u6784\u5316",
+    "\u5173\u7cfb\u56fe",
+    "\u8282\u70b9",
+    "\u89e3\u6790",
+    "\u68b3\u7406",
+    "\u5206\u6790",
+    "\u603b\u7ed3",
+    "\u77e5\u8bc6\u56fe\u8c31",
+)
 
 AGENT_NAME = "云小圆 (CloudCycle)"
 
@@ -78,6 +116,60 @@ def _build_summary(parsed: Dict[str, Any]) -> str:
     return f"本次为 {matter}，面向 {audience}，关键时间节点：{time_deadline}。"
 
 
+def _extract_file_refs_from_text(text: Optional[str]) -> List[str]:
+    refs: List[str] = []
+    seen: set[str] = set()
+    for match in _FILE_REF_RE.findall(str(text or "")):
+        ref = match.rstrip(".,;:)]}>")
+        if not ref or ref in seen:
+            continue
+        seen.add(ref)
+        refs.append(ref)
+    return refs
+
+
+def _is_image_file_ref(file_ref: str) -> bool:
+    return Path(str(file_ref or "")).suffix.lower() in _IMAGE_SUFFIXES
+
+
+def _extract_request_text_for_intent(user_text: Optional[str]) -> str:
+    raw_text = str(user_text or "")
+    media_pos = raw_text.find("/media/")
+    if media_pos >= 0:
+        raw_text = raw_text[:media_pos]
+    request_lines: List[str] = []
+    for line in raw_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("\u3010") and "\u3011" in stripped:
+            break
+        request_lines.append(line)
+    request_text = "\n".join(request_lines).strip()
+    return request_text or raw_text
+
+
+def _detect_upload_parse_intent(user_text: Optional[str]) -> Dict[str, Any]:
+    raw_text = str(user_text or "")
+    file_refs = _extract_file_refs_from_text(raw_text)
+    has_upload_context = bool(file_refs) or any(marker in raw_text for marker in _UPLOAD_PARSE_MARKERS)
+    has_image_upload = any(_is_image_file_ref(ref) for ref in file_refs)
+    request_text = _extract_request_text_for_intent(raw_text)
+    lowered = request_text.lower()
+    wants_ocr = has_image_upload and any(keyword in lowered or keyword in request_text for keyword in _OCR_INTENT_KEYWORDS)
+    wants_graph = any(keyword in lowered or keyword in request_text for keyword in _GRAPH_INTENT_KEYWORDS)
+
+    display_mode = "default"
+    if has_upload_context:
+        display_mode = "ocr_text" if wants_ocr and not wants_graph else "knowledge_graph"
+
+    result = {
+        "has_upload_context": has_upload_context,
+        "has_image_upload": has_image_upload,
+        "display_mode": display_mode,
+        "file_refs": file_refs,
+    }
+    return result
+
+
 def _normalize_evidence(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     for item in items:
@@ -97,6 +189,91 @@ def _normalize_evidence(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             }
         )
     return normalized
+
+
+def _append_display_card(
+    display_cards: List[Dict[str, Any]],
+    seen: set[str],
+    card: Dict[str, Any],
+) -> None:
+    key = json.dumps(card, ensure_ascii=False, sort_keys=True, default=str)
+    if key in seen:
+        return
+    seen.add(key)
+    display_cards.append(card)
+
+
+def _has_display_card_type(display_cards: List[Dict[str, Any]], card_type: str) -> bool:
+    for card in display_cards:
+        if isinstance(card, dict) and str(card.get("type") or "") == card_type:
+            return True
+    return False
+
+
+def _extract_original_text_card_content(display_cards: List[Dict[str, Any]]) -> str:
+    for card in display_cards:
+        if not isinstance(card, dict) or str(card.get("type") or "") != "original_text":
+            continue
+        payload = card.get("payload")
+        if isinstance(payload, dict) and str(payload.get("content") or "").strip():
+            return str(payload.get("content") or "")
+    return ""
+
+
+def _extract_uploaded_body_text(user_text: Optional[str]) -> str:
+    raw_text = str(user_text or "")
+    if not raw_text:
+        return ""
+
+    body_lines: List[str] = []
+    seen_marker = False
+    for line in raw_text.splitlines():
+        stripped = line.strip()
+        if any(stripped.startswith(marker) for marker in _UPLOAD_PARSE_MARKERS):
+            seen_marker = True
+            continue
+        if seen_marker:
+            body_lines.append(line)
+
+    body_text = "\n".join(body_lines).strip()
+    if body_text:
+        return body_text
+
+    fallback_lines = [
+        line
+        for line in raw_text.splitlines()
+        if not any(line.strip().startswith(marker) for marker in _UPLOAD_PARSE_MARKERS)
+    ]
+    return "\n".join(fallback_lines).strip()
+
+
+def _normalize_chat_text_content(text: Any) -> str:
+    normalized = str(text or "")
+    if not normalized:
+        return ""
+    normalized = normalized.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
+    return normalized.strip()
+
+
+def _build_uploaded_parse_reply(result: Dict[str, Any], user_text: str | None = None) -> str:
+    parse_display_intent = _detect_upload_parse_intent(user_text)
+    if not parse_display_intent.get("has_upload_context"):
+        return ""
+
+    display_cards = [card for card in list(result.get("display_cards", []) or []) if isinstance(card, dict)]
+    if parse_display_intent.get("display_mode") == "ocr_text":
+        structured = result.get("structured", {}) or {}
+        content_text = (
+            _extract_original_text_card_content(display_cards)
+            or str(structured.get("content") or "")
+            or _extract_uploaded_body_text(user_text)
+        )
+        content_text = _normalize_chat_text_content(content_text)
+        return content_text or "已提取图片文字，并打开结果小窗。"
+
+    if _has_display_card_type(display_cards, "knowledge_graph"):
+        return "已生成图谱小窗，可直接查看知识图谱并切换原文。"
+    return "已读取上传内容，并打开原文小窗。"
 
 
 def run_agent(
@@ -132,6 +309,7 @@ def run_agent(
             "structured": plugin_result.get("structured"),
             "parse_mode": plugin_result.get("parse_mode"),
             "evidence": plugin_result.get("evidence", []),
+            "display_cards": plugin_result.get("display_cards", []),
         }
         safe_text = original_text
     except Exception:
@@ -158,6 +336,16 @@ def run_agent(
     parsed.setdefault("dynamic_payload", {})
     parsed.setdefault("visual_config", {"focus_node": None, "initial_zoom": 1.0, "text_mapping": {}})
     parsed["file_url"] = file_url or parsed.get("file_url")
+    parse_display_intent = _detect_upload_parse_intent(original_text)
+    if parse_display_intent.get("has_upload_context"):
+        logger.info(
+            "Agent parse display intent user_id=%s mode=%s display_mode=%s has_image_upload=%s file_refs=%s",
+            user_id,
+            mode,
+            parse_display_intent.get("display_mode"),
+            parse_display_intent.get("has_image_upload"),
+            json.dumps(parse_display_intent.get("file_refs", []), ensure_ascii=False),
+        )
 
     steps = _build_steps(parsed.get("handling_process"))
     materials = _build_materials(parsed.get("required_materials"))
@@ -166,6 +354,10 @@ def run_agent(
     timeline = _build_timeline(parsed.get("time_deadline"), original_text)
     checklist = _build_checklist(steps, materials)
     summary = _build_summary(parsed)
+    if _is_low_signal_reply(graph_reply):
+        if graph_reply.strip():
+            logger.info("Agent reply downgraded to fallback user_id=%s parse_mode=%s reply=%s", user_id, parse_mode, graph_reply)
+        graph_reply = ""
 
     evidence: List[Dict[str, Any]] = []
     avg_score = 0.0
@@ -214,7 +406,46 @@ def run_agent(
         )
         chat_message_id = message.id
 
-    return {
+    display_cards: List[Dict[str, Any]] = []
+    display_seen: set[str] = set()
+    show_parse_cards = parse_display_intent.get("has_upload_context")
+    allow_graph_display = parse_display_intent.get("display_mode") != "ocr_text"
+    for card in list(tool_state.get("display_cards", []) or []):
+        if isinstance(card, dict):
+            card_type = str(card.get("type") or "")
+            if card_type in {"knowledge_graph", "original_text"} and not show_parse_cards:
+                continue
+            if not allow_graph_display and card_type == "knowledge_graph":
+                continue
+            _append_display_card(display_cards, display_seen, card)
+
+    fallback_display_text = _extract_uploaded_body_text(original_text) or str(parsed.get("content") or "") or safe_text
+    if show_parse_cards and fallback_display_text and not _has_display_card_type(display_cards, "original_text"):
+        _append_display_card(
+            display_cards,
+            display_seen,
+            original_text_display(
+                title="原文内容",
+                content=fallback_display_text,
+                file_url=parsed.get("file_url"),
+            ),
+        )
+    has_graph_payload = bool(parsed.get("nodes") or parsed.get("links") or parsed.get("dynamic_payload"))
+    if show_parse_cards and allow_graph_display and has_graph_payload and not _has_display_card_type(display_cards, "knowledge_graph"):
+        _append_display_card(
+            display_cards,
+            display_seen,
+            knowledge_graph_display(
+                title=parsed.get("handling_matter") or "解析图谱",
+                content=parsed.get("content") or fallback_display_text,
+                nodes=parsed.get("nodes") or [],
+                links=parsed.get("links") or [],
+                dynamic_payload=parsed.get("dynamic_payload") or {},
+                visual_config=parsed.get("visual_config") or {},
+            ),
+        )
+
+    result = {
         "agent_name": AGENT_NAME,
         "parse_mode": parse_mode,
         "confidence": confidence,
@@ -235,9 +466,20 @@ def run_agent(
             "hit_rate": 1.0 if result_count > 0 else 0.0,
         },
         "evidence": evidence,
+        "display_cards": display_cards,
         "chat_message_id": chat_message_id,
         "user_audience": user_audience_label,
     }
+    if parse_display_intent.get("has_upload_context"):
+        result["assistant_reply"] = _build_uploaded_parse_reply(result, user_text=original_text)
+        return result
+        if parse_display_intent.get("display_mode") == "ocr_text":
+            result["assistant_reply"] = "已提取图片文字，并打开结果小窗。"
+        elif _has_display_card_type(display_cards, "knowledge_graph"):
+            result["assistant_reply"] = "已生成图谱小窗，可直接查看知识图谱并切换原文。"
+        else:
+            result["assistant_reply"] = "已读取上传内容，并打开原文小窗。"
+    return result
 
 
 def _is_json_like(text: str) -> bool:
@@ -258,6 +500,14 @@ _NOISE_PHRASES = [
     "材料清单：",
     "注意事项：",
     "风险提示：",
+]
+
+_LOW_SIGNAL_REPLY_PHRASES = [
+    "目前没有识别到明确的通知要点",
+    "请补充更完整的通知内容",
+    "无法访问您提供的",
+    "请检查文件路径是否正确",
+    "请上传文件",
 ]
 
 
@@ -293,10 +543,183 @@ def _format_list(items: List[str], fallback: str) -> List[str]:
     return [f"- {item}" for item in items]
 
 
+def _compact_reply_text(text: Optional[str], limit: int = 180) -> str:
+    normalized = " ".join(str(text or "").split()).strip()
+    if not normalized:
+        return ""
+    return normalized if len(normalized) <= limit else f"{normalized[: limit - 3]}..."
+
+
+def _preview_generic_value(value: Any, limit: int = 120) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return _compact_reply_text(value, limit=limit)
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    if isinstance(value, list):
+        parts: List[str] = []
+        for item in value[:4]:
+            preview = _preview_generic_value(item, limit=36)
+            if preview:
+                parts.append(preview)
+        return "；".join(parts)
+    if isinstance(value, dict):
+        parts: List[str] = []
+        for idx, (key, item) in enumerate(value.items()):
+            if idx >= 3:
+                break
+            preview = _preview_generic_value(item, limit=32)
+            if preview:
+                parts.append(f"{key}={preview}")
+        return "；".join(parts)
+    return _compact_reply_text(str(value), limit=limit)
+
+
+def _extract_generic_points(structured: Dict[str, Any], user_text: str | None = None, limit: int = 6) -> List[str]:
+    points: List[str] = []
+    dynamic_payload = structured.get("dynamic_payload") if isinstance(structured.get("dynamic_payload"), dict) else {}
+    if isinstance(dynamic_payload, dict):
+        for key, value in dynamic_payload.items():
+            if key in {"content", "nodes", "links", "visual_config", "dynamic_payload", "parse_warning", "raw_excerpt", "text", "original_text"}:
+                continue
+            preview = _preview_generic_value(value)
+            if not preview:
+                continue
+            points.append(f"{key}：{preview}")
+            if len(points) >= limit:
+                return points
+
+    raw_text = str(structured.get("content") or structured.get("original_text") or user_text or "")
+    for line in raw_text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("【文件解析】") or stripped.startswith("【文件引用】"):
+            continue
+        if stripped in {"解析它", "提取文本", "提取图片文字"}:
+            continue
+        if len(stripped) < 6:
+            continue
+        points.append(_compact_reply_text(stripped, limit=120))
+        if len(points) >= limit:
+            break
+    return points
+
+
+def _guess_document_title(structured: Dict[str, Any], user_text: str | None = None) -> str:
+    candidates = [
+        structured.get("handling_matter"),
+        structured.get("title"),
+    ]
+    dynamic_payload = structured.get("dynamic_payload") if isinstance(structured.get("dynamic_payload"), dict) else {}
+    if isinstance(dynamic_payload, dict):
+        candidates.extend(
+            [
+                dynamic_payload.get("title"),
+                dynamic_payload.get("name"),
+                dynamic_payload.get("subject"),
+                dynamic_payload.get("topic"),
+            ]
+        )
+
+    for candidate in candidates:
+        text = _compact_reply_text(candidate, limit=48)
+        if text:
+            return text
+
+    raw_text = str(structured.get("original_text") or user_text or "")
+    for line in raw_text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("【文件解析】"):
+            return _compact_reply_text(stripped.replace("【文件解析】", "", 1), limit=48)
+        if stripped.startswith("【文件引用】"):
+            continue
+        if stripped in {"解析它", "提取文本", "提取图片文字"}:
+            continue
+        return _compact_reply_text(stripped, limit=48)
+    return "当前文档"
+
+
+def _guess_document_kind(title: str, text: str) -> str:
+    haystack = f"{title}\n{text}"
+    keyword_map = [
+        ("通知", "通知/公告"),
+        ("公告", "通知/公告"),
+        ("培养方案", "培养方案"),
+        ("方案", "方案文档"),
+        ("计划", "计划文档"),
+        ("赛道", "比赛策划/赛道分析"),
+        ("比赛", "比赛资料"),
+        ("课程", "课程资料"),
+        ("项目", "项目资料"),
+        ("简历", "个人材料"),
+    ]
+    for needle, label in keyword_map:
+        if needle in haystack:
+            return label
+    return "通用文档"
+
+
+def _build_generic_document_reply(result: Dict[str, Any], user_text: str | None = None) -> str:
+    parse_display_intent = _detect_upload_parse_intent(user_text)
+    display_cards = [card for card in list(result.get("display_cards", []) or []) if isinstance(card, dict)]
+    if parse_display_intent.get("has_upload_context"):
+        return _build_uploaded_parse_reply(result, user_text=user_text)
+        if parse_display_intent.get("display_mode") == "ocr_text":
+            return "已提取图片文字，并打开结果小窗。"
+        if _has_display_card_type(display_cards, "knowledge_graph"):
+            return "已生成图谱小窗，可直接查看知识图谱并切换原文。"
+        return "已读取上传内容，并打开原文小窗。"
+
+    structured = result.get("structured", {}) or {}
+    title = _guess_document_title(structured, user_text)
+    raw_text = str(structured.get("original_text") or user_text or "")
+    kind = _guess_document_kind(title, raw_text)
+    content_summary = _compact_reply_text(structured.get("content") or result.get("summary") or raw_text, limit=220)
+    generic_points = _extract_generic_points(structured, user_text=user_text, limit=6)
+
+    lines: List[str] = []
+    lines.append("## 文档概览")
+    lines.append(f"- 标题：{title}")
+    lines.append(f"- 类型：{kind}")
+    lines.append("- 解析结论：文件内容已成功读取，但它更像资料/方案/说明文档，不适合用“办理通知”模板输出。")
+    if content_summary:
+        lines.append(f"- 摘要：{content_summary}")
+    lines.append("")
+
+    lines.append("## 关键信息")
+    if generic_points:
+        lines.extend([f"- {item}" for item in generic_points[:6]])
+    else:
+        lines.append("- 已读取到文档正文，但暂未抽取出更稳定的结构化字段。")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _is_low_signal_reply(text: str) -> bool:
+    normalized = " ".join(str(text or "").split()).strip()
+    if not normalized:
+        return True
+    return any(phrase in normalized for phrase in _LOW_SIGNAL_REPLY_PHRASES)
+
+
 def build_agent_reply(result: Dict[str, Any], user_text: str | None = None) -> str:
     audience_label = "通用"
     if result.get("user_audience"):
         audience_label = str(result.get("user_audience"))
+
+    parse_display_intent = _detect_upload_parse_intent(user_text)
+    display_cards = [card for card in list(result.get("display_cards", []) or []) if isinstance(card, dict)]
+    if parse_display_intent.get("has_upload_context"):
+        return _build_uploaded_parse_reply(result, user_text=user_text)
+        if parse_display_intent.get("display_mode") == "ocr_text":
+            return "已提取图片文字，并打开结果小窗。"
+        if _has_display_card_type(display_cards, "knowledge_graph"):
+            return "已生成图谱小窗，可直接查看知识图谱并切换原文。"
+        return "已读取上传内容，并打开原文小窗。"
 
     structured = result.get("structured", {}) or {}
     has_core = any(
@@ -311,10 +734,7 @@ def build_agent_reply(result: Dict[str, Any], user_text: str | None = None) -> s
         ]
     )
     if not has_core:
-        return (
-            "目前没有识别到明确的通知要点。\n\n"
-            "请补充更完整的通知内容或上传原文件，我可以继续拆解办理步骤、材料清单与时间节点。"
-        )
+        return _build_generic_document_reply(result, user_text=user_text)
 
     handling_matter = _strip_noise(structured.get("handling_matter")) or "办理事项"
     target = _strip_noise(structured.get("target_audience")) or "适用对象"

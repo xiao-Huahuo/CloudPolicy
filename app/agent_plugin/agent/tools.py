@@ -15,6 +15,17 @@ from app.models.settings import Settings
 from app.models.todo import TodoItem
 from app.models.user import User
 from app.services import chat_message_service, stats_service
+from app.services.agent_tool_services import (
+    admin_tool_service,
+    diagnostic_tool_service,
+    file_tool_service,
+    search_tool_service,
+    stats_tool_service,
+)
+from app.services.agent_tool_services.base import (
+    ok_item_payload,
+    ok_list_payload,
+)
 from app.services.news_crawler import get_daily_gov_summary, search_news
 
 
@@ -93,7 +104,15 @@ def query_long_term_memory(query: str, user_id: str):
     """当需要检索用户长期记忆（偏好、背景、历史事实）时调用。"""
     long_term_memory = get_long_term_memory()
     results = long_term_memory.rag_query_top_k(query=query, user_id=user_id)
-    return _ok({"items": results, "meta": {"query": query, "count": len(results)}})
+    return _ok(
+        ok_list_payload(
+            results,
+            query=query,
+            total=len(results),
+            source_total=None,
+            suggested_tools=["unified_search_tool"],
+        )
+    )
 
 
 @tool
@@ -135,12 +154,21 @@ def get_my_todos(user_id: str, confirmed_only: bool = True):
     try:
         uid = _uid(user_id)
         with Session(engine) as session:
+            all_items = list(session.exec(select(TodoItem).where(TodoItem.user_id == uid)).all())
             stmt = select(TodoItem).where(TodoItem.user_id == uid)
             if confirmed_only:
                 stmt = stmt.where(TodoItem.is_confirmed == True)
             stmt = stmt.order_by(TodoItem.created_time.desc())
             items = list(session.exec(stmt).all())
-            return _ok({"items": [_todo_to_dict(item) for item in items]})
+            return _ok(
+                ok_list_payload(
+                    [_todo_to_dict(item) for item in items],
+                    total=len(items),
+                    source_total=len(all_items),
+                    applied_filters={"confirmed_only": confirmed_only},
+                    suggested_tools=["debug_query_zero_results", "create_todos_from_chat"],
+                )
+            )
     except Exception as exc:
         return _err("TODO_QUERY_FAILED", str(exc))
 
@@ -223,23 +251,26 @@ def confirm_todo(user_id: str, todo_id: int, confirm: bool = False):
 @tool
 def search_policy_documents(
     user_id: str,
+    query: str = "",
     category: str = "",
     skip: int = 0,
     limit: int = 20,
 ):
     """检索已审核通过的政策文档。"""
     try:
+        uid = _uid(user_id)
         with Session(engine) as session:
-            q = select(PolicyDocument).where(PolicyDocument.status == DocStatus.approved)
-            if category:
-                q = q.where(PolicyDocument.category == category)
-            q = q.order_by(PolicyDocument.created_time.desc()).offset(max(skip, 0)).limit(max(1, min(limit, 50)))
-            docs = list(session.exec(q).all())
-            result = []
-            for doc in docs:
-                uploader = session.get(User, doc.uploader_id)
-                result.append(_doc_to_dict(doc, uploader.uname if uploader else None))
-            return _ok({"items": result})
+            return _ok(
+                search_tool_service.search_policy_documents_payload(
+                    session,
+                    uid,
+                    query=query,
+                    category=category,
+                    skip=skip,
+                    limit=limit,
+                    approved_only=True,
+                )
+            )
     except Exception as exc:
         return _err("POLICY_SEARCH_FAILED", str(exc))
 
@@ -376,17 +407,16 @@ def search_chat_history(
     try:
         uid = _uid(user_id)
         with Session(engine) as session:
-            stmt = select(ChatMessage).where(
-                ChatMessage.user_id == uid,
-                ChatMessage.is_deleted == False,
+            return _ok(
+                search_tool_service.search_chat_messages_fulltext_payload(
+                    session,
+                    uid,
+                    query=query,
+                    skip=skip,
+                    limit=limit,
+                    handling_only=handling_only,
+                )
             )
-            if query:
-                stmt = stmt.where(ChatMessage.original_text.contains(query))
-            stmt = stmt.order_by(ChatMessage.created_time.desc()).offset(max(skip, 0)).limit(max(1, min(limit, 50)))
-            items = list(session.exec(stmt).all())
-            if handling_only:
-                items = [item for item in items if (item.handling_matter or "").strip()]
-            return _ok({"items": [_message_to_dict(item) for item in items]})
     except Exception as exc:
         return _err("CHAT_HISTORY_SEARCH_FAILED", str(exc))
 
@@ -438,7 +468,14 @@ def list_favorites(user_id: str):
                 .order_by(Favorite.created_time.desc())
             )
             items = list(session.exec(stmt).all())
-            return _ok({"items": [_favorite_to_dict(item) for item in items]})
+            return _ok(
+                ok_list_payload(
+                    [_favorite_to_dict(item) for item in items],
+                    total=len(items),
+                    source_total=len(items),
+                    suggested_tools=["get_chat_message_detail"],
+                )
+            )
     except Exception as exc:
         return _err("FAVORITE_LIST_FAILED", str(exc))
 
@@ -495,7 +532,7 @@ def get_my_stats(user_id: str):
         uid = _uid(user_id)
         with Session(engine) as session:
             stats = stats_service.generate_user_stats(session, uid)
-            return _ok({"item": stats})
+            return _ok(ok_item_payload(stats))
     except Exception as exc:
         return _err("STATS_QUERY_FAILED", str(exc))
 
@@ -534,6 +571,332 @@ def rewrite_for_audience(
         return _err("REWRITE_FAILED", str(exc))
 
 
+@tool
+def inspect_agent_runtime(
+    user_id: str,
+    mode: str = "agent",
+    conversation_id: int | None = None,
+):
+    """检查当前 Agent 运行模式、用户权限范围和可用工具集合。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                diagnostic_tool_service.inspect_agent_runtime_payload(
+                    session,
+                    uid,
+                    mode=mode,
+                    conversation_id=conversation_id,
+                )
+            )
+    except Exception as exc:
+        return _err("AGENT_RUNTIME_INSPECT_FAILED", str(exc))
+
+
+@tool
+def list_available_tools(user_id: str):
+    """列出当前用户在本轮 Agent 运行中可用的工具。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(diagnostic_tool_service.list_available_tools_payload(session, uid))
+    except Exception as exc:
+        return _err("AVAILABLE_TOOLS_QUERY_FAILED", str(exc))
+
+
+@tool
+def get_user_permission_scope(user_id: str):
+    """查看当前用户权限范围，用于判断是否可以使用高级分析或管理员工具。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(ok_item_payload(diagnostic_tool_service.get_permission_scope(session, uid)))
+    except Exception as exc:
+        return _err("PERMISSION_SCOPE_QUERY_FAILED", str(exc))
+
+
+@tool
+def debug_query_zero_results(
+    user_id: str,
+    tool_name: str,
+    query: str = "",
+    confirmed_only: bool | None = None,
+    category: str = "",
+    types: str = "",
+):
+    """当查询工具返回 0 个结果时，诊断空结果的原因并给出下一步建议。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                diagnostic_tool_service.debug_query_zero_results_payload(
+                    session,
+                    uid,
+                    tool_name=tool_name,
+                    query=query,
+                    confirmed_only=confirmed_only,
+                    category=category,
+                    types=types,
+                )
+            )
+    except Exception as exc:
+        return _err("QUERY_ZERO_DEBUG_FAILED", str(exc))
+
+
+@tool
+def unified_search_tool(
+    user_id: str,
+    query: str,
+    limit: int = 12,
+    types: str = "",
+):
+    """执行全局统一搜索，跨历史记录、Agent 会话、政策和新闻联合检索。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                search_tool_service.unified_search_payload(
+                    session,
+                    uid,
+                    query=query,
+                    limit=limit,
+                    types=types,
+                )
+            )
+    except Exception as exc:
+        return _err("UNIFIED_SEARCH_FAILED", str(exc))
+
+
+@tool
+def search_chat_messages_fulltext(
+    user_id: str,
+    query: str,
+    skip: int = 0,
+    limit: int = 20,
+    handling_only: bool = False,
+):
+    """按原文、办理事项、材料、流程、风险和图谱字段全文检索历史解析消息。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                search_tool_service.search_chat_messages_fulltext_payload(
+                    session,
+                    uid,
+                    query=query,
+                    skip=skip,
+                    limit=limit,
+                    handling_only=handling_only,
+                )
+            )
+    except Exception as exc:
+        return _err("CHAT_FULLTEXT_SEARCH_FAILED", str(exc))
+
+
+@tool
+def search_policy_documents_by_query(
+    user_id: str,
+    query: str,
+    category: str = "",
+    skip: int = 0,
+    limit: int = 20,
+):
+    """按关键词检索政策文档，覆盖标题、分类、标签和正文内容。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                search_tool_service.search_policy_documents_payload(
+                    session,
+                    uid,
+                    query=query,
+                    category=category,
+                    skip=skip,
+                    limit=limit,
+                    approved_only=True,
+                )
+            )
+    except Exception as exc:
+        return _err("POLICY_QUERY_SEARCH_FAILED", str(exc))
+
+
+@tool
+def list_user_uploaded_files(user_id: str, limit: int = 20):
+    """列出当前用户最近上传的文档、OCR 文件和会话导出快照。"""
+    try:
+        uid = _uid(user_id)
+        return _ok(file_tool_service.list_user_uploaded_files_payload(uid, limit=limit))
+    except Exception as exc:
+        return _err("USER_FILES_LIST_FAILED", str(exc))
+
+
+@tool
+def parse_uploaded_document(user_id: str, file_ref: str):
+    """解析当前用户已上传的文档文件，支持 PDF、Word、Excel、TXT 和 JSON 快照。"""
+    try:
+        uid = _uid(user_id)
+        return _ok(file_tool_service.parse_uploaded_document_payload(uid, file_ref=file_ref))
+    except PermissionError:
+        return _err("FILE_ACCESS_DENIED", "无权访问该文件")
+    except FileNotFoundError:
+        return _err("FILE_NOT_FOUND", "未找到该文件")
+    except ValueError as exc:
+        code = str(exc)
+        if code == "IMAGE_FILE_REQUIRES_OCR":
+            return _err("IMAGE_FILE_REQUIRES_OCR", "图片文件请改用 parse_uploaded_image_ocr")
+        return _err("DOCUMENT_PARSE_FAILED", code)
+    except Exception as exc:
+        return _err("DOCUMENT_PARSE_FAILED", str(exc))
+
+
+@tool
+def parse_uploaded_image_ocr(user_id: str, file_ref: str):
+    """对当前用户上传的图片执行 OCR，提取可读文本。"""
+    try:
+        uid = _uid(user_id)
+        return _ok(file_tool_service.parse_uploaded_image_ocr_payload(uid, file_ref=file_ref))
+    except PermissionError:
+        return _err("FILE_ACCESS_DENIED", "无权访问该文件")
+    except FileNotFoundError:
+        return _err("FILE_NOT_FOUND", "未找到该文件")
+    except ValueError as exc:
+        return _err("IMAGE_OCR_FAILED", str(exc))
+    except Exception as exc:
+        return _err("IMAGE_OCR_FAILED", str(exc))
+
+
+@tool
+def build_document_knowledge_graph(user_id: str, original_text: str, title: str = ""):
+    """从输入文本构建知识图谱，并返回可直接展示的小窗图谱数据。"""
+    try:
+        uid = _uid(user_id)
+        return _ok(
+            file_tool_service.build_document_knowledge_graph_payload(
+                uid,
+                original_text=original_text,
+                title=title,
+            )
+        )
+    except Exception as exc:
+        return _err("KNOWLEDGE_GRAPH_BUILD_FAILED", str(exc))
+
+
+@tool
+def get_message_knowledge_graph(user_id: str, message_id: int):
+    """读取某条历史解析消息中的知识图谱和原文映射数据。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                file_tool_service.get_message_knowledge_graph_payload(
+                    session,
+                    uid,
+                    message_id=message_id,
+                )
+            )
+    except PermissionError:
+        return _err("MESSAGE_NOT_FOUND", "未找到该消息或无权访问")
+    except Exception as exc:
+        return _err("MESSAGE_KNOWLEDGE_GRAPH_FAILED", str(exc))
+
+
+@tool
+def show_knowledge_graph_modal(
+    user_id: str,
+    message_id: int | None = None,
+    original_text: str = "",
+    title: str = "",
+):
+    """生成知识图谱小窗展示卡片，可基于历史消息或直接输入文本。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                file_tool_service.show_knowledge_graph_modal_payload(
+                    session,
+                    uid,
+                    message_id=message_id,
+                    original_text=original_text,
+                    title=title,
+                )
+            )
+    except PermissionError:
+        return _err("GRAPH_SOURCE_DENIED", "无权访问该图谱来源")
+    except ValueError as exc:
+        return _err("GRAPH_SOURCE_REQUIRED", str(exc))
+    except Exception as exc:
+        return _err("GRAPH_MODAL_BUILD_FAILED", str(exc))
+
+
+@tool
+def build_metric_cards(user_id: str):
+    """把当前用户统计结果转换为指标卡展示数据。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(stats_tool_service.build_metric_cards_payload(session, uid))
+    except Exception as exc:
+        return _err("METRIC_CARDS_BUILD_FAILED", str(exc))
+
+
+@tool
+def get_admin_analysis_overview(user_id: str):
+    """获取管理员全局分析总览，包含用户统计、RAG 命中和高活跃用户。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(admin_tool_service.get_admin_analysis_overview_payload(session, uid))
+    except PermissionError:
+        return _err("ADMIN_REQUIRED", "该工具需要管理员权限")
+    except Exception as exc:
+        return _err("ADMIN_ANALYSIS_OVERVIEW_FAILED", str(exc))
+
+
+@tool
+def build_admin_metric_cards(user_id: str):
+    """生成管理员专用的系统指标卡，用于综合数据分析展示。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(admin_tool_service.build_admin_metric_cards_payload(session, uid))
+    except PermissionError:
+        return _err("ADMIN_REQUIRED", "该工具需要管理员权限")
+    except Exception as exc:
+        return _err("ADMIN_METRIC_CARDS_BUILD_FAILED", str(exc))
+
+
+@tool
+def get_admin_user_role_distribution(user_id: str):
+    """查看管理员视角下的用户角色分布统计。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(admin_tool_service.get_admin_user_role_distribution_payload(session, uid))
+    except PermissionError:
+        return _err("ADMIN_REQUIRED", "该工具需要管理员权限")
+    except Exception as exc:
+        return _err("ADMIN_ROLE_DISTRIBUTION_FAILED", str(exc))
+
+
+@tool
+def get_admin_policy_review_overview(user_id: str, limit: int = 10):
+    """查看管理员视角下的政策文档审核分布和最近文档列表。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(
+                admin_tool_service.get_admin_policy_review_overview_payload(
+                    session,
+                    uid,
+                    limit=limit,
+                )
+            )
+    except PermissionError:
+        return _err("ADMIN_REQUIRED", "该工具需要管理员权限")
+    except Exception as exc:
+        return _err("ADMIN_POLICY_REVIEW_OVERVIEW_FAILED", str(exc))
+
+
 tools = [
     query_long_term_memory,
     parse_local_file,
@@ -552,5 +915,23 @@ tools = [
     add_favorite,
     get_my_stats,
     rewrite_for_audience,
+    inspect_agent_runtime,
+    list_available_tools,
+    get_user_permission_scope,
+    debug_query_zero_results,
+    unified_search_tool,
+    search_chat_messages_fulltext,
+    search_policy_documents_by_query,
+    list_user_uploaded_files,
+    parse_uploaded_document,
+    parse_uploaded_image_ocr,
+    build_document_knowledge_graph,
+    get_message_knowledge_graph,
+    show_knowledge_graph_modal,
+    build_metric_cards,
+    get_admin_analysis_overview,
+    build_admin_metric_cards,
+    get_admin_user_role_distribution,
+    get_admin_policy_review_overview,
 ]
 tool_node = ToolNode(tools)

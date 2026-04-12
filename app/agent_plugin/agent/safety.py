@@ -92,6 +92,13 @@ class StaticSafetyEngine:
             "add_favorite",
             "rewrite_for_audience",
         }
+        admin_only_tools = {
+            "get_admin_analysis_overview",
+            "build_admin_metric_cards",
+            "get_admin_user_role_distribution",
+            "get_admin_policy_review_overview",
+        }
+        normalized_role = str(user_role or "normal").strip().lower().split(".")[-1]
 
         rewritten = []
         rewritten_any = False
@@ -101,6 +108,12 @@ class StaticSafetyEngine:
                 return {
                     "decision": "deny",
                     "reason": f"未注册或不允许的工具: {name or 'unknown'}",
+                    "tool_calls": [],
+                }
+            if name in admin_only_tools and normalized_role != "admin":
+                return {
+                    "decision": "deny",
+                    "reason": f"工具需要管理员权限: {name}",
                     "tool_calls": [],
                 }
 

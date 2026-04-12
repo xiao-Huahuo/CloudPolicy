@@ -19,7 +19,7 @@ class AgentEvidence(BaseModel):
     category: Optional[str] = None
     score: float = 0.0
     snippet: str = ""
-    tags: List[str] = []
+    tags: List[str] = Field(default_factory=list)
 
 
 class AgentToolCall(BaseModel):
@@ -36,14 +36,15 @@ class AgentRunResponse(BaseModel):
     structured: Dict[str, Any]
     assistant_reply: str = ""
     mode: str = "agent"
-    tool_calls: List[AgentToolCall] = []
-    checklist: List[Dict[str, Any]]
-    timeline: List[Dict[str, Any]]
-    process_steps: List[str]
-    materials: List[str]
-    notices: List[str]
-    risks: List[str]
+    tool_calls: List[AgentToolCall] = Field(default_factory=list)
+    checklist: List[Dict[str, Any]] = Field(default_factory=list)
+    timeline: List[Dict[str, Any]] = Field(default_factory=list)
+    process_steps: List[str] = Field(default_factory=list)
+    materials: List[str] = Field(default_factory=list)
+    notices: List[str] = Field(default_factory=list)
+    risks: List[str] = Field(default_factory=list)
     rag_metrics: Dict[str, Any]
-    evidence: List[AgentEvidence]
+    evidence: List[AgentEvidence] = Field(default_factory=list)
+    display_cards: List[Dict[str, Any]] = Field(default_factory=list)
     chat_message_id: Optional[int] = None
     user_audience: Optional[str] = None

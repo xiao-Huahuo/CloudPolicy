@@ -1,4 +1,3 @@
-import os
 import shutil
 import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -218,13 +217,7 @@ async def ocr_image(
     # Call the new OCR service
     extracted_text = await perform_kimi_ocr(file_path, content_type, file.filename)
 
-    # Clean up the local temporary file after OCR processing
-    if file_path.exists():
-        try:
-            os.remove(file_path)
-            logger.info(f"Local temporary OCR file {file_path} deleted.")
-        except Exception as e:
-            logger.error(f"Failed to delete local temporary OCR file {file_path}: {e}")
+    logger.info("OCR source file retained for downstream agent parsing: %s", file_path)
 
     return {
         "file_url": f"/media/docs/{new_filename}",

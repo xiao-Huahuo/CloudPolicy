@@ -486,6 +486,9 @@ const handleSocketMessage = (raw) => {
 
   if (data.type === 'result') {
     agentResult.value = data.agent_result || null;
+    if (!isMobile.value && Array.isArray(agentResult.value?.display_cards) && agentResult.value.display_cards.length) {
+      inspectorOpen.value = true;
+    }
     return;
   }
 
@@ -589,6 +592,17 @@ const uploadPendingFiles = async () => {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     const extractedText = String(response.data?.extracted_text || '').trim();
+    const fileRef = String(response.data?.file_url || '').trim();
+    if (extractedText) {
+      const lines = [`【文件解析】${item.name}`];
+      if (fileRef) {
+        lines.push(`【文件引用】${fileRef}`);
+      }
+      lines.push(extractedText);
+      sections.push(lines.join('\n'));
+      labels.push(item.name);
+      continue;
+    }
     if (extractedText) {
       sections.push(`【文件解析】${item.name}\n${extractedText}`);
       labels.push(item.name);
@@ -622,6 +636,10 @@ const sendMessage = async (textOverride) => {
 
     const userVisibleContent = content || `请分析我上传的 ${labels.length} 个文件。`;
     const requestParts = [content || '请分析以下材料，并给出结论。', ...sections].filter(Boolean);
+    if (!content && requestParts.length) {
+      requestParts[0] =
+        '请分析以下材料并给出结论。若消息里已经包含“【文件引用】/media/...”，只有在确实需要重新读取文件时才调用文件工具，并优先使用该文件引用，不要直接使用原始文件名作为 file_ref。';
+    }
     const finalMessage = requestParts.join('\n\n');
 
     if (!finalMessage) {

@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 import sqlite3
 from pathlib import Path
 from typing import Annotated, TypedDict, Any, Generator
@@ -19,6 +21,26 @@ from app.agent_plugin.agent.tools import tools, tool_node
 from app.core.config import GlobalConfig
 from app.core.database import engine
 from app.models.user import User
+from app.services.agent_tool_services.base import normalize_role_value
+
+
+logger = logging.getLogger(__name__)
+
+_FILE_REF_RE = re.compile(r"(/media/(?:docs|images|avatars)/[^\s\"'<>]+)")
+_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".tif"}
+_FILE_TOOL_NAMES = {"parse_uploaded_document", "parse_uploaded_image_ocr"}
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    items: list[str] = []
+    for value in values:
+        normalized = str(value or "").strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        items.append(normalized)
+    return items
 
 
 class AgentState(TypedDict):
@@ -75,6 +97,8 @@ def write_agent_graph_svg(graph_path: Path, overwrite: bool = False) -> bool:
 
 class AgentCore:
     MAX_RECURSION_STEPS = 24
+    MAX_MODEL_MESSAGES = 12
+    MAX_MODEL_CHARS = 6000
 
     model: Any
     plain_model: Any
@@ -156,19 +180,193 @@ class AgentCore:
             # ??????????????????
             pass
 
+    def _extract_file_refs_from_text(self, text: str) -> list[str]:
+        refs: list[str] = []
+        for match in _FILE_REF_RE.findall(str(text or "")):
+            refs.append(match.rstrip(".,;:)]}>"))
+        return _dedupe_preserve_order(refs)
+
+    def _tool_name_for_file_ref(self, file_ref: str) -> str:
+        suffix = Path(str(file_ref or "")).suffix.lower()
+        return "parse_uploaded_image_ocr" if suffix in _IMAGE_SUFFIXES else "parse_uploaded_document"
+
+    def _select_context_file_ref(
+        self,
+        tool_name: str,
+        provided_ref: str,
+        file_refs: list[str],
+    ) -> tuple[str | None, str | None]:
+        raw_value = str(provided_ref or "").strip()
+        if not file_refs:
+            return None, None
+
+        if raw_value in file_refs:
+            return raw_value, None
+
+        preferred_refs = [
+            ref for ref in file_refs if self._tool_name_for_file_ref(ref) == self._tool_name_for_file_ref(tool_name)
+        ]
+        candidate_refs = preferred_refs or file_refs
+
+        if not raw_value and len(candidate_refs) == 1:
+            return candidate_refs[0], "fill_from_message_context"
+
+        if raw_value and len(candidate_refs) == 1 and not raw_value.startswith("/media/"):
+            return candidate_refs[0], "replace_filename_with_message_ref"
+
+        if raw_value:
+            raw_name = Path(raw_value).name.lower()
+            if raw_name:
+                name_matches = [ref for ref in candidate_refs if Path(ref).name.lower() == raw_name]
+                if len(name_matches) == 1:
+                    return name_matches[0], "match_by_uploaded_name"
+
+            raw_suffix = Path(raw_value).suffix.lower()
+            if raw_suffix:
+                suffix_matches = [ref for ref in candidate_refs if Path(ref).suffix.lower() == raw_suffix]
+                if len(suffix_matches) == 1:
+                    return suffix_matches[0], "match_by_uploaded_suffix"
+
+        return None, None
+
+    def _normalize_tool_call(
+        self,
+        state: AgentState,
+        tool_name: str,
+        args: dict[str, Any],
+        file_refs: list[str],
+    ) -> tuple[str, dict[str, Any], list[str]]:
+        normalized_args = dict(args)
+        rewrite_reasons: list[str] = []
+        runtime_user_id = str(state["user_id"])
+        model_user_id = str(normalized_args.get("user_id", "") or "").strip()
+        if model_user_id != runtime_user_id:
+            if model_user_id:
+                rewrite_reasons.append(f"user_id_override:{model_user_id}->{runtime_user_id}")
+            else:
+                rewrite_reasons.append(f"user_id_injected:{runtime_user_id}")
+        normalized_args["user_id"] = runtime_user_id
+
+        rewritten_tool_name = tool_name
+
+        if tool_name == "parse_local_file" and file_refs:
+            file_name = str(normalized_args.get("file_name", "") or "").strip()
+            selected_ref, select_reason = self._select_context_file_ref("parse_uploaded_document", file_name, file_refs)
+            if selected_ref:
+                rewritten_tool_name = self._tool_name_for_file_ref(selected_ref)
+                normalized_args = {"user_id": runtime_user_id, "file_ref": selected_ref}
+                rewrite_reasons.append(f"tool_redirect:{tool_name}->{rewritten_tool_name}")
+                rewrite_reasons.append(f"file_ref:{select_reason}")
+                return rewritten_tool_name, normalized_args, rewrite_reasons
+
+        if rewritten_tool_name in _FILE_TOOL_NAMES:
+            selected_ref, select_reason = self._select_context_file_ref(
+                rewritten_tool_name,
+                str(normalized_args.get("file_ref", "") or ""),
+                file_refs,
+            )
+            if selected_ref:
+                if str(normalized_args.get("file_ref", "") or "") != selected_ref:
+                    rewrite_reasons.append(f"file_ref:{select_reason}")
+                normalized_args["file_ref"] = selected_ref
+                expected_tool_name = self._tool_name_for_file_ref(selected_ref)
+                if expected_tool_name != rewritten_tool_name:
+                    rewrite_reasons.append(f"tool_redirect:{rewritten_tool_name}->{expected_tool_name}")
+                    rewritten_tool_name = expected_tool_name
+
+        return rewritten_tool_name, normalized_args, rewrite_reasons
+
+    def _preview_json(self, value: Any, limit: int = 800) -> str:
+        try:
+            text = json.dumps(value, ensure_ascii=False, default=str)
+        except Exception:
+            text = str(value)
+        if len(text) <= limit:
+            return text
+        return f"{text[:limit]}...(truncated)"
+
+    def _summarize_tool_output(self, output: str) -> dict[str, Any]:
+        text = str(output or "").strip()
+        if not text:
+            return {}
+        try:
+            payload = json.loads(text)
+        except Exception:
+            return {"preview": text[:300]}
+
+        if not isinstance(payload, dict):
+            return {"preview": self._preview_json(payload, limit=300)}
+
+        error = payload.get("error") if isinstance(payload.get("error"), dict) else {}
+        meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+        summary: dict[str, Any] = {
+            "ok": payload.get("ok"),
+            "error_code": error.get("code"),
+            "error_message": error.get("message"),
+        }
+        if meta:
+            summary["meta"] = meta
+        if "item" in payload:
+            summary["has_item"] = True
+        if isinstance(payload.get("items"), list):
+            summary["items_count"] = len(payload.get("items") or [])
+        return summary
+
     def _inject_runtime_args(self, state: AgentState, response: Any) -> Any:
         tool_calls = getattr(response, "tool_calls", []) or []
+        user_text = self._extract_user_text(state)
+        file_refs = self._extract_file_refs_from_text(user_text)
+        runtime_normalizations: list[dict[str, Any]] = []
         for tc in tool_calls:
+            original_tool_name = str(tc.get("name", "") or "tool")
             args = tc.get("args")
             if not isinstance(args, dict):
                 args = {}
-                tc["args"] = args
-            args.setdefault("user_id", state["user_id"])
+            original_args = dict(args)
+            normalized_tool_name, normalized_args, rewrite_reasons = self._normalize_tool_call(
+                state,
+                original_tool_name,
+                original_args,
+                file_refs,
+            )
+            tc["name"] = normalized_tool_name
+            tc["args"] = normalized_args
+            if rewrite_reasons:
+                event = {
+                    "tool": normalized_tool_name,
+                    "original_tool": original_tool_name,
+                    "original_args": original_args,
+                    "normalized_args": normalized_args,
+                    "reasons": rewrite_reasons,
+                }
+                runtime_normalizations.append(event)
+                logger.info(
+                    "Agent tool normalized user_id=%s thread_mode=%s event=%s",
+                    state["user_id"],
+                    state.get("mode", "agent"),
+                    self._preview_json(event),
+                )
+
+        if runtime_normalizations or file_refs:
+            extra = getattr(response, "additional_kwargs", None)
+            if not isinstance(extra, dict):
+                extra = {}
+                try:
+                    response.additional_kwargs = extra
+                except Exception:
+                    extra = {}
+            extra["_runtime_context"] = {
+                "user_id": state["user_id"],
+                "mode": state.get("mode", "agent"),
+                "file_refs": file_refs,
+            }
+            if runtime_normalizations:
+                extra["_runtime_normalizations"] = runtime_normalizations
         return response
 
     def _call_model(self, state: AgentState):
         system_msg = SystemMessage(content=AgentConfig.SYSTEM_PROMPT)
-        response = self.model.invoke([system_msg] + state["messages"])
+        response = self.model.invoke([system_msg] + self._select_model_messages(state))
         response = self._inject_runtime_args(state, response)
         return {"messages": [response]}
 
@@ -188,12 +386,99 @@ class AgentCore:
                 return str(getattr(msg, "content", "") or "").strip()
         return ""
 
+    def _message_length(self, msg: Any) -> int:
+        content = getattr(msg, "content", "")
+        if isinstance(content, str):
+            return len(content)
+        return len(str(content or ""))
+
+    def _message_has_tool_calls(self, msg: Any) -> bool:
+        return bool(getattr(msg, "tool_calls", []) or [])
+
+    def _is_tool_message(self, msg: Any) -> bool:
+        msg_type = str(getattr(msg, "type", "") or "").strip().lower()
+        return msg_type == "tool" or msg.__class__.__name__ == "ToolMessage"
+
+    def _group_messages_for_model(self, messages: list[Any]) -> list[list[Any]]:
+        grouped: list[list[Any]] = []
+        idx = 0
+        while idx < len(messages):
+            msg = messages[idx]
+            if self._message_has_tool_calls(msg):
+                group = [msg]
+                tool_call_ids = {
+                    str(tc.get("id", "") or "").strip()
+                    for tc in list(getattr(msg, "tool_calls", []) or [])
+                    if isinstance(tc, dict)
+                }
+                idx += 1
+                while idx < len(messages):
+                    next_msg = messages[idx]
+                    if not self._is_tool_message(next_msg):
+                        break
+                    next_tool_call_id = str(getattr(next_msg, "tool_call_id", "") or "").strip()
+                    if tool_call_ids and next_tool_call_id and next_tool_call_id not in tool_call_ids:
+                        break
+                    group.append(next_msg)
+                    idx += 1
+                grouped.append(group)
+                continue
+
+            grouped.append([msg])
+            idx += 1
+        return grouped
+
+    def _select_model_messages(self, state: AgentState) -> list[Any]:
+        messages = list(state.get("messages") or [])
+        if not messages:
+            return []
+
+        grouped_messages = self._group_messages_for_model(messages)
+        selected_groups: list[list[Any]] = []
+        selected_count = 0
+        total_chars = 0
+        for group in reversed(grouped_messages):
+            group_count = len(group)
+            group_chars = sum(self._message_length(msg) for msg in group)
+            if selected_groups and (
+                selected_count + group_count > self.MAX_MODEL_MESSAGES
+                or total_chars + group_chars > self.MAX_MODEL_CHARS
+            ):
+                continue
+            selected_groups.append(group)
+            selected_count += group_count
+            total_chars += group_chars
+            if selected_count >= self.MAX_MODEL_MESSAGES or total_chars >= self.MAX_MODEL_CHARS:
+                break
+
+        if not selected_groups and grouped_messages:
+            latest_group = grouped_messages[-1]
+            selected_groups = [latest_group]
+            selected_count = len(latest_group)
+            total_chars = sum(self._message_length(msg) for msg in latest_group)
+
+        selected = [msg for group in reversed(selected_groups) for msg in group]
+        if len(selected) != len(messages):
+            logger.info(
+                (
+                    "Agent message window trimmed user_id=%s original_messages=%s "
+                    "original_groups=%s selected_messages=%s selected_groups=%s selected_chars=%s"
+                ),
+                state.get("user_id"),
+                len(messages),
+                len(grouped_messages),
+                len(selected),
+                len(selected_groups),
+                total_chars,
+            )
+        return selected
+
     def _get_user_role(self, user_id: str) -> str:
         try:
             with Session(engine) as session:
                 user = session.get(User, int(user_id))
                 if user and user.role:
-                    return str(user.role)
+                    return normalize_role_value(user.role)
         except Exception:
             pass
         return "normal"
@@ -311,7 +596,7 @@ class AgentCore:
 
     def _direct_answer(self, state: AgentState):
         system_msg = SystemMessage(content=AgentConfig.SYSTEM_PROMPT + "\n本轮无需调用工具，请直接回答。")
-        response = self.plain_model.invoke([system_msg] + state["messages"])
+        response = self.plain_model.invoke([system_msg] + self._select_model_messages(state))
         return {"messages": [response], "thought_event": "已直接生成答复（未调用工具）"}
 
     def _should_continue(self, state: AgentState):
@@ -323,7 +608,7 @@ class AgentCore:
             content="分析对话，提取 1-2 条关于用户的新信息（偏好/习惯/背景）。若无新增信息，仅回复 NONE。"
         )
 
-        response = self.model.invoke([summary_prompt] + state["messages"])
+        response = self.model.invoke([summary_prompt] + self._select_model_messages(state))
         content = (response.content or "").strip()
 
         self.memory_engine.summarize_and_store_knowledge(
@@ -358,6 +643,14 @@ class AgentCore:
             "configurable": {"thread_id": thread_id},
             "recursion_limit": self.MAX_RECURSION_STEPS,
         }
+        runtime_context = {
+            "thread_id": thread_id,
+            "user_id": user_id,
+            "mode": mode,
+            "file_refs": self._extract_file_refs_from_text(prompt),
+        }
+        print(f"[runtime_context] {self._preview_json(runtime_context)}")
+        logger.info("Agent task start %s", self._preview_json(runtime_context))
 
         print(f"\n{'=' * 20} 任务开始 (Thread: {thread_id}) {'=' * 20}")
         print(f"[用户输入]: {prompt}")
@@ -374,9 +667,18 @@ class AgentCore:
                     last_msg = state_update["messages"][-1] if has_messages else None
 
                     if node_name == "agent":
+                        runtime_meta = {}
+                        if last_msg is not None:
+                            runtime_meta = getattr(last_msg, "additional_kwargs", {}) or {}
+                        for item in runtime_meta.get("_runtime_normalizations", []) or []:
+                            print(f"--- [runtime_normalized] {self._preview_json(item)}")
+                        if runtime_meta.get("_runtime_context"):
+                            print(f"--- [runtime_context] {self._preview_json(runtime_meta['_runtime_context'])}")
                         if last_msg is not None and getattr(last_msg, "tool_calls", None):
-                            for tc in last_msg.tool_calls:
-                                print(f"--- [内核决策] 调用工具 [{tc['name']}]")
+                            for idx, tc in enumerate(last_msg.tool_calls, start=1):
+                                print(
+                                    f"--- [tool_plan:{idx}] name={tc['name']} args={self._preview_json(tc.get('args', {}))}"
+                                )
                         if last_msg is not None and last_msg.content:
                             print(f"[内核回复]: {last_msg.content}")
                     elif node_name == "action":
@@ -419,11 +721,18 @@ class AgentCore:
                         output = last_msg.content if last_msg is not None else ""
                         if not isinstance(output, str):
                             output = json.dumps(output, ensure_ascii=False)
+                        preview_output = output[:2000]
+                        if len(output) > 2000:
+                            preview_output = f"{preview_output}...(truncated)"
+                        summary = self._summarize_tool_output(output)
+                        if summary:
+                            print(f"--- [tool_result] {self._preview_json(summary)}")
                         payload["tool_results"] = [
                             {
                                 "name": getattr(last_msg, "name", "tool") if last_msg is not None else "tool",
                                 "tool_call_id": getattr(last_msg, "tool_call_id", None) if last_msg is not None else None,
-                                "output": output[:6000],
+                                "output": preview_output,
+                                "full_output": output,
                             }
                         ]
                         payload["thought_event"] = "工具执行完成，正在吸收结果并继续推理"
