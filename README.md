@@ -96,7 +96,7 @@
 * **Agent 插件化架构**：在基础 AI 链路之上，项目进一步落地了基于 **LangGraph** 的通用 Agent 插件系统，具备短期会话记忆、长期向量记忆、工具注册、图谱输出与流式执行能力，并在应用启动阶段进行 AgentGraph 生成与插件预热。
 * **本地 Embedding 与知识预热机制**：后端通过 **sentence-transformers** 管理本地 embedding 模型，支持独立脚本下载、启动前检查、Docker 外预下载与知识库首次向量化同步，降低容器部署阶段对外部网络和 GPU 环境的依赖。
 * **自由结构化解析引擎**：文档解析并非固定模板抽取，而是基于 LLM 输出严格 JSON、局部修复、失败回退和动态载荷生成的多级容错链路，同时支持 `nodes / links / dynamic_payload / visual_config` 等结构化结果，便于后续图谱展示与二次处理。
-* **文档解析与 OCR 处理链**：系统支持 **PDF / DOCX / DOC / XLSX / XLS / TXT** 多格式文档上传与解析，结合 **PyMuPDF、pdfplumber、python-docx、openpyxl、xlrd** 等工具链，并对图片、扫描版 PDF、图文混排 PDF 与 DOCX 内嵌图片统一采用“**本地 PaddleOCR 优先，LLM OCR 兜底**”的混合链路完成文字提取。
+* **文档解析与 OCR 处理链**：系统支持 **PDF / DOCX / DOC / XLSX / XLS / TXT** 多格式文档上传与解析，结合 **PyMuPDF、pdfplumber、python-docx、openpyxl、xlrd** 等工具链，并对图片、扫描版 PDF、图文混排 PDF 与 DOCX 内嵌图片统一采用“**本地 PaddleOCR 优先，LLM OCR 兜底**”的混合链路完成文字提取；同时针对内嵌图片过多的 DOCX 自动切换为“**整文件抽取优先**”策略，避免逐图串行 OCR 导致的长时间阻塞。
 * **实时通信编排**：智能体服务基于 **FastAPI WebSocket + asyncio.Queue + to_thread** 形成“轨迹先行、结果后达、正文分块输出”的实时推理编排机制，支持 trace step、trace done 与 chunk 化回答分阶段推送。
 * **统计建模与内容分析**：后端通过 **jieba** 进行材料词频、风险词频与复杂度分布计算，结合时间节省估算模型、RAG 命中率统计、向量散点数据与用户画像摘要，为个人中心、管理后台与展示大屏提供统一的数据分析底座。
 * **新闻抓取与缓存回退**：项目已实现基于 **RSS + Redis 缓存 + 内存回退缓存 + 限流控制** 的资讯服务链路，在外部源不稳定时仍可退回到可展示的数据状态，保障展示层连续可用。
@@ -311,6 +311,7 @@ $$
 * **多格式文档解析**：系统支持 **PDF / DOCX / DOC / XLSX / XLS / TXT / 图片 / 截图 / URL** 等多类输入，分别接入不同的解析路径。
 * **文本优先、混合提取**：在 PDF 场景下优先使用 `PyMuPDF` 提取文本块与图片块，并按页面阅读顺序混排；文本层直接保留，图片块走 OCR，从而兼容扫描件、图文混排 PDF 与图片型 PDF。
 * **本地优先、LLM 兜底**：OCR 统一优先使用本地 `PaddleOCR`；若本地 OCR 未启用、依赖缺失、模型不可用或识别结果为空，再回退到 LLM OCR，覆盖图片上传、截图上传、扫描 PDF、DOCX 内嵌图片等入口。
+* **重图文档智能分流**：当 DOCX 内嵌图片数量过多时，系统不会继续逐张串行执行本地 OCR，而是自动切换为整文件 `file-extract` 抽取路径；这套策略在普通上传接口与 Agent 文件解析工具中保持一致，显著降低了多图文档的超时风险。
 * **解析结果直连结构化引擎**：OCR 与文档提取出的文本不会停留在“纯文字展示”，而是直接进入自由结构解析、图谱生成与结果可视化链路。
 
 ### 6. 复杂度评估与轻量评分模型 (Complexity Assessment & Lightweight Scoring)
