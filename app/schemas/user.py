@@ -11,11 +11,16 @@ class UserCreate(UserBase):
 
 
 class UserRead(UserBase):
+    email: Optional[str] = None
     uid: int
     created_time: datetime
     last_login: datetime
     role: UserRole = UserRole.normal
     email_verified: bool = False
+    phone_verified: bool = False
+    password_login_enabled: bool = True
+    preferred_login_method: Optional[str] = None
+    last_login_method: Optional[str] = None
 
 
 class UserRegisterResponse(SQLModel):
@@ -38,5 +43,6 @@ class UserUpdate(SQLModel):
     uname: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    login_phone: Optional[str] = None
     pwd: Optional[str] = None
     avatar_url: Optional[str] = None

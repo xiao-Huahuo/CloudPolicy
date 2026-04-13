@@ -8,7 +8,7 @@ import threading
 import logging
 
 from app.core.config import GlobalConfig
-from app.api.routes import user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin, agent, policy_document, opinion, showcase, history, search
+from app.api.routes import auth, user, login, chat_message, stats_analysis, settings, upload, news, todo, favorite, admin, agent, policy_document, opinion, showcase, history, search
 from app.services.init_db import init_db_and_admin
 from app.services.worker import start_worker, stop_worker # 导入 worker 的启动和停止函数
 from app.services.agent_plugin_service import close_agent_core, ensure_agent_graph_svg_on_startup, warmup_agent_plugin
@@ -92,6 +92,7 @@ async def log_request_middleware(request: Request, call_next):
 app.mount("/media", StaticFiles(directory=str(GlobalConfig.UPLOAD_DIR)), name="media")
 
 # 注入路由
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(user.router, prefix="/user", tags=["user"])
 app.include_router(login.router, prefix="/login", tags=["login"])
 app.include_router(chat_message.router, prefix="/chat", tags=["chat_message"])

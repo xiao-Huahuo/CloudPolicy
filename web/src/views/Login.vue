@@ -1,21 +1,17 @@
-﻿<template>
+<template>
   <div class="auth-page">
-    <LoginForm @success="handleSuccess" @switch-to-register="goRegister" />
+    <AuthShell initial-form="login" @success="handleSuccess" />
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router';
-import LoginForm from '@/components/Home/LoginForm.vue';
+import AuthShell from '@/components/Home/AuthShell.vue';
 
 const router = useRouter();
 
 const handleSuccess = () => {
   router.push('/agent');
-};
-
-const goRegister = () => {
-  router.push('/register');
 };
 </script>
 
@@ -53,8 +49,7 @@ const goRegister = () => {
 }
 
 .auth-page::after {
-  background:
-    linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
   transform: translateX(-100%);
   animation: authShimmer 10s linear infinite;
 }

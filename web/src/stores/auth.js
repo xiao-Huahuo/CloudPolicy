@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { login as loginApi, getMe } from '@/api/user';
+import { getMe, login as loginApi, passwordLogin as passwordLoginApi, phoneLogin as phoneLoginApi } from '@/api/user';
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || null);
@@ -9,6 +9,11 @@ export const useUserStore = defineStore('user', () => {
   const setToken = (newToken) => {
     token.value = newToken;
     localStorage.setItem('token', newToken);
+  };
+
+  const applyAccessToken = async (accessToken) => {
+    setToken(accessToken);
+    await fetchUser();
   };
 
   const fetchUser = async () => {
@@ -28,8 +33,17 @@ export const useUserStore = defineStore('user', () => {
 
   const login = async (username, password) => {
     const response = await loginApi(username, password);
-    setToken(response.data.access_token);
-    await fetchUser();
+    await applyAccessToken(response.data.access_token);
+  };
+
+  const loginWithPassword = async (identity, password) => {
+    const response = await passwordLoginApi(identity, password);
+    await applyAccessToken(response.data.access_token);
+  };
+
+  const loginWithPhone = async (phone, code) => {
+    const response = await phoneLoginApi({ phone, code });
+    await applyAccessToken(response.data.access_token);
   };
 
   const logout = () => {
@@ -41,5 +55,16 @@ export const useUserStore = defineStore('user', () => {
   const isAdmin = computed(() => user.value?.role === 'admin');
   const isCertified = computed(() => user.value?.role === 'certified');
 
-  return { token, user, isAdmin, isCertified, login, logout, fetchUser };
+  return {
+    token,
+    user,
+    isAdmin,
+    isCertified,
+    login,
+    loginWithPassword,
+    loginWithPhone,
+    applyAccessToken,
+    logout,
+    fetchUser,
+  };
 });

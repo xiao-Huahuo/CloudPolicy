@@ -9,6 +9,7 @@ from typing import Iterable, Optional
 from app.core.config import GlobalConfig
 from app.core.security import create_email_verification_token
 from app.models.user import User
+from app.services.auth_identity_service import get_public_email
 
 
 logger = logging.getLogger(__name__)
@@ -126,10 +127,46 @@ def send_verification_email(user: User) -> dict:
     return result
 
 
+def send_code_email(recipient: str, code: str, purpose: str) -> dict:
+    subject_map = {
+        "reset_password": "ClearNotify 密码重置验证码",
+        "bind_email": "ClearNotify 邮箱绑定验证码",
+        "register": "ClearNotify 邮箱注册验证码",
+    }
+    purpose_label_map = {
+        "reset_password": "重置密码",
+        "bind_email": "绑定邮箱",
+        "register": "注册验证",
+    }
+    subject = subject_map.get(purpose, "ClearNotify 验证码")
+    purpose_label = purpose_label_map.get(purpose, "身份验证")
+    content = (
+        f"您好：\n\n"
+        f"您正在进行{purpose_label}。\n"
+        f"本次验证码为：{code}\n\n"
+        f"验证码将在 {GlobalConfig.AUTH_CODE_EXPIRE_MINUTES} 分钟后失效。"
+    )
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <p>您好：</p>
+      <p>您正在进行{purpose_label}。</p>
+      <p style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">{code}</p>
+      <p style="font-size: 12px; color: #666;">验证码将在 {GlobalConfig.AUTH_CODE_EXPIRE_MINUTES} 分钟后失效。</p>
+    </div>
+    """
+    result = send_email(recipient, subject, content, html_content=html_content)
+    if result["delivery_channel"] == "preview":
+        result["preview_code"] = code
+    return result
+
+
 def send_upgrade_request_email(requester: User, admins: Iterable[User]) -> None:
     for admin in admins:
+        recipient = get_public_email(admin.email)
+        if not recipient:
+            continue
         send_email(
-            admin.email,
+            recipient,
             "ClearNotify 权限升级申请",
             (
                 f"用户 {requester.uname}（UID: {requester.uid}，邮箱: {requester.email}）"
@@ -139,8 +176,11 @@ def send_upgrade_request_email(requester: User, admins: Iterable[User]) -> None:
 
 
 def send_role_change_email(user: User, role_name: str) -> None:
+    recipient = get_public_email(user.email)
+    if not recipient:
+        return
     send_email(
-        user.email,
+        recipient,
         "ClearNotify 权限变更通知",
         f"您好，您的账户权限已变更为：{role_name}。",
     )

@@ -1,9 +1,10 @@
 import os
 import json
 import logging
+import secrets
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from sqlmodel import Session, select
 from app.core.database import create_db_and_tables, engine
 from app.models.user import User, UserRole
@@ -22,6 +23,14 @@ from app.models.stats_analysis import StatsAnalysis
 from app.core.security import get_password_hash
 from app.core.config import GlobalConfig
 from app.services import history_service, search_index_service
+from app.services.auth_identity_service import (
+    build_placeholder_email,
+    get_public_email,
+    is_valid_login_phone,
+    normalize_email,
+    normalize_login_phone,
+    resolve_user_for_identifier,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +121,11 @@ def _run_migrations():
         "ALTER TABLE user ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT 0",
         "ALTER TABLE user ADD COLUMN email_verification_code VARCHAR",
         "ALTER TABLE user ADD COLUMN email_verification_sent_at DATETIME",
+        "ALTER TABLE user ADD COLUMN login_phone VARCHAR",
+        "ALTER TABLE user ADD COLUMN phone_verified BOOLEAN NOT NULL DEFAULT 0",
+        "ALTER TABLE user ADD COLUMN password_login_enabled BOOLEAN NOT NULL DEFAULT 1",
+        "ALTER TABLE user ADD COLUMN preferred_login_method VARCHAR",
+        "ALTER TABLE user ADD COLUMN last_login_method VARCHAR",
         "ALTER TABLE user ADD COLUMN role VARCHAR NOT NULL DEFAULT 'normal'",
         "ALTER TABLE user ADD COLUMN last_ip VARCHAR",
         "ALTER TABLE user ADD COLUMN profession VARCHAR",
@@ -132,6 +146,58 @@ def _run_migrations():
             except Exception as e:
                 # 字段已存在，忽略错误
                 pass
+        try:
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_login_phone_unique ON user(login_phone)"))
+            conn.commit()
+            print("  [ok] 鎵ц杩佺Щ: unique index for user.login_phone")
+        except Exception:
+            pass
+
+    _backfill_auth_fields()
+
+
+def _backfill_auth_fields():
+    with Session(engine) as session:
+        users = session.exec(select(User)).all()
+        changed = 0
+        for user in users:
+            dirty = False
+            if getattr(user, "password_login_enabled", None) is None:
+                user.password_login_enabled = bool(user.hashed_pwd)
+                dirty = True
+            if not getattr(user, "login_phone", None) and user.phone:
+                normalized_phone = normalize_login_phone(user.phone)
+                if is_valid_login_phone(normalized_phone):
+                    user.login_phone = normalized_phone
+                    user.phone_verified = True
+                    dirty = True
+            public_email = get_public_email(user.email)
+            if getattr(user, "last_login_method", None) == "password":
+                user.last_login_method = "email_password" if public_email else ("phone_password" if user.login_phone else "username_password")
+                dirty = True
+            if not getattr(user, "last_login_method", None):
+                if user.login_phone and not user.password_login_enabled:
+                    user.last_login_method = "phone_code"
+                elif user.hashed_pwd:
+                    user.last_login_method = "email_password" if public_email else ("phone_password" if user.login_phone else "username_password")
+                dirty = True
+            if getattr(user, "preferred_login_method", None) == "password":
+                user.preferred_login_method = None
+                dirty = True
+            if not getattr(user, "preferred_login_method", None):
+                if user.login_phone and (user.phone_verified or not user.password_login_enabled):
+                    user.preferred_login_method = "phone_code"
+                elif getattr(user, "last_login_method", None):
+                    user.preferred_login_method = user.last_login_method
+                elif user.hashed_pwd:
+                    user.preferred_login_method = "email_password" if public_email else ("phone_password" if user.login_phone else "username_password")
+                dirty = True
+            if dirty:
+                session.add(user)
+                changed += 1
+        if changed:
+            session.commit()
+            print(f"  [ok] 鍥炲～璁よ瘉瀛楁: {changed} 条")
 
 
 def _init_admin_user() -> int:
@@ -139,43 +205,74 @@ def _init_admin_user() -> int:
     初始化管理员账户
     返回管理员的 uid
     """
-    admin_email = os.getenv("ADMIN_EMAIL", GlobalConfig.DEFAULT_ADMIN_EMAIL)
+    admin_email = normalize_email(os.getenv("ADMIN_EMAIL", GlobalConfig.DEFAULT_ADMIN_EMAIL) or "")
     admin_username = os.getenv("ADMIN_USERNAME", GlobalConfig.DEFAULT_ADMIN_USERNAME)
     admin_password = os.getenv("ADMIN_PASSWORD", GlobalConfig.DEFAULT_ADMIN_PASSWORD)
+    admin_phone = normalize_login_phone(os.getenv("ADMIN_PHONE", GlobalConfig.DEFAULT_ADMIN_PHONE) or "")
+    if not is_valid_login_phone(admin_phone):
+        admin_phone = None
 
-    if not admin_email:
-        print("  [warn] 未配置管理员邮箱，跳过管理员初始化")
+    if not admin_email and not admin_phone:
+        print("  [warn] 未配置管理员邮箱或手机号，跳过管理员初始化")
         return None
 
     with Session(engine) as session:
-        existing = session.exec(select(User).where(User.email == admin_email)).first()
+        existing = None
+        if admin_email:
+            existing = session.exec(select(User).where(User.email == admin_email)).first()
+        if not existing and admin_phone:
+            existing = session.exec(select(User).where(User.login_phone == admin_phone)).first()
+        if not existing:
+            existing = session.exec(select(User).where(User.uname == admin_username)).first()
 
         if existing:
-            # 管理员已存在，确保角色和邮箱验证状态正确
-            if existing.role != UserRole.admin or not existing.email_verified:
-                existing.role = UserRole.admin
+            # 管理员已存在，确保认证字段和权限一致
+            existing.uname = admin_username
+            if admin_email:
+                existing.email = admin_email
                 existing.email_verified = True
-                session.add(existing)
-                session.commit()
-                print(f"  [ok] 更新管理员账户: {existing.email}")
-            else:
-                print(f"  [ok] 管理员账户已存在: {existing.email}")
-            return existing.uid
-        else:
-            # 创建新管理员
-            admin = User(
-                uname=admin_username,
-                email=admin_email,
-                hashed_pwd=get_password_hash(admin_password),
-                role=UserRole.admin,
-                email_verified=True,
-            )
-            session.add(admin)
+            elif not existing.email and admin_phone:
+                existing.email = build_placeholder_email(admin_phone)
+                existing.email_verified = False
+            if admin_phone:
+                existing.phone = admin_phone
+                existing.login_phone = admin_phone
+                existing.phone_verified = True
+            existing.hashed_pwd = get_password_hash(admin_password)
+            existing.role = UserRole.admin
+            existing.password_login_enabled = True
+            existing.preferred_login_method = "email_password" if admin_email else ("phone_code" if admin_phone else "username_password")
+            if not existing.last_login_method:
+                existing.last_login_method = existing.preferred_login_method
+            session.add(existing)
             session.commit()
-            session.refresh(admin)
-            print(f"  [ok] 创建管理员账户: {admin_username} ({admin_email})")
-            print(f"  [ok] 管理员密码: {admin_password}")
-            return admin.uid
+            print(f"  [ok] 更新管理员账户: {existing.uname} ({existing.email})")
+            return existing.uid
+
+        # 创建新管理员
+        stored_email = admin_email or build_placeholder_email(admin_phone)
+        preferred_login_method = "email_password" if admin_email else ("phone_code" if admin_phone else "username_password")
+        admin = User(
+            uname=admin_username,
+            email=stored_email,
+            phone=admin_phone,
+            login_phone=admin_phone,
+            hashed_pwd=get_password_hash(admin_password),
+            role=UserRole.admin,
+            email_verified=bool(admin_email),
+            phone_verified=bool(admin_phone),
+            password_login_enabled=True,
+            preferred_login_method=preferred_login_method,
+            last_login_method=preferred_login_method,
+        )
+        session.add(admin)
+        session.commit()
+        session.refresh(admin)
+        print(f"  [ok] 创建管理员账户: {admin_username} ({stored_email})")
+        if admin_phone:
+            print(f"  [ok] 管理员绑定手机号: {admin_phone}")
+        print(f"  [ok] 管理员密码: {admin_password}")
+        return admin.uid
 
 
 def _import_seed_data(admin_uid: int):
@@ -221,6 +318,7 @@ def _import_seed_data(admin_uid: int):
 
         # 7. 导入用户设置
         _import_settings(session, seed_dir)
+        _ensure_settings_for_all_users(session)
 
         # 8. 导入智能体对话
         _import_agent_conversations(session, seed_dir)
@@ -247,6 +345,98 @@ def _load_json(file_path: Path) -> Dict[str, Any]:
         return {}
 
 
+def _resolve_seed_user(
+    session: Session,
+    record: Dict[str, Any],
+    *,
+    email_key: str = "user_email",
+    identifier_key: str = "user_identifier",
+) -> Optional[User]:
+    identifier = (record.get(identifier_key) or record.get(email_key) or "").strip()
+    if not identifier:
+        return None
+    return resolve_user_for_identifier(session, identifier)
+
+
+def _build_seed_user(user_data: Dict[str, Any], *, default_role: UserRole, default_password: str) -> User:
+    uname = (user_data.get("uname") or "").strip()
+    if not uname:
+        raise ValueError("seed user is missing uname")
+
+    public_email = normalize_email(user_data.get("email") or "") or None
+
+    login_phone = normalize_login_phone(user_data.get("login_phone") or user_data.get("phone") or "")
+    if not is_valid_login_phone(login_phone):
+        login_phone = None
+
+    stored_email = public_email or (build_placeholder_email(login_phone) if login_phone else None)
+    if not stored_email:
+        raise ValueError(f"seed user '{uname}' must provide email or a valid login_phone")
+
+    password_login_enabled = bool(user_data.get("password_login_enabled", True))
+    seed_password = (user_data.get("seed_password") or "").strip()
+    effective_password = (seed_password or default_password) if password_login_enabled else secrets.token_urlsafe(24)
+
+    email_verified = bool(user_data.get("email_verified", bool(public_email)))
+    phone_verified = bool(user_data.get("phone_verified", bool(login_phone)))
+
+    if "preferred_login_method" in user_data:
+        preferred_login_method = user_data.get("preferred_login_method")
+    elif login_phone and (phone_verified or not password_login_enabled):
+        preferred_login_method = "phone_code"
+    elif password_login_enabled and public_email:
+        preferred_login_method = "email_password"
+    elif password_login_enabled:
+        preferred_login_method = "username_password"
+    else:
+        preferred_login_method = None
+
+    if "last_login_method" in user_data:
+        last_login_method = user_data.get("last_login_method")
+    else:
+        last_login_method = preferred_login_method
+
+    raw_role = user_data.get("role")
+    role = UserRole(raw_role) if raw_role else default_role
+
+    contact_phone = user_data.get("phone")
+    if not contact_phone and login_phone:
+        contact_phone = login_phone
+
+    return User(
+        uname=uname,
+        email=stored_email,
+        phone=contact_phone,
+        login_phone=login_phone,
+        profession=user_data.get("profession"),
+        avatar_url=user_data.get("avatar_url"),
+        hashed_pwd=get_password_hash(effective_password),
+        role=role,
+        email_verified=email_verified,
+        phone_verified=phone_verified,
+        password_login_enabled=password_login_enabled,
+        preferred_login_method=preferred_login_method,
+        last_login_method=last_login_method,
+    )
+
+
+def _ensure_settings_for_all_users(session: Session):
+    existing_user_ids = {setting.user_id for setting in session.exec(select(Settings)).all()}
+    created = 0
+
+    for user in session.exec(select(User)).all():
+        if user.uid in existing_user_ids:
+            continue
+        session.add(Settings(user_id=user.uid))
+        created += 1
+
+    if created:
+        session.commit()
+        print(f"  [ok] 为缺少设置的用户补全默认设置: {created} 条")
+    else:
+        print("  [ok] 所有用户均已有设置")
+
+
 def _import_users(session: Session, seed_dir: Path):
     """导入用户数据"""
     data = _load_json(seed_dir / "users.json")
@@ -255,38 +445,34 @@ def _import_users(session: Session, seed_dir: Path):
 
     print("  [用户数据]")
 
-    # 导入认证主体用户
-    for user_data in data.get("certified_users", []):
-        user = User(
-            uname=user_data["uname"],
-            email=user_data["email"],
-            phone=user_data.get("phone"),
-            profession=user_data.get("profession"),
-            avatar_url=user_data.get("avatar_url"),
-            hashed_pwd=get_password_hash("demo123456"),
-            role=UserRole.certified,
-            email_verified=True,
-        )
-        session.add(user)
-        print(f"    + 认证主体: {user.uname} ({user.email})")
+    group_specs = [
+        ("certified_users", UserRole.certified, "GovService#2026", "认证主体"),
+        ("normal_users", UserRole.normal, "Citizen#2026", "普通用户"),
+        ("auth_demo_users", UserRole.normal, "AuthDemo#2026", "认证演示"),
+    ]
+    imported_counts: Dict[str, int] = {}
 
-    # 导入普通用户
-    for user_data in data.get("normal_users", []):
-        user = User(
-            uname=user_data["uname"],
-            email=user_data["email"],
-            phone=user_data.get("phone"),
-            profession=user_data.get("profession"),
-            avatar_url=user_data.get("avatar_url"),
-            hashed_pwd=get_password_hash("user123456"),
-            role=UserRole.normal,
-            email_verified=True,
-        )
-        session.add(user)
-        print(f"    + 普通用户: {user.uname} ({user.email})")
+    for group_name, default_role, default_password, label in group_specs:
+        group_count = 0
+        for user_data in data.get(group_name, []):
+            user = _build_seed_user(
+                user_data,
+                default_role=default_role,
+                default_password=default_password,
+            )
+            session.add(user)
+            group_count += 1
+            identifier = user.login_phone or user.email
+            print(f"    + {label}: {user.uname} ({identifier})")
+        imported_counts[group_name] = group_count
 
     session.commit()
-    print(f"  [ok] 导入用户: {len(data.get('certified_users', []))} 个认证主体, {len(data.get('normal_users', []))} 个普通用户\n")
+    print(
+        "  [ok] 导入用户: "
+        f"{imported_counts.get('certified_users', 0)} 个认证主体, "
+        f"{imported_counts.get('normal_users', 0)} 个普通用户, "
+        f"{imported_counts.get('auth_demo_users', 0)} 个认证演示账号\n"
+    )
 
 
 def _import_policy_documents(session: Session, seed_dir: Path):
@@ -297,15 +483,14 @@ def _import_policy_documents(session: Session, seed_dir: Path):
 
     print("  [政策文档]")
 
-    # 构建 email -> uid 映射
-    email_to_uid = {}
-    users = session.exec(select(User)).all()
-    for user in users:
-        email_to_uid[user.email] = user.uid
-
     for doc_data in data.get("documents", []):
-        uploader_uid = email_to_uid.get(doc_data["uploader_email"])
-        if not uploader_uid:
+        uploader = _resolve_seed_user(
+            session,
+            doc_data,
+            email_key="uploader_email",
+            identifier_key="uploader_identifier",
+        )
+        if not uploader:
             continue
 
         doc = PolicyDocument(
@@ -313,7 +498,7 @@ def _import_policy_documents(session: Session, seed_dir: Path):
             content=doc_data["content"],
             category=doc_data.get("category"),
             tags=doc_data.get("tags"),
-            uploader_id=uploader_uid,
+            uploader_id=uploader.uid,
             status=DocStatus[doc_data.get("status", "approved")],
             view_count=doc_data.get("view_count", 0),
             like_count=doc_data.get("like_count", 0),
@@ -334,8 +519,6 @@ def _import_opinions(session: Session, seed_dir: Path):
 
     print("  [民意评议]")
 
-    # 构建映射
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
     title_to_doc_id = {d.title: d.id for d in session.exec(select(PolicyDocument)).all()}
 
     type_map = {
@@ -346,14 +529,14 @@ def _import_opinions(session: Session, seed_dir: Path):
 
     for opinion_data in data.get("opinions", []):
         doc_id = title_to_doc_id.get(opinion_data["doc_title"])
-        user_uid = email_to_uid.get(opinion_data["user_email"])
+        user = _resolve_seed_user(session, opinion_data)
 
-        if not doc_id or not user_uid:
+        if not doc_id or not user:
             continue
 
         opinion = Opinion(
             doc_id=doc_id,
-            user_id=user_uid,
+            user_id=user.uid,
             opinion_type=type_map.get(opinion_data["opinion_type"], OpinionType.review),
             content=opinion_data["content"],
             rating=opinion_data.get("rating"),
@@ -434,13 +617,11 @@ def _import_favorites(session: Session, seed_dir: Path):
 
     print("  [收藏记录]")
 
-    # 构建映射
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
     chat_messages = session.exec(select(ChatMessage)).all()
 
     for fav_data in data.get("favorites", []):
-        user_uid = email_to_uid.get(fav_data["user_email"])
-        if not user_uid:
+        user = _resolve_seed_user(session, fav_data)
+        if not user:
             continue
 
         # 根据索引获取 chat_message_id
@@ -449,7 +630,7 @@ def _import_favorites(session: Session, seed_dir: Path):
             chat_msg_id = chat_messages[chat_msg_index].id
 
             fav = Favorite(
-                user_id=user_uid,
+                user_id=user.uid,
                 chat_message_id=chat_msg_id,
                 note=fav_data.get("note"),
             )
@@ -468,22 +649,21 @@ def _import_settings(session: Session, seed_dir: Path):
 
     print("  [用户设置]")
 
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
-
     for setting_data in data.get("settings", []):
-        user_uid = email_to_uid.get(setting_data["user_email"])
-        if not user_uid:
+        user = _resolve_seed_user(session, setting_data)
+        if not user:
             continue
 
         setting = Settings(
-            user_id=user_uid,
+            user_id=user.uid,
             default_audience=setting_data.get("default_audience", "none"),
             theme_mode=setting_data.get("theme_mode", "light"),
             color_scheme=setting_data.get("color_scheme", "classic"),
             system_notifications=setting_data.get("system_notifications", True),
         )
         session.add(setting)
-        print(f"    + 设置: 用户 {setting_data['user_email']}")
+        setting_identifier = setting_data.get("user_identifier") or setting_data.get("user_email")
+        print(f"    + 设置: 用户 {setting_identifier}")
 
     session.commit()
     print(f"  [ok] 导入用户设置: {len(data.get('settings', []))} 条\n")
@@ -497,15 +677,13 @@ def _import_agent_conversations(session: Session, seed_dir: Path):
 
     print("  [智能体对话]")
 
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
-
     for conv_data in data.get("agent_conversations", []):
-        user_uid = email_to_uid.get(conv_data["user_email"])
-        if not user_uid:
+        user = _resolve_seed_user(session, conv_data)
+        if not user:
             continue
 
         conv = AgentConversation(
-            user_id=user_uid,
+            user_id=user.uid,
             title=conv_data["title"],
         )
         session.add(conv)
@@ -523,12 +701,11 @@ def _import_agent_messages(session: Session, seed_dir: Path):
 
     print("  [智能体消息]")
 
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
     conversations = session.exec(select(AgentConversation)).all()
 
     for msg_data in data.get("agent_messages", []):
-        user_uid = email_to_uid.get(msg_data["user_email"])
-        if not user_uid:
+        user = _resolve_seed_user(session, msg_data)
+        if not user:
             continue
 
         conv_index = msg_data.get("conversation_index", 0)
@@ -537,7 +714,7 @@ def _import_agent_messages(session: Session, seed_dir: Path):
 
             msg = AgentMessage(
                 conversation_id=conv_id,
-                user_id=user_uid,
+                user_id=user.uid,
                 role=msg_data["role"],
                 content=msg_data["content"],
             )
@@ -556,12 +733,11 @@ def _import_agent_memories(session: Session, seed_dir: Path):
 
     print("  [智能体记忆]")
 
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
     conversations = session.exec(select(AgentConversation)).all()
 
     for mem_data in data.get("agent_memories", []):
-        user_uid = email_to_uid.get(mem_data["user_email"])
-        if not user_uid:
+        user = _resolve_seed_user(session, mem_data)
+        if not user:
             continue
 
         conv_index = mem_data.get("conversation_index", 0)
@@ -569,7 +745,7 @@ def _import_agent_memories(session: Session, seed_dir: Path):
             conv_id = conversations[conv_index].id
 
             mem = AgentMemory(
-                user_id=user_uid,
+                user_id=user.uid,
                 conversation_id=conv_id,
                 summary=mem_data["summary"],
             )
@@ -588,15 +764,13 @@ def _import_stats_analyses(session: Session, seed_dir: Path):
 
     print("  [统计分析]")
 
-    email_to_uid = {u.email: u.uid for u in session.exec(select(User)).all()}
-
     for stats_data in data.get("stats_analyses", []):
-        user_uid = email_to_uid.get(stats_data["user_email"])
-        if not user_uid:
+        user = _resolve_seed_user(session, stats_data)
+        if not user:
             continue
 
         stats = StatsAnalysis(
-            user_id=user_uid,
+            user_id=user.uid,
             materials_freq=stats_data.get("materials_freq", "{}"),
             risks_freq=stats_data.get("risks_freq", "{}"),
             complexity_distribution=stats_data.get("complexity_distribution", "{}"),
@@ -607,7 +781,8 @@ def _import_stats_analyses(session: Session, seed_dir: Path):
             total_parsed_count=stats_data.get("total_parsed_count", 0),
         )
         session.add(stats)
-        print(f"    + 统计: 用户 {stats_data['user_email']} - 解析 {stats.total_parsed_count} 条")
+        stats_identifier = stats_data.get("user_identifier") or stats_data.get("user_email")
+        print(f"    + 统计: 用户 {stats_identifier} - 解析 {stats.total_parsed_count} 条")
 
     session.commit()
     print(f"  [ok] 导入统计分析: {len(data.get('stats_analyses', []))} 条\n")

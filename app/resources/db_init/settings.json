@@ -69,6 +69,34 @@
       "theme_mode": "light",
       "color_scheme": "classic",
       "system_notifications": true
+    },
+    {
+      "user_identifier": "13700030001",
+      "default_audience": "elderly",
+      "theme_mode": "light",
+      "color_scheme": "classic",
+      "system_notifications": true
+    },
+    {
+      "user_identifier": "recovery.user@example.com",
+      "default_audience": "worker",
+      "theme_mode": "dark",
+      "color_scheme": "wine-coral",
+      "system_notifications": true
+    },
+    {
+      "user_identifier": "mailbox.only@example.com",
+      "default_audience": "student",
+      "theme_mode": "light",
+      "color_scheme": "classic",
+      "system_notifications": false
+    },
+    {
+      "user_identifier": "13700030005",
+      "default_audience": "none",
+      "theme_mode": "dark",
+      "color_scheme": "wine-coral",
+      "system_notifications": true
     }
   ]
 }

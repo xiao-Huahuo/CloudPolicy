@@ -1,60 +1,188 @@
-﻿<template>
+<template>
   <div class="form-container">
     <div class="logo-area">
-      <img src="@/assets/photos/main-icon.png" alt="icon" class="main-icon" v-if="hasIcon" @error="hasIcon = false" />
+      <img
+        v-if="hasIcon"
+        src="@/assets/photos/main-icon.png"
+        alt="icon"
+        class="main-icon"
+        @error="hasIcon = false"
+      />
       <h1 class="logo-text">
-        <span v-for="(ch, i) in '云枢观策'" :key="i" class="letter" :style="{ animationDelay: `${i * 0.06}s` }">{{ ch }}</span>
+        <span
+          v-for="(ch, index) in titleChars"
+          :key="`${ch}-${index}`"
+          class="letter"
+          :style="{ animationDelay: `${index * 0.06}s` }"
+        >
+          {{ ch }}
+        </span>
       </h1>
+      <p class="logo-subtitle">支持手机号短信登录，也支持手机号 / 邮箱 / 用户名密码登录</p>
     </div>
 
     <form class="form" @submit.prevent="handleLogin">
-      <div class="flex-column">
-        <label>用户名 / Username</label>
-      </div>
-      <div class="inputForm">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-        <input v-model="username" type="text" class="input" placeholder="Enter your username" required />
+      <div class="auth-tabs">
+        <button
+          type="button"
+          class="auth-tab"
+          :class="{ active: mode === 'phone' }"
+          @click="mode = 'phone'"
+        >
+          手机号短信登录
+        </button>
+        <button
+          type="button"
+          class="auth-tab"
+          :class="{ active: mode === 'password' }"
+          @click="mode = 'password'"
+        >
+          密码登录
+        </button>
       </div>
 
-      <div class="flex-column">
-        <label>密码 / Password</label>
-      </div>
-      <div class="inputForm">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="input-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-        <input v-model="password" type="password" class="input" placeholder="Enter your password" required />
-      </div>
+      <template v-if="mode === 'phone'">
+        <div class="flex-column">
+          <label>手机号</label>
+        </div>
+        <div class="inputForm">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="input-icon">
+            <rect x="7" y="2" width="10" height="20" rx="2"></rect>
+            <line x1="11" y1="18" x2="13" y2="18"></line>
+          </svg>
+          <input v-model="phone" type="text" class="input" placeholder="请输入 11 位手机号" required />
+        </div>
+
+        <div class="flex-column">
+          <label>短信验证码</label>
+        </div>
+        <div class="code-row">
+          <div class="inputForm inputForm--code">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="input-icon">
+              <path d="M9 12l2 2 4-4"></path>
+              <path d="M21 12c.552 0 1-.449.973-1A10 10 0 1 0 12 22c.551.027 1-.421 1-.973V18"></path>
+            </svg>
+            <input
+              v-model="code"
+              type="text"
+              class="input"
+              maxlength="6"
+              placeholder="输入 6 位验证码"
+              required
+            />
+          </div>
+          <button
+            type="button"
+            class="send-code-btn"
+            :disabled="!canSendCode"
+            @click="handleSendCode"
+          >
+            {{ sendingCode ? '发送中...' : '发送验证码' }}
+          </button>
+        </div>
+        <p class="tip-text">如果你已经设置过密码，也可以切到密码登录，直接用手机号登录。</p>
+      </template>
+
+      <template v-else>
+        <div class="flex-column">
+          <label>手机号 / 邮箱 / 用户名</label>
+        </div>
+        <div class="inputForm">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="input-icon">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <input
+            v-model="identity"
+            type="text"
+            class="input"
+            placeholder="请输入手机号、邮箱或用户名"
+            required
+          />
+        </div>
+
+        <div class="flex-column">
+          <label>密码</label>
+        </div>
+        <div class="inputForm">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="input-icon">
+            <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <input v-model="password" type="password" class="input" placeholder="请输入密码" required />
+        </div>
+      </template>
+
+      <p v-if="statusMessage" class="status-msg">{{ statusMessage }}</p>
+      <p v-if="previewCode" class="preview-box">沙箱验证码：<strong>{{ previewCode }}</strong></p>
+      <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
 
       <div class="flex-row">
         <span class="span" @click="$emit('switch-to-register')">没有账号？去注册</span>
+        <span class="span span-muted" @click="$emit('switch-to-recover')">忘记密码</span>
       </div>
 
       <button class="button-submit" type="submit" :disabled="loading">
-        {{ loading ? '登录中...' : '登 录' }}
+        {{ loading ? '登录中...' : '登录' }}
       </button>
-
-      <p class="error-msg" v-if="errorMessage">{{ errorMessage }}</p>
     </form>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { sendPhoneCode } from '@/api/user';
 import { useUserStore } from '@/stores/auth.js';
 
-const emit = defineEmits(['success', 'switch-to-register']);
+const emit = defineEmits(['success', 'switch-to-register', 'switch-to-recover']);
+const userStore = useUserStore();
+
+const titleChars = '云析观策'.split('');
 const hasIcon = ref(true);
 
-const username = ref('');
+const mode = ref('phone');
+const phone = ref('');
+const code = ref('');
+const identity = ref('');
 const password = ref('');
+
+const previewCode = ref('');
+const statusMessage = ref('');
 const errorMessage = ref('');
+
 const loading = ref(false);
-const userStore = useUserStore();
+const sendingCode = ref(false);
+
+const canSendCode = computed(() => !sendingCode.value && phone.value.trim());
+
+const handleSendCode = async () => {
+  sendingCode.value = true;
+  errorMessage.value = '';
+  statusMessage.value = '';
+  try {
+    const { data } = await sendPhoneCode({
+      phone: phone.value,
+      purpose: 'login',
+    });
+    previewCode.value = data.preview_code || '';
+    statusMessage.value = '验证码已发送，请在下方输入。';
+  } catch (error) {
+    errorMessage.value = error.response?.data?.detail || '验证码发送失败';
+  } finally {
+    sendingCode.value = false;
+  }
+};
 
 const handleLogin = async () => {
   loading.value = true;
   errorMessage.value = '';
+  statusMessage.value = '';
   try {
-    await userStore.login(username.value, password.value);
+    if (mode.value === 'phone') {
+      await userStore.loginWithPhone(phone.value, code.value);
+    } else {
+      await userStore.loginWithPassword(identity.value, password.value);
+    }
     emit('success');
   } catch (error) {
     errorMessage.value = error.response?.data?.detail || '登录失败';
@@ -62,6 +190,18 @@ const handleLogin = async () => {
     loading.value = false;
   }
 };
+
+watch(mode, (value) => {
+  errorMessage.value = '';
+  statusMessage.value = '';
+  previewCode.value = '';
+  if (value === 'phone') {
+    code.value = '';
+    return;
+  }
+  identity.value = '';
+  password.value = '';
+});
 </script>
 
 <style scoped>
@@ -87,14 +227,13 @@ const handleLogin = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 
 .main-icon {
   width: 64px;
   height: 64px;
   object-fit: contain;
-  filter: none;
 }
 
 .logo-text {
@@ -115,9 +254,23 @@ const handleLogin = async () => {
   opacity: 0;
 }
 
+.logo-subtitle {
+  margin: 0;
+  color: rgba(255, 247, 245, 0.74);
+  font-size: 13px;
+  text-align: center;
+}
+
 @keyframes letterFloat {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .form {
@@ -126,7 +279,7 @@ const handleLogin = async () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 13px;
   background: linear-gradient(
     160deg,
     rgba(20, 12, 18, 0.96) 0%,
@@ -134,11 +287,10 @@ const handleLogin = async () => {
     rgba(21, 35, 63, 0.92) 72%,
     rgba(9, 19, 31, 0.97) 100%
   );
-  padding: 38px 34px;
+  padding: 34px;
   width: 100%;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   backdrop-filter: blur(22px);
   box-shadow:
     0 28px 80px rgba(9, 19, 31, 0.46),
@@ -146,195 +298,182 @@ const handleLogin = async () => {
     0 0 42px rgba(255, 143, 122, 0.12);
 }
 
-.form::before,
-.form::after {
-  content: "";
-  position: absolute;
-  inset: auto;
-  border-radius: 999px;
-  pointer-events: none;
-  z-index: -1;
-  filter: blur(14px);
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 2px;
 }
 
-.form::before {
-  top: -48px;
-  right: -10px;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(255, 143, 122, 0.3) 0%, rgba(255, 143, 122, 0) 72%);
+.auth-tab {
+  border: none;
+  background: transparent;
+  color: rgba(255, 247, 245, 0.7);
+  min-height: 40px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.form::after {
-  left: -38px;
-  bottom: -66px;
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(88, 203, 255, 0.18) 0%, rgba(88, 203, 255, 0) 72%);
-}
-
-::placeholder {
-  font-family: inherit;
-  color: rgba(245, 247, 255, 0.44);
+.auth-tab.active {
+  background: rgba(255, 143, 122, 0.16);
+  color: #fffaf6;
+  box-shadow: inset 0 0 0 1px rgba(255, 143, 122, 0.2);
 }
 
 .flex-column > label {
   color: rgba(255, 247, 245, 0.86);
   font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  font-size: 13px;
 }
 
 .inputForm {
   border: 1.5px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  min-height: 54px;
+  min-height: 48px;
   display: flex;
   align-items: center;
-  padding-left: 16px;
-  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05)),
-    rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  margin-bottom: 10px;
-}
-
-.inputForm:hover {
-  border-color: rgba(255, 183, 111, 0.24);
-}
-
-.input-icon {
-  color: rgba(255, 183, 111, 0.72);
-}
-
-.input {
-  margin-left: 10px;
-  border-radius: 6px;
-  border: none;
-  width: 100%;
-  height: 100%;
-  font-size: 15px;
-  background: transparent !important;
-  color: #fff7f1;
-  -webkit-text-fill-color: #fff7f1;
-  caret-color: #fff7f1;
-  box-shadow: none;
-  appearance: none;
-}
-
-.input:focus { outline: none; }
-
-.input:-webkit-autofill,
-.input:-webkit-autofill:hover,
-.input:-webkit-autofill:focus,
-.input:-webkit-autofill:active {
-  -webkit-text-fill-color: #fff7f1;
-  caret-color: #fff7f1;
-  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-  box-shadow: 0 0 0 1000px transparent inset !important;
-  -webkit-background-clip: padding-box;
-  transition: background-color 9999s ease-out 0s;
+  gap: 10px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .inputForm:focus-within {
-  border: 1.5px solid rgba(255, 143, 122, 0.85);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
-    rgba(255, 255, 255, 0.05);
-  box-shadow:
-    0 0 0 4px rgba(255, 143, 122, 0.12),
-    0 16px 28px rgba(9, 19, 31, 0.18);
+  border-color: rgba(95, 209, 255, 0.56);
+  box-shadow: 0 0 0 4px rgba(95, 209, 255, 0.12);
+}
+
+.inputForm--code {
+  flex: 1;
+}
+
+.input-icon {
+  color: rgba(255, 255, 255, 0.72);
+  flex-shrink: 0;
+}
+
+.input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  color: #fff7f1;
+  font-size: 14px;
+}
+
+.input::placeholder {
+  color: rgba(245, 247, 255, 0.44);
+}
+
+.code-row {
+  display: flex;
+  gap: 10px;
+}
+
+.send-code-btn {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 247, 245, 0.86);
+  cursor: pointer;
+  min-height: 48px;
+  min-width: 118px;
+  padding: 0 14px;
+  font-weight: 700;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.send-code-btn:hover {
+  border-color: rgba(95, 209, 255, 0.3);
   transform: translateY(-1px);
+}
+
+.tip-text {
+  margin: -2px 0 0;
+  color: rgba(255, 247, 245, 0.62);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.preview-box,
+.status-msg,
+.error-msg {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.preview-box {
+  background: rgba(255, 219, 100, 0.12);
+  border: 1px solid rgba(255, 219, 100, 0.28);
+  color: #ffe7a0;
+}
+
+.status-msg {
+  background: rgba(128, 250, 176, 0.12);
+  border: 1px solid rgba(128, 250, 176, 0.22);
+  color: #c7fdd8;
+}
+
+.error-msg {
+  background: rgba(255, 143, 122, 0.12);
+  border: 1px solid rgba(255, 143, 122, 0.24);
+  color: #ffd7cf;
 }
 
 .flex-row {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .span {
-  font-size: 14px;
-  color: rgba(255, 215, 207, 0.78);
-  font-weight: 500;
+  color: var(--auth-coral);
+  font-size: 13px;
   cursor: pointer;
-  transition: color 0.2s ease, text-shadow 0.2s ease;
-  text-decoration: underline;
 }
 
-.span:hover {
-  color: var(--auth-coral);
-  text-shadow: 0 0 14px rgba(255, 143, 122, 0.24);
+.span-muted {
+  color: rgba(255, 247, 245, 0.7);
 }
 
 .button-submit {
-  position: relative;
-  display: inline-block;
-  padding: 15px 30px;
-  text-align: center;
-  letter-spacing: 1.5px;
-  background: linear-gradient(135deg, #ff8f7a 0%, #ffdb64 38%, #58cbff 100%);
-  transition: transform 0.2s ease, box-shadow 0.3s ease, filter 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 16px;
-  box-shadow:
-    0 18px 34px rgba(255, 143, 122, 0.2),
-    0 8px 22px rgba(88, 203, 255, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.34);
-  margin: 10px 0;
-  color: #1f1720;
-  font-size: 16px;
+  border: none;
+  border-radius: 18px;
+  min-height: 48px;
+  background: linear-gradient(135deg, var(--auth-coral) 0%, #ffb76f 100%);
+  color: #26111a;
   font-weight: 800;
-  height: 55px;
-  width: 100%;
+  font-size: 15px;
   cursor: pointer;
 }
 
-.button-submit:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 24px 38px rgba(255, 143, 122, 0.24),
-    0 12px 28px rgba(88, 203, 255, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.42);
-  filter: saturate(1.04);
-}
-
-.button-submit:active { transform: scale(0.98); }
-
-.button-submit:disabled {
-  opacity: 0.72;
+.button-submit:disabled,
+.send-code-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
-  filter: saturate(0.86);
-}
-
-.error-msg {
-  color: var(--auth-coral-soft);
-  text-align: center;
-  font-size: 14px;
-  margin: 0;
-  font-weight: 500;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(255, 143, 122, 0.12);
-  border: 1px solid rgba(255, 183, 111, 0.18);
+  transform: none;
 }
 
 @media (max-width: 560px) {
-  .logo-text {
-    font-size: 31px;
-    letter-spacing: 1px;
-  }
-
   .form {
-    padding: 30px 22px;
-    border-radius: 24px;
+    padding: 28px 20px;
   }
 
-  .button-submit {
-    height: 52px;
+  .code-row,
+  .flex-row {
+    flex-direction: column;
+  }
+
+  .send-code-btn {
+    width: 100%;
   }
 }
 </style>

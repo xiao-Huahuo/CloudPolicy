@@ -11,6 +11,7 @@ from app.api.deps import get_current_user
 from app.core.config import GlobalConfig
 from app.core.security import decode_email_verification_token
 from app.services import email_service
+from app.services.auth_identity_service import normalize_email, to_user_read
 
 # 创建路由器
 router = APIRouter()  #在main中被登记为"/user"
@@ -24,7 +25,8 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)): #接
     :param session:
     :return:
     """
-    existing_email = session.exec(select(User).where(User.email == user.email)).first()
+    normalized_email = normalize_email(user.email)
+    existing_email = session.exec(select(User).where(User.email == normalized_email)).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="该邮箱已被注册")
 
@@ -38,8 +40,15 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)): #接
     db_user = User.model_validate(
         user,
         update={
+            "email": normalized_email,
+            "role": UserRole.normal,
+            "login_phone": None,
             "hashed_pwd": hashed_pwd,
             "email_verified": False,
+            "phone_verified": False,
+            "password_login_enabled": True,
+            "preferred_login_method": "email_password",
+            "last_login_method": None,
             "email_verification_code": verification_code,
             "email_verification_sent_at": datetime.now(),
         },
@@ -51,17 +60,7 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)): #接
 
     delivery = email_service.send_verification_email(db_user)
     return UserRegisterResponse(
-        user=UserRead(
-            uid=db_user.uid,
-            uname=db_user.uname,
-            email=db_user.email,
-            phone=db_user.phone,
-            avatar_url=db_user.avatar_url,
-            is_admin=db_user.is_admin,
-            created_time=db_user.created_time,
-            last_login=db_user.last_login,
-            email_verified=db_user.email_verified,
-        ),
+        user=to_user_read(db_user),
         verification_required=True,
         delivery_channel=delivery["delivery_channel"],
         preview_code=delivery.get("preview_code"),
@@ -73,7 +72,7 @@ def verify_email(
     payload: EmailVerificationRequest,
     session: Session = Depends(get_session),
 ):
-    user = session.exec(select(User).where(User.email == payload.email)).first()
+    user = session.exec(select(User).where(User.email == normalize_email(payload.email))).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     if user.email_verified:
@@ -152,7 +151,7 @@ def resend_verification_email(
     payload: EmailVerificationResendRequest,
     session: Session = Depends(get_session),
 ):
-    user = session.exec(select(User).where(User.email == payload.email)).first()
+    user = session.exec(select(User).where(User.email == normalize_email(payload.email))).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     if user.email_verified:
@@ -180,7 +179,7 @@ def get_user(current_user: User = Depends(get_current_user)):
     :param current_user:
     :return:
     """
-    return current_user
+    return to_user_read(current_user)
 
 #修改个人信息(部分更新)
 @router.patch("/me",response_model=UserRead)
@@ -194,6 +193,8 @@ def update_user(user_in:UserUpdate,session:Session=Depends(get_session),current_
     """
     # 1. 提取需要更新的数据的字典 (排除None字段)
     update_data = user_in.model_dump(exclude_unset=True)
+    update_data.pop("email", None)
+    update_data.pop("login_phone", None)
 
     # 2. 如果包含密码，需要特殊处理
     if "pwd" in update_data:
@@ -213,7 +214,7 @@ def update_user(user_in:UserUpdate,session:Session=Depends(get_session),current_
     session.refresh(current_user)
 
     # 5. 返回更新后的用户
-    return current_user
+    return to_user_read(current_user)
 
 
 @router.post("/request-upgrade")

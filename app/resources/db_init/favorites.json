@@ -49,6 +49,21 @@
       "user_email": "sunli@example.com",
       "chat_message_index": 9,
       "note": "生育登记办理，准备要二胎"
+    },
+    {
+      "user_identifier": "13700030001",
+      "chat_message_index": 1,
+      "note": "验证码登录后常看职业技能补贴流程"
+    },
+    {
+      "user_identifier": "recovery.user@example.com",
+      "chat_message_index": 6,
+      "note": "双通道找回前先收藏公租房申请要点"
+    },
+    {
+      "user_identifier": "13700030005",
+      "chat_message_index": 4,
+      "note": "用户名密码账号常查高新认定材料"
     }
   ]
 }

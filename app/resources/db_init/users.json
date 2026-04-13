@@ -4,27 +4,35 @@
       "uname": "市政务服务管理局",
       "email": "gov_service@gov.example.com",
       "phone": "010-12345001",
+      "login_phone": "13900020001",
       "profession": "政务服务",
-      "avatar_url": null
+      "avatar_url": null,
+      "preferred_login_method": "phone_code",
+      "last_login_method": "email_password"
     },
     {
       "uname": "市人力资源和社会保障局",
       "email": "hrss@gov.example.com",
       "phone": "010-12345002",
+      "login_phone": "13900020002",
       "profession": "人力资源",
-      "avatar_url": null
+      "avatar_url": null,
+      "preferred_login_method": "phone_code",
+      "last_login_method": "email_password"
     },
     {
       "uname": "市生态环境局",
       "email": "eco@gov.example.com",
       "phone": "010-12345003",
-      "profession": "生态环境",
+      "login_phone": "13900020003",
+      "profession": "生态环保",
       "avatar_url": null
     },
     {
       "uname": "市教育局",
       "email": "edu@gov.example.com",
       "phone": "010-12345004",
+      "login_phone": "13900020004",
       "profession": "教育管理",
       "avatar_url": null
     },
@@ -32,6 +40,7 @@
       "uname": "市卫生健康委员会",
       "email": "health@gov.example.com",
       "phone": "010-12345005",
+      "login_phone": "13900020005",
       "profession": "医疗卫生",
       "avatar_url": null
     },
@@ -39,6 +48,7 @@
       "uname": "市市场监督管理局",
       "email": "market@gov.example.com",
       "phone": "010-12345006",
+      "login_phone": "13900020006",
       "profession": "市场监管",
       "avatar_url": null
     },
@@ -46,6 +56,7 @@
       "uname": "市农业农村局",
       "email": "agri@gov.example.com",
       "phone": "010-12345007",
+      "login_phone": "13900020007",
       "profession": "农业管理",
       "avatar_url": null
     },
@@ -53,6 +64,7 @@
       "uname": "市住房和城乡建设局",
       "email": "housing@gov.example.com",
       "phone": "010-12345008",
+      "login_phone": "13900020008",
       "profession": "住建管理",
       "avatar_url": null
     },
@@ -60,6 +72,7 @@
       "uname": "市公安局",
       "email": "police@gov.example.com",
       "phone": "010-12345009",
+      "login_phone": "13900020009",
       "profession": "公共安全",
       "avatar_url": null
     },
@@ -67,6 +80,7 @@
       "uname": "市交通运输局",
       "email": "transport@gov.example.com",
       "phone": "010-12345010",
+      "login_phone": "13900020010",
       "profession": "交通运输",
       "avatar_url": null
     }
@@ -76,13 +90,17 @@
       "uname": "市民张伟",
       "email": "zhangwei@example.com",
       "phone": "138-0001-0001",
+      "login_phone": "13800010001",
       "profession": "软件工程师",
-      "avatar_url": null
+      "avatar_url": null,
+      "preferred_login_method": "phone_code",
+      "last_login_method": "email_password"
     },
     {
       "uname": "市民李娜",
       "email": "lina@example.com",
       "phone": "138-0001-0002",
+      "login_phone": "13800010002",
       "profession": "教师",
       "avatar_url": null
     },
@@ -90,20 +108,27 @@
       "uname": "市民王芳",
       "email": "wangfang@example.com",
       "phone": "138-0001-0003",
+      "login_phone": "13800010003",
       "profession": "医生",
-      "avatar_url": null
+      "avatar_url": null,
+      "preferred_login_method": "email_password",
+      "last_login_method": "email_password"
     },
     {
       "uname": "市民刘洋",
       "email": "liuyang@example.com",
       "phone": "138-0001-0004",
+      "login_phone": "13800010004",
       "profession": "企业主",
-      "avatar_url": null
+      "avatar_url": null,
+      "preferred_login_method": "username_password",
+      "last_login_method": "username_password"
     },
     {
       "uname": "市民陈静",
       "email": "chenjing@example.com",
       "phone": "138-0001-0005",
+      "login_phone": "13800010005",
       "profession": "会计",
       "avatar_url": null
     },
@@ -111,6 +136,7 @@
       "uname": "市民赵磊",
       "email": "zhaolei@example.com",
       "phone": "138-0001-0006",
+      "login_phone": "13800010006",
       "profession": "律师",
       "avatar_url": null
     },
@@ -118,6 +144,7 @@
       "uname": "市民孙丽",
       "email": "sunli@example.com",
       "phone": "138-0001-0007",
+      "login_phone": "13800010007",
       "profession": "护士",
       "avatar_url": null
     },
@@ -125,6 +152,7 @@
       "uname": "市民周强",
       "email": "zhouqiang@example.com",
       "phone": "138-0001-0008",
+      "login_phone": "13800010008",
       "profession": "建筑师",
       "avatar_url": null
     },
@@ -132,6 +160,7 @@
       "uname": "市民吴敏",
       "email": "wumin@example.com",
       "phone": "138-0001-0009",
+      "login_phone": "13800010009",
       "profession": "设计师",
       "avatar_url": null
     },
@@ -139,8 +168,77 @@
       "uname": "市民郑华",
       "email": "zhenghua@example.com",
       "phone": "138-0001-0010",
+      "login_phone": "13800010010",
       "profession": "退休人员",
       "avatar_url": null
+    }
+  ],
+  "auth_demo_users": [
+    {
+      "uname": "沙箱手机号用户甲",
+      "login_phone": "13700030001",
+      "phone": "13700030001",
+      "profession": "自由职业者",
+      "avatar_url": null,
+      "password_login_enabled": false,
+      "phone_verified": true,
+      "preferred_login_method": "phone_code",
+      "last_login_method": "phone_code",
+      "demo_label": "纯手机号免密用户"
+    },
+    {
+      "uname": "双通道恢复用户乙",
+      "email": "recovery.user@example.com",
+      "login_phone": "13700030002",
+      "phone": "13700030002",
+      "profession": "社区运营",
+      "avatar_url": null,
+      "seed_password": "Recover#2026",
+      "email_verified": true,
+      "phone_verified": true,
+      "preferred_login_method": "phone_code",
+      "last_login_method": "email_password",
+      "demo_label": "手机邮箱双绑定用户"
+    },
+    {
+      "uname": "邮箱密码用户丙",
+      "email": "mailbox.only@example.com",
+      "phone": null,
+      "profession": "内容编辑",
+      "avatar_url": null,
+      "seed_password": "Mailbox#2026",
+      "email_verified": true,
+      "phone_verified": false,
+      "preferred_login_method": "email_password",
+      "last_login_method": "email_password",
+      "demo_label": "仅邮箱密码登录用户"
+    },
+    {
+      "uname": "待绑邮箱演示用户丁",
+      "email": "pending.bind@example.com",
+      "login_phone": "13700030004",
+      "phone": "13700030004",
+      "profession": "餐饮店主",
+      "avatar_url": null,
+      "seed_password": "Pending#2026",
+      "email_verified": false,
+      "phone_verified": true,
+      "preferred_login_method": "phone_code",
+      "last_login_method": "username_password",
+      "demo_label": "邮箱未验证但手机可用用户"
+    },
+    {
+      "uname": "用户名密码用户戊",
+      "login_phone": "13700030005",
+      "phone": "13700030005",
+      "profession": "个体经营者",
+      "avatar_url": null,
+      "seed_password": "Username#2026",
+      "phone_verified": true,
+      "password_login_enabled": true,
+      "preferred_login_method": "phone_password",
+      "last_login_method": "phone_password",
+      "demo_label": "无公网邮箱的用户名密码用户"
     }
   ]
 }

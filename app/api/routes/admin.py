@@ -13,6 +13,7 @@ from app.core.database import get_session
 from app.models.chat_message import ChatMessage
 from app.models.user import User, UserRole
 from app.services import email_service, stats_service
+from app.services.auth_identity_service import get_public_email
 
 
 router = APIRouter()
@@ -34,12 +35,16 @@ def list_users(
         {
             "uid": u.uid,
             "uname": u.uname,
-            "email": u.email,
+            "email": get_public_email(u.email),
+            "login_phone": u.login_phone,
             "role": u.role,
             "created_time": str(u.created_time),
             "last_login": str(u.last_login),
             "avatar_url": u.avatar_url,
             "email_verified": u.email_verified,
+            "phone_verified": u.phone_verified,
+            "password_login_enabled": u.password_login_enabled,
+            "last_login_method": u.last_login_method,
         }
         for u in users
     ]

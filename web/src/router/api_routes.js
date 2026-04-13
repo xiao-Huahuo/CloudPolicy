@@ -2,6 +2,19 @@ import axios from 'axios';
 
 // API 路径常量
 export const API_ROUTES = {
+  AUTH_CAPTCHA: '/auth/captcha',
+  AUTH_PHONE_SEND_CODE: '/auth/phone/send-code',
+  AUTH_PHONE_REGISTER: '/auth/phone/register',
+  AUTH_PHONE_LOGIN: '/auth/phone/login',
+  AUTH_PASSWORD_LOGIN: '/auth/login/password',
+  AUTH_RECOVERY_OPTIONS: '/auth/password/recovery/options',
+  AUTH_RECOVERY_SEND: '/auth/password/recovery/send',
+  AUTH_PASSWORD_RESET: '/auth/password/reset',
+  AUTH_PASSWORD_SET: '/auth/password/set',
+  AUTH_PASSWORD_CHANGE: '/auth/password/change',
+  AUTH_EMAIL_SEND_CODE: '/auth/email/send-code',
+  AUTH_EMAIL_BIND: '/auth/email/bind',
+  AUTH_PHONE_BIND: '/auth/phone/bind',
   LOGIN: '/login/',
   REGISTER: '/user',
   VERIFY_EMAIL: '/user/verify-email',
