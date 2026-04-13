@@ -1,6 +1,9 @@
 <template>
   <div class="chart-wrapper">
-    <div v-if="loading" class="placeholder-text">词云组件加载中...</div>
+    <div v-if="loading" class="placeholder-text">
+      <AgentLoader :size="34" />
+      <span>词云组件加载中...</span>
+    </div>
     <div ref="chartRef" class="echarts-container" v-show="!loading"></div>
   </div>
 </template>
@@ -11,6 +14,7 @@ import { useRouter } from 'vue-router';
 import * as echarts from 'echarts/core';
 import { TitleComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import { getChartTheme, observeChartAppearance } from '@/utils/chartTheme';
 
 echarts.use([TitleComponent, TooltipComponent, CanvasRenderer]);
@@ -149,5 +153,11 @@ onUnmounted(() => {
   font-size: 14px;
   text-align: center;
   padding: 20px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 </style>

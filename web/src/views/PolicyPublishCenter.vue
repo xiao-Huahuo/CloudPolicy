@@ -45,7 +45,7 @@
           <div class="form-actions">
             <button class="reset-btn" @click="resetForm">重置</button>
             <button class="submit-btn" @click="submitDoc" :disabled="submitting || !form.title || !form.content">
-              <span v-if="submitting" class="spinner"></span>
+              <AgentLoader v-if="submitting" :size="18" compact />
               {{ submitting ? '提交中...' : '提交审核' }}
             </button>
           </div>
@@ -126,6 +126,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import PolicyTitle from '@/components/common/PolicyTitle.vue'
+import AgentLoader from '@/components/ui/AgentLoader.vue'
 import { useUserStore } from '@/stores/auth.js'
 import { apiClient, API_ROUTES } from '@/router/api_routes'
 

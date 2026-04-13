@@ -176,7 +176,10 @@
         <div class="section-head">
           <span class="section-label">用户管理</span>
         </div>
-        <div v-if="usersLoading" class="loading-text">加载中...</div>
+        <div v-if="usersLoading" class="loading-text">
+          <AgentLoader :size="24" compact :center="false" />
+          <span>加载中...</span>
+        </div>
         <table v-else class="user-table">
           <thead>
             <tr>
@@ -248,6 +251,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart, MapChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TitleComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
@@ -576,6 +580,7 @@ onUnmounted(() => {
 .refresh-btn { border: none; border-bottom: 3px solid var(--color-primary-dark); border-radius: 999px; padding: 7px 18px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
 .refresh-btn:hover { background: var(--color-primary-light); border-bottom-color: var(--color-primary); }
 .no-permission, .loading-text { color: var(--text-muted); font-size: 14px; }
+.loading-text { display: flex; align-items: center; gap: 10px; }
 .no-permission { text-align: center; padding: 60px 0; }
 .stats-row, .doc-status-row { display: flex; gap: 12px; }
 .stat-card, .time-card, .section, .metric-card { background: var(--card-bg); border: 1px solid var(--border-color); }

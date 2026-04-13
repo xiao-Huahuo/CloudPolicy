@@ -79,7 +79,10 @@
 
       <section ref="scrollContainer" class="history-list" @scroll="handleScroll">
         <div v-if="loading && !events.length" class="empty-shell">
-          <div class="empty-card">加载中...</div>
+          <div class="empty-card empty-card--loading">
+            <AgentLoader :size="36" />
+            <span>加载中...</span>
+          </div>
         </div>
 
         <div v-else-if="!events.length" class="empty-shell">
@@ -152,6 +155,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import UnifiedSearchBox from '@/components/common/UnifiedSearchBox.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { exportChatMessage, getChatMessage, importChatMessage } from '@/api/ai';
 import { getHistoryFacets, getHistoryFeed } from '@/api/history';
@@ -474,7 +478,7 @@ onMounted(async () => {
   height: 100%;
   gap: 16px;
   padding: 18px 20px 20px;
-  background: var(--content-bg);
+  background: transparent;
 }
 
 .history-hero,
@@ -721,6 +725,13 @@ onMounted(async () => {
 .empty-card {
   max-width: 520px;
   text-align: center;
+}
+
+.empty-card--loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .empty-card h3 {

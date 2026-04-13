@@ -34,7 +34,7 @@
         </div>
 
         <div v-if="loading" class="loading-banner">
-          <div class="spinner"></div>
+          <AgentLoader :size="24" compact />
           <span>正在智能处理中...</span>
         </div>
 
@@ -116,7 +116,7 @@
             <h3 class="box-title highlight">{{ activeVersion }}</h3>
 
             <div v-if="isRewriting" class="loading-state">
-              <div class="spinner"></div>
+              <AgentLoader :size="34" />
               <p>AI 正在努力改写中...</p>
             </div>
 
@@ -144,6 +144,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import { createChatMessage, createChatMessageWithFile, uploadAndExtractDocument, rewriteChatMessage, getChatMessages } from '@/api/ai';
 import { useUserStore } from '@/stores/auth.js';
 
@@ -630,6 +631,7 @@ const formatDate = (dateString) => {
   align-items: center;
   justify-content: center;
   height: 100%;
+  gap: 12px;
   color: #999;
 }
 .loading-banner {
@@ -637,6 +639,10 @@ const formatDate = (dateString) => {
   height: auto;
   padding: 20px;
   margin-bottom: 20px;
+}
+.loading-banner :deep(.agent-loader),
+.loading-state :deep(.agent-loader) {
+  color: inherit;
 }
 .spinner {
   width: 30px;

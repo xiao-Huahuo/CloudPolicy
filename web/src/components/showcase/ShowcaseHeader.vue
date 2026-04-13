@@ -381,6 +381,50 @@ onBeforeUnmount(() => {
   color: var(--sc-header-text);
 }
 
+.logout-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ff6c6c, #ff4141);
+  box-shadow:
+    0 12px 24px rgba(255, 65, 65, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  transition: width 0.3s ease, transform 0.24s ease, box-shadow 0.24s ease, color 0.24s ease;
+}
+
+.logout-btn svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #fff;
+}
+
+.logout-btn::after {
+  content: '退出';
+  width: 0;
+  opacity: 0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: width 0.3s ease, opacity 0.24s ease;
+}
+
+.logout-btn:hover {
+  width: 116px;
+  transform: translateY(-1px);
+  color: #fff;
+  box-shadow:
+    0 16px 26px rgba(255, 65, 65, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.logout-btn:hover::after {
+  width: 32px;
+  opacity: 1;
+}
+
 .user-profile {
   cursor: pointer;
   display: flex;

@@ -35,7 +35,7 @@
         <div class="panel-header">
           <span class="panel-dot"></span>
           <span>热门政策 Top5</span>
-          <router-link to="/discovery-home" class="panel-more">查看全部 →</router-link>
+          <LearnMoreLink label="查看全部" compact @click="router.push('/discovery-home')" />
         </div>
         <div v-for="(doc, i) in hotDocs" :key="doc.id" class="hot-doc-item" @click="openDoc(doc)">
           <span class="hot-rank" :class="{ top3: i < 3 }">{{ i + 1 }}</span>
@@ -87,7 +87,7 @@
       <div class="feed-header">
         <div class="section-header">
           <span class="section-dot"></span>
-          <span>实时评议信息流</span>
+          <span>民生反馈</span>
         </div>
         <div class="feed-controls">
           <button class="mode-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
@@ -125,7 +125,10 @@
         </div>
       </div>
 
-      <div v-if="feedLoading" class="loading-tip">加载中...</div>
+      <div v-if="feedLoading" class="loading-tip">
+        <AgentLoader :size="20" compact :center="false" />
+        <span>加载中...</span>
+      </div>
       <div v-else-if="!feedHasMore" class="end-tip">— 已到底部 —</div>
       <div ref="loadMoreRef" class="load-more-trigger"></div>
     </div>
@@ -135,6 +138,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import PolicyTitle from '@/components/common/PolicyTitle.vue'
+import LearnMoreLink from '@/components/ui/LearnMoreLink.vue'
+import AgentLoader from '@/components/ui/AgentLoader.vue'
 import { useUserStore } from '@/stores/auth.js'
 import { useRouter } from 'vue-router'
 import { apiClient, API_ROUTES } from '@/router/api_routes'
@@ -588,7 +593,6 @@ onUnmounted(() => {
 .hot-docs-panel {
   background: var(--card-bg, #fff);
   border: 1px solid var(--border-color, #e8e8e8);
-  border-left: 3px solid var(--color-primary);
   border-radius: 18px;
   padding: 16px;
   overflow-y: auto;
@@ -662,48 +666,6 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--bubble-color) 20%, transparent);
 }
 
-:global([data-theme="dark"]) .bubble-word {
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--bubble-color) 60%, transparent);
-}
-
-:global([data-theme="dark"]) .hot-docs-panel {
-  background: var(--card-bg);
-  border-color: rgba(255,255,255,0.12);
-}
-
-:global([data-theme="dark"]) .panel-header,
-:global([data-theme="dark"]) .hot-doc-title {
-  color: #e2e8f0;
-}
-
-:global([data-theme="dark"]) .panel-more {
-  color: #fda4af;
-}
-
-:global([data-theme="dark"]) .hot-doc-item {
-  border-bottom-color: rgba(255,255,255,0.08);
-}
-
-:global([data-theme="dark"]) .hot-doc-meta {
-  color: #94a3b8;
-}
-
-:global([data-theme="dark"]) .hot-rank {
-  background: #334155;
-  color: #cbd5e1;
-}
-
-:global([data-theme="dark"]) .hot-rank.top3 {
-  background: #c0392b;
-  color: #fff;
-}
-
-:global([data-theme="dark"]) .wordcloud-section {
-  background: var(--card-bg);
-  border-color: rgba(255,255,255,0.12);
-}
-
 .bubble-word:hover {
   transform: scale(1.08);
   box-shadow: 0 6px 20px color-mix(in srgb, var(--bubble-color) 35%, transparent);
@@ -714,7 +676,6 @@ onUnmounted(() => {
 .certified-section {
   background: var(--card-bg, #fff);
   border: 1px solid var(--border-color, #e8e8e8);
-  border-left: 3px solid var(--color-accent-cool);
   border-radius: 18px;
   padding: 20px;
   box-shadow: 0 18px 34px color-mix(in srgb, var(--color-accent-cool) 10%, transparent);
@@ -764,7 +725,6 @@ onUnmounted(() => {
 
 .opinion-card {
   border: 1px solid var(--border-color, #e8e8e8);
-  border-left: 3px solid var(--color-primary);
   border-radius: 16px;
   background: color-mix(in srgb, var(--color-primary) 3%, var(--card-bg));
   padding: 14px 16px;
@@ -776,7 +736,7 @@ onUnmounted(() => {
 }
 
 .certified-card {
-  border-left-color: var(--color-accent-cool);
+  border-color: color-mix(in srgb, var(--color-accent-cool) 18%, var(--border-color, #e8e8e8));
   background: color-mix(in srgb, var(--color-accent-cool) 4%, var(--card-bg));
 }
 
@@ -814,6 +774,13 @@ onUnmounted(() => {
 
 .loading-tip, .end-tip, .empty-tip {
   text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px;
+}
+
+.loading-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .load-more-trigger { height: 20px; }

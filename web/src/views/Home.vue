@@ -86,9 +86,26 @@
                 subtitle="多模态 · 可视化 · 富呈现"
               />
               <div class="upload-buttons">
-                <button class="action-btn upload-round-btn" @click.stop="triggerFileUpload" :disabled="loading">本地上传</button>
-                <button class="action-btn upload-round-btn" @click.stop="handleUrlUpload" :disabled="loading">URL上传</button>
-                <button class="action-btn upload-round-btn" @click.stop="handleScreenshot" :disabled="loading">截图</button>
+                <CoreFeatureButton class="upload-round-btn" label="本地上传" hint="文件" @click.stop="triggerFileUpload">
+                  <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="12" y1="18" x2="12" y2="10"></line>
+                    <polyline points="9 13 12 10 15 13"></polyline>
+                  </svg>
+                </CoreFeatureButton>
+                <CoreFeatureButton class="upload-round-btn" label="URL 上传" hint="链接" @click.stop="handleUrlUpload">
+                  <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5"></path>
+                    <path d="M14 11a5 5 0 0 0-7.07 0L5.5 12.41a5 5 0 0 0 7.07 7.07L14 19"></path>
+                  </svg>
+                </CoreFeatureButton>
+                <CoreFeatureButton class="upload-round-btn" label="截图识别" hint="图像" @click.stop="handleScreenshot">
+                  <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-2-2h-3l-2-2H10L8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2Z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </CoreFeatureButton>
               </div>
               <p class="upload-hint">点击或拖拽上传 (支持文档、图片、PDF)</p>
             </div>
@@ -114,6 +131,7 @@
 
           <div v-if="loading" class="loading-banner">
             <div class="loading-banner-head">
+              <AgentLoader compact :size="34" />
               <div class="loading-copy">
                 <span class="loading-kicker">智能解析任务</span>
                 <span class="loading-title">正在智能解读中...</span>
@@ -371,6 +389,8 @@ import { toggleSpeak, isSpeaking } from '@/utils/tts.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import KnowledgeGraphPanel from '@/components/Home/KnowledgeGraphPanel.vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
+import CoreFeatureButton from '@/components/ui/CoreFeatureButton.vue';
 
 
 const userStore = useUserStore();
@@ -1172,7 +1192,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--content-bg, #f5f7fa);
+  background: transparent;
 }
 
 .three-col-layout {
@@ -1741,7 +1761,13 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .upload-area {
-  background: var(--home-upload-surface);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-secondary) 12%, rgba(255, 255, 255, 0.76)), transparent 46%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--home-upload-surface) 78%, #ffffff),
+      color-mix(in srgb, var(--color-primary) 3%, color-mix(in srgb, var(--home-upload-surface) 88%, #ffffff))
+    );
   border: 2px dashed var(--home-upload-border);
   border-radius: 12px;
   padding: 48px 60px;
@@ -1755,8 +1781,20 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 4px 12px color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
-.upload-area:hover { border-color: var(--home-upload-border-hover); background: var(--home-upload-surface-hover); }
+.upload-area:hover {
+  border-color: var(--home-upload-border-hover);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-secondary) 16%, rgba(255, 255, 255, 0.86)), transparent 48%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--home-upload-surface-hover) 74%, #ffffff),
+      color-mix(in srgb, var(--color-primary) 5%, color-mix(in srgb, var(--home-upload-surface-hover) 84%, #ffffff))
+    );
+}
 .upload-area.disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
 
 /* 卷轴装饰 */
@@ -1825,6 +1863,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .upload-buttons {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 20px;
   margin-bottom: 14px;
 }
@@ -1836,38 +1875,8 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .upload-round-btn:nth-child(1) { animation: fadeInLeft 0.4s ease 0.05s both; }
 .upload-round-btn:nth-child(2) { animation: fadeInLeft 0.4s ease 0.15s both; }
 .upload-round-btn:nth-child(3) { animation: fadeInLeft 0.4s ease 0.25s both; }
-.action-btn {
-  background: var(--upload-round-btn-bg, var(--home-upload-button-bg));
-  border: none;
-  border-radius: 0;
-  padding: 8px 18px;
-  font-size: 13px;
-  font-weight: bold;
-  color: var(--upload-round-btn-text, #fff);
-  cursor: pointer;
-  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
-}
-.action-btn:hover {
-  background: var(--upload-round-btn-hover-bg, var(--home-upload-button-hover-bg));
-  transform: translateY(-1px);
-}
-
 .upload-round-btn {
-  --upload-round-btn-bg: var(--home-upload-button-solid-bg);
-  --upload-round-btn-hover-bg: var(--home-upload-button-solid-hover-bg);
-  --upload-round-btn-shadow: var(--home-upload-button-solid-shadow);
-  --upload-round-btn-glow: var(--home-upload-button-solid-glow);
-  --upload-round-btn-text: var(--home-upload-button-solid-text);
-  width: 98px;
-  height: 98px;
-  border-radius: 50% !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 4px 0 var(--upload-round-btn-shadow, var(--home-upload-button-shadow)),
-    0 14px 28px var(--upload-round-btn-glow, var(--home-upload-button-glow));
-  padding: 0 !important;
+  flex: 0 0 auto;
 }
 
 /* Capsule button style (shared) */
@@ -1974,9 +1983,9 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .loading-banner-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
 }
 
@@ -2167,7 +2176,8 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   gap: 20px;
 }
 .example-card {
-  background: var(--card-bg);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 5%, var(--card-bg)), var(--card-bg));
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
   display: flex;
@@ -2178,6 +2188,7 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   animation: exampleFadeIn 0.6s ease forwards, exampleShake 0.5s ease forwards;
   position: relative;
   overflow: visible;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--color-primary) 7%, transparent);
 }
 
 @keyframes exampleFadeIn {
@@ -2283,49 +2294,6 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 .examples-dot.active {
   width: 22px;
   background: linear-gradient(90deg, var(--color-primary-dark), var(--color-primary));
-}
-
-:global([data-theme="dark"]) .example-card {
-  background: var(--card-bg);
-  border-color: rgba(255,255,255,0.1);
-}
-
-:global([data-theme="dark"]) .card-content {
-  background: var(--card-bg);
-}
-
-:global([data-theme="dark"]) .card-title {
-  color: #e2e8f0;
-}
-
-:global([data-theme="dark"]) .tag {
-  background: rgba(192,57,43,0.2);
-  border-color: rgba(192,57,43,0.4);
-}
-
-:global([data-theme="dark"]) .loading-banner {
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent-cool) 12%, transparent), transparent 40%),
-    linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 12%, var(--card-bg)), var(--card-bg));
-  border-color: color-mix(in srgb, var(--color-primary) 18%, var(--border-color));
-}
-
-:global([data-theme="dark"]) .loading-kicker,
-:global([data-theme="dark"]) .loading-elapsed,
-:global([data-theme="dark"]) .loading-stage {
-  color: var(--text-secondary);
-}
-
-:global([data-theme="dark"]) .loading-progress-meta {
-  color: var(--text-muted);
-}
-
-:global([data-theme="dark"]) .loading-progress-track {
-  background: color-mix(in srgb, var(--color-primary) 14%, var(--border-color));
-}
-
-:global([data-theme="dark"]) .loading-progress-fill {
-  background: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 52%, var(--color-secondary) 100%);
 }
 
 @media (max-width: 1360px) {

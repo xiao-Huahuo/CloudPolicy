@@ -79,9 +79,7 @@
             v-if="message.role === 'assistant' && showAgentTrace(message)"
             class="live-trace-stage"
           >
-            <div class="thinking-loader">
-              <ThinkingLoader />
-            </div>
+            <AgentLoader class="thinking-loader" :size="28" compact />
 
               <article
                 v-if="getVisibleTrace(message)"
@@ -110,9 +108,7 @@
             v-else-if="message.role === 'assistant' && showMessageLoader(message)"
             class="message-loading-state"
           >
-            <div class="thinking-loader compact">
-              <ThinkingLoader />
-            </div>
+            <AgentLoader class="thinking-loader compact" :size="28" compact />
             <span>正在生成回复...</span>
           </div>
 
@@ -160,7 +156,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
 import MarkdownIt from 'markdown-it';
-import ThinkingLoader from '../../../super-comonents/loader.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 
 const props = defineProps({
   messages: { type: Array, default: () => [] },
@@ -523,6 +519,9 @@ watch(
 .thinking-loader {
   --loader-color: #ff8f7a;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   height: 32px;
   flex-shrink: 0;

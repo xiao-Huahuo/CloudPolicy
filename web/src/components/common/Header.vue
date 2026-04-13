@@ -108,13 +108,7 @@
       </div>
 
       <!-- 閫€鍑虹櫥褰曟寜閽?-->
-      <button v-if="userStore.token" class="icon-btn logout-btn" @click="handleLogout" title="退出登录">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-      </button>
+      <LogoutPillButton v-if="userStore.token" compact @click="handleLogout" />
     </div>
   </header>
 </template>
@@ -124,6 +118,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { trackHistoryEvent } from '@/api/history';
 import UnifiedSearchBox from '@/components/common/UnifiedSearchBox.vue';
+import LogoutPillButton from '@/components/ui/LogoutPillButton.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
 import { COLOR_SCHEME_OPTIONS, useSettingsStore } from '@/stores/settings';
@@ -275,7 +270,6 @@ onBeforeUnmount(() => {
   padding: 0 20px;
   flex-shrink: 0;
   border-radius: 999px;
-  backdrop-filter: blur(18px);
   box-shadow: var(--shell-shadow), inset 0 0 0 1px var(--shell-glass-border);
   transition: background 0.45s ease, box-shadow 0.45s ease, color 0.35s ease;
 }
@@ -473,8 +467,6 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 .icon-btn:hover { color: var(--shell-text); }
-.logout-btn:hover { color: var(--shell-text-muted); }
-
 .user-profile {
   cursor: pointer;
   display: flex;
@@ -554,7 +546,6 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: rgba(7, 14, 24, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(3px);
   pointer-events: none;
   transition: background 0.35s ease, border-color 0.35s ease;
 }

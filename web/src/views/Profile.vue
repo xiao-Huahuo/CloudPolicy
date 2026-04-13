@@ -12,7 +12,7 @@
     </div>
 
     <div v-if="loading && userStore.token" class="loading-state widget-card">
-      <div class="spinner"></div>
+      <AgentLoader :size="46" />
       <span>正在整理你的个人工作台...</span>
     </div>
 
@@ -54,7 +54,7 @@
               {{ permissionActionLabel }}
             </button>
             <button v-if="canRequestDowngrade" class="hero-btn hero-btn--danger" :disabled="permissionLoading" @click="handlePermissionAction('downgrade')">申请降级</button>
-            <button class="hero-btn hero-btn--ghost" @click="handleLogout">退出登录</button>
+            <LogoutPillButton @click="handleLogout" />
           </div>
         </div>
 
@@ -176,7 +176,7 @@
         <div class="section section-history">
           <div class="section-head">
             <span class="section-label">最近解析</span>
-            <button class="section-link" @click="router.push('/history')">查看全部</button>
+            <LearnMoreLink label="查看全部" @click="router.push('/history')" />
           </div>
           <div v-if="recentHistory.length" class="list-block">
             <button v-for="item in recentHistory" :key="item.id" class="list-item" @click="restoreHistory(item.id)">
@@ -197,7 +197,7 @@
           <div class="section">
             <div class="section-head">
               <span class="section-label">最近收藏</span>
-              <button class="section-link" @click="router.push('/favorites')">查看全部</button>
+              <LearnMoreLink label="查看全部" @click="router.push('/favorites')" />
             </div>
             <div v-if="recentFavorites.length" class="mini-list">
               <button v-for="item in recentFavorites" :key="item.fav.id" class="mini-item" @click="openFavorite(item.message)">
@@ -214,7 +214,7 @@
           <div class="section">
             <div class="section-head">
               <span class="section-label">待办进度</span>
-              <button class="section-link" @click="router.push('/todo')">查看全部</button>
+              <LearnMoreLink label="查看全部" @click="router.push('/todo')" />
             </div>
             <div v-if="recentTodos.length" class="mini-list">
               <div v-for="todo in recentTodos" :key="todo.id" class="mini-item mini-item--todo">
@@ -317,6 +317,9 @@ import { useRouter } from 'vue-router';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import Modal from '@/components/common/Modal.vue';
 import AvatarEditor from '@/components/common/AvatarEditor.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
+import LearnMoreLink from '@/components/ui/LearnMoreLink.vue';
+import LogoutPillButton from '@/components/ui/LogoutPillButton.vue';
 import { getChatMessage, getChatMessages } from '@/api/ai.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
@@ -1007,8 +1010,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-left: 3px solid var(--focus-tone);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--focus-tone) 10%, var(--card-bg)), var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--focus-tone) 18%, var(--border-color));
+  background: var(--card-bg);
 }
 
 .focus-card--primary {
@@ -1063,8 +1066,8 @@ onMounted(async () => {
   align-items: center;
   gap: 14px;
   padding: 16px;
-  border-left: 3px solid var(--stat-tone);
-  background: linear-gradient(165deg, color-mix(in srgb, var(--stat-tone) 8%, var(--card-bg)), var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--stat-tone) 18%, var(--border-color));
+  background: var(--card-bg);
 }
 
 .stat-card--primary {
@@ -1282,7 +1285,7 @@ onMounted(async () => {
 .mini-item {
   width: 100%;
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
-  background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 5%, var(--card-bg)), var(--card-bg));
+  background: var(--card-bg);
   border-radius: 14px;
   display: flex;
   align-items: center;
@@ -1427,8 +1430,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-left: 3px solid var(--metric-tone);
-  background: linear-gradient(165deg, color-mix(in srgb, var(--metric-tone) 9%, var(--card-bg)), var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--metric-tone) 18%, var(--border-color));
+  background: var(--card-bg);
 }
 
 .metric-card--primary {

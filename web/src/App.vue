@@ -83,7 +83,7 @@ body {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  background-color: var(--content-bg);
+  background-color: var(--page-shell-bg, var(--content-bg));
   padding: 20px;
   transition: padding-left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

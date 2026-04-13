@@ -65,7 +65,8 @@
               </div>
             </div>
             <div v-if="loading" class="loading-more">
-              <div class="spinner-sm"></div> 加载中...
+              <AgentLoader :size="18" compact :center="false" />
+              <span>加载中...</span>
             </div>
             <div v-if="!loading && !hasMore" class="no-more">已加载全部内容</div>
           </div>
@@ -175,6 +176,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PolicyTitle from '@/components/common/PolicyTitle.vue'
 import UnifiedSearchBox from '@/components/common/UnifiedSearchBox.vue'
+import AgentLoader from '@/components/ui/AgentLoader.vue'
 import { trackHistoryEvent } from '@/api/history'
 import { useUserStore } from '@/stores/auth.js'
 import { apiClient, API_ROUTES } from '@/router/api_routes'
@@ -680,21 +682,22 @@ onBeforeUnmount(() => {
   color: var(--text-primary, #111);
 }
 .overview-item {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e8e8e8);
-  border-left: 3px solid transparent;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 6%, var(--border-color, #e8e8e8));
   padding: 12px 14px;
   cursor: pointer;
   transition: all 0.2s;
   border-radius: 6px;
 }
 .overview-item:hover {
-  border-left-color: var(--color-primary, #c0392b);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 3%, var(--card-bg, #fff));
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 18%, var(--border-color, #e8e8e8));
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .overview-item.active {
-  border-left-color: var(--color-primary, #c0392b);
-  background: rgba(192,57,43,0.03);
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 22%, var(--border-color, #e8e8e8));
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 6%, var(--card-bg, #fff));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary, #c0392b) 10%, transparent);
 }
 .ov-top {
   display: flex;
@@ -774,19 +777,22 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: var(--content-bg, #f9f9f9);
+  background: color-mix(in srgb, var(--card-bg, #fff) 94%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 8%, var(--border-color, #e8e8e8));
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .doc-title-item:hover {
-  background: rgba(192,57,43,0.05);
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 18%, var(--border-color, #e8e8e8));
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 4%, var(--card-bg, #fff));
 }
 
 .doc-title-item.active {
-  background: rgba(192,57,43,0.1);
-  border-left: 3px solid #c0392b;
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 8%, var(--card-bg, #fff));
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 24%, var(--border-color, #e8e8e8));
+  box-shadow: inset 0 0 0 1px rgba(192,57,43,0.08);
 }
 
 .doc-index {
@@ -815,8 +821,14 @@ onBeforeUnmount(() => {
 }
 
 .red-header-bar {
-  background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%);
-  color: #fff;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary, #c0392b) 12%, #ffffff) 0%,
+    color-mix(in srgb, var(--color-primary-light, #e74c3c) 18%, #ffffff) 100%
+  );
+  color: var(--color-primary-dark, #8e231b);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 16%, rgba(255, 255, 255, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -879,14 +891,16 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: var(--content-bg, #f9f9f9);
+  background: color-mix(in srgb, var(--card-bg, #fff) 95%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 6%, var(--border-color, #e8e8e8));
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .news-item:hover {
-  background: rgba(192,57,43,0.05);
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 4%, var(--card-bg, #fff));
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 16%, var(--border-color, #e8e8e8));
 }
 
 .news-rank {
@@ -914,9 +928,7 @@ onBeforeUnmount(() => {
   color: #ccc;
 }
 
-.loading-more { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 16px; color: #999; font-size: 13px; }
-.spinner-sm { width: 14px; height: 14px; border: 2px solid #eee; border-top-color: #c0392b; border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.loading-more { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: #999; font-size: 13px; }
 .no-more { text-align: center; padding: 16px; color: #ccc; font-size: 12px; }
 
 .loading-placeholder {

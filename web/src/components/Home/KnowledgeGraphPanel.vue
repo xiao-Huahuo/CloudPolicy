@@ -2701,7 +2701,7 @@ onBeforeUnmount(() => {
 .kg-panel.is-fullscreen {
   min-height: 100vh;
   padding: 14px;
-  background: var(--content-bg);
+  background-color: var(--page-shell-bg, var(--content-bg));
   box-sizing: border-box;
 }
 
@@ -3327,27 +3327,6 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--color-secondary) 24%, transparent);
   border-radius: 4px;
   padding: 0 2px;
-}
-
-:global([data-theme="dark"]) .kg-panel {
-  --kg-panel-shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
-  --kg-button-shadow: 0 12px 22px rgba(0, 0, 0, 0.26);
-}
-
-:global([data-theme="dark"]) .graph-2d-wrapper::before { opacity: 0.08; }
-
-:global([data-theme="dark"]) .graph-2d-wrapper::after { opacity: 0.32; }
-
-:global([data-theme="dark"]) .kg-entity {
-  background: color-mix(in srgb, var(--color-secondary) 18%, rgba(255, 255, 255, 0.04));
-}
-
-:global([data-theme="dark"]) .kg-entity.active {
-  background: color-mix(in srgb, var(--color-primary) 20%, rgba(255, 255, 255, 0.05));
-}
-
-:global([data-theme="dark"]) .kg-source-highlight {
-  background: color-mix(in srgb, var(--color-secondary) 18%, rgba(255, 255, 255, 0.04));
 }
 
 .kg-panel.is-fullscreen .kg-content { min-height: calc(100vh - 104px); }

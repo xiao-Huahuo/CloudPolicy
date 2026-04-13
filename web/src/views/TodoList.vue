@@ -33,7 +33,10 @@
         <button :class="{ active: filter === 'pending' }" @click="filter = 'pending'">待完成</button>
         <button :class="{ active: filter === 'done' }" @click="filter = 'done'">已完成</button>
       </div>
-      <div v-if="loading" class="todo-loading">加载中...</div>
+      <div v-if="loading" class="todo-loading">
+        <AgentLoader :size="34" />
+        <span>加载中...</span>
+      </div>
       <div v-else-if="filteredTodos.length === 0" class="todo-empty">暂无待办事项</div>
       <div v-else class="todo-list">
         <div v-for="(todo, index) in filteredTodos" :key="todo.id" class="todo-item fade-in-up" :style="{ animationDelay: `${index * 50}ms` }" :class="{ done: todo.is_done }">
@@ -72,6 +75,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 
 const todos = ref([]);
@@ -178,7 +182,6 @@ async function createTodo() {
 .draft-section {
   background: color-mix(in srgb, var(--color-primary) 6%, var(--card-bg));
   border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
-  border-left: 3px solid var(--color-primary);
   border-radius: 18px;
   padding: 16px 18px;
   box-shadow: 0 14px 28px color-mix(in srgb, var(--color-primary) 8%, transparent);
@@ -233,12 +236,17 @@ async function createTodo() {
 }
 .todo-filters button.active { background: var(--color-primary); color: #fff; font-weight: 700; }
 .todo-loading, .todo-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 30px 0; }
+.todo-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
 .todo-list { display: flex; flex-direction: column; gap: 6px; }
 .todo-item {
   display: flex; align-items: flex-start; gap: 12px;
   background: color-mix(in srgb, var(--color-primary) 3%, var(--card-bg));
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
-  border-left: 3px solid var(--color-primary);
   border-radius: 14px;
   padding: 12px 14px;
   transition: opacity 0.2s, transform 0.2s ease, box-shadow 0.2s ease;
@@ -258,7 +266,7 @@ async function createTodo() {
 .fade-in-up {
   animation: fadeInUp 0.35s ease both;
 }
-.todo-item.done { opacity: 0.7; border-left-color: color-mix(in srgb, var(--text-muted) 54%, var(--border-color)); }
+.todo-item.done { opacity: 0.7; border-color: color-mix(in srgb, var(--text-muted) 54%, var(--border-color)); }
 .todo-check { cursor: pointer; flex-shrink: 0; margin-top: 2px; }
 .check-empty {
   width: 18px; height: 18px; border: 2px solid color-mix(in srgb, var(--border-color) 80%, var(--text-muted));

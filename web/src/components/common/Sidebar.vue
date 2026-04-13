@@ -105,6 +105,7 @@
         <span class="username">{{ userStore.user?.username }}</span>
       </div>
       <div class="footer-actions">
+        <AboutOrbButton @click="showMore = !showMore" />
         <router-link to="/settings" class="footer-icon-btn" title="设置">
           <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
             <circle cx="12" cy="12" r="3"/>
@@ -180,6 +181,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AboutOrbButton from '@/components/ui/AboutOrbButton.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
 import { resolveAvatarUrl } from '@/utils/avatar.js';
@@ -687,6 +689,10 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
 .footer-actions {
   display: flex;
   gap: 4px;
+}
+
+.footer-actions > button.footer-icon-btn {
+  display: none;
 }
 
 .footer-icon-btn {

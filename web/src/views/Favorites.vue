@@ -4,7 +4,10 @@
       <PolicyTitle title="我的收藏" />
     </div>
 
-    <div v-if="loading" class="empty-state">加载中...</div>
+    <div v-if="loading" class="empty-state empty-state--loading">
+      <AgentLoader :size="34" />
+      <span>加载中...</span>
+    </div>
     <div v-else-if="items.length === 0" class="empty-state">暂无收藏</div>
 
     <div v-else class="favorites-grid">
@@ -34,6 +37,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import { useRouter } from 'vue-router';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
@@ -136,6 +140,13 @@ onMounted(fetchFavorites);
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 18px;
+}
+
+.empty-state--loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .favorites-grid {

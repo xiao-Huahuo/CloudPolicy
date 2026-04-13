@@ -6,7 +6,8 @@
 
     <!-- 加载状态 -->
     <div v-if="settingsStore.loading" class="loading-state">
-      加载中...
+      <AgentLoader :size="46" />
+      <span>加载中...</span>
     </div>
 
     <!-- 主体内容 -->
@@ -29,7 +30,7 @@
           </div>
         </div>
         <div class="profile-side-actions">
-          <button class="profile-logout-link" @click="handleLogout">退出当前账号</button>
+          <LogoutPillButton @click="handleLogout" />
         </div>
       </div>
 
@@ -202,6 +203,8 @@ import { useUserStore } from '@/stores/auth.js';
 import { useSettingsStore } from '@/stores/settings';
 import Modal from '@/components/common/Modal.vue';
 import AvatarEditor from '@/components/common/AvatarEditor.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
+import LogoutPillButton from '@/components/ui/LogoutPillButton.vue';
 import { resolveAvatarUrl } from '@/utils/avatar.js';
 
 const router = useRouter();
@@ -281,6 +284,10 @@ const openLoginModal = () => {
 }
 
 .loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   text-align: center;
   padding: 40px;
   color: var(--text-secondary);
@@ -636,14 +643,6 @@ input:checked + .slider:before {
   cursor: pointer;
   font-weight: 700;
   box-shadow: 0 12px 24px color-mix(in srgb, var(--color-primary) 18%, transparent);
-}
-
-:global([data-theme="dark"]) .settings-container .toggle-group {
-  background-color: color-mix(in srgb, var(--color-primary) 8%, var(--card-bg));
-}
-
-:global([data-theme="dark"]) .settings-container .theme-mode-toggle .toggle-btn.active {
-  box-shadow: 0 10px 18px color-mix(in srgb, var(--color-primary) 22%, transparent) !important;
 }
 
 @media (max-width: 1024px) {

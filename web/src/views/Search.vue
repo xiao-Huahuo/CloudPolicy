@@ -420,7 +420,7 @@ onMounted(async () => {
   height: 100%;
   overflow-y: auto;
   padding: 24px 32px;
-  background: var(--content-bg, #f5f7fa);
+  background: transparent;
   display: flex;
   flex-direction: column;
   gap: 20px;

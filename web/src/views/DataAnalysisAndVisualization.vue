@@ -5,7 +5,7 @@
     </div>
 
     <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
+      <AgentLoader :size="46" />
       <span>正在分析您的海量数据...</span>
     </div>
 
@@ -166,6 +166,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
+import AgentLoader from '@/components/ui/AgentLoader.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { apiClient, API_ROUTES } from '@/router/api_routes';
 import TimeSavedChart from '@/components/Analysis/TimeSavedChart.vue';
@@ -473,10 +474,7 @@ onMounted(async () => {
 }
 
 .time-cards-container {
-  position: relative;
   width: 100%;
-  height: 200px;
-  min-height: 200px;
 }
 
 .time-cards-grid {
@@ -489,7 +487,6 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 16px;
   border: 1px solid var(--border-color);
-  border-left: 3px solid var(--color-primary);
   background: var(--card-bg);
   display: flex;
   flex-direction: column;
@@ -499,24 +496,20 @@ onMounted(async () => {
 
 .card-personal-avg {
   background: color-mix(in srgb, var(--color-primary) 10%, var(--card-bg));
-  border-left-color: var(--color-primary);
 }
 
 .card-personal-total {
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary-dark) 82%, #0f1116), color-mix(in srgb, var(--color-primary) 62%, #151922));
   color: #fff;
-  border-left-color: var(--color-primary-dark);
 }
 
 .card-all-avg {
   background: color-mix(in srgb, var(--color-accent-cool) 12%, var(--card-bg));
-  border-left-color: var(--color-accent-cool);
 }
 
 .card-all-total {
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-accent-cool) 70%, #0f1720), color-mix(in srgb, var(--color-accent-mint) 44%, #12202b));
   color: #fff;
-  border-left-color: var(--color-accent-cool);
 }
 
 .time-card-grid .card-label {
@@ -530,25 +523,20 @@ onMounted(async () => {
 }
 
 .time-card {
-  position: absolute;
+  position: relative;
   border-radius: 16px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: none;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--border-color));
 }
 
 .card-bottom {
-  right: 0;
-  bottom: 0;
-  width: 65%;
-  height: 80%;
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary-dark) 84%, #0f1116), color-mix(in srgb, var(--color-accent-cool) 30%, #151922));
   color: #fff;
-  z-index: 1;
-  cursor: pointer;
 }
 
 .card-bottom .card-label {
@@ -556,26 +544,22 @@ onMounted(async () => {
 }
 
 .card-top {
-  left: 0;
-  top: 0;
-  width: 65%;
-  height: 80%;
   background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 80%, #ffffff), color-mix(in srgb, var(--color-secondary) 62%, #ffffff));
   color: var(--text-primary);
-  z-index: 2;
   border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--border-color));
 }
 
-.time-cards-container:hover .card-bottom {
-  z-index: 3;
-  transform: scale(1.05) translate(-10px, -10px);
-  box-shadow: 0 15px 40px color-mix(in srgb, var(--color-primary-dark) 28%, transparent);
+.time-cards-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  height: auto;
+  min-height: auto;
 }
 
-.time-cards-container:hover .card-top {
-  z-index: 1;
-  transform: scale(0.95) translate(10px, 10px);
-  opacity: 0.84;
+.time-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 .card-label {
