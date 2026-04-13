@@ -600,6 +600,10 @@ onMounted(async () => {
   padding-right: 2px;
 }
 
+.history-list > * {
+  flex-shrink: 0;
+}
+
 .history-card,
 .empty-card {
   background: var(--card-bg);

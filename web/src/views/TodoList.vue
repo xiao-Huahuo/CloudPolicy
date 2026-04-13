@@ -9,7 +9,7 @@
     <div v-if="drafts.length" class="draft-section">
       <div class="section-label-row">
         <span class="section-label">待确认草稿</span>
-        <span class="draft-hint">来自 AI 解析，请确认后保存</span>
+        <span class="draft-hint">来自自动解析，请确认后保存</span>
       </div>
       <div class="draft-list">
         <div v-for="d in drafts" :key="d.id" class="draft-card">
@@ -39,7 +39,7 @@
       </div>
       <div v-else-if="filteredTodos.length === 0" class="todo-empty">暂无待办事项</div>
       <div v-else class="todo-list">
-        <div v-for="(todo, index) in filteredTodos" :key="todo.id" class="todo-item fade-in-up" :style="{ animationDelay: `${index * 50}ms` }" :class="{ done: todo.is_done }">
+        <div v-for="todo in filteredTodos" :key="todo.id" class="todo-item" :class="{ done: todo.is_done }">
           <div class="todo-check" @click="toggleTodo(todo.id)">
             <svg v-if="todo.is_done" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#c0392b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <div v-else class="check-empty"></div>
@@ -168,23 +168,29 @@ async function createTodo() {
 }
 
 .add-btn {
-  background: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-bottom: 3px solid var(--color-primary-dark);
-  border-radius: 999px;
-  padding: 7px 18px; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.2s;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--card-bg));
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--border-color));
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
-.add-btn:hover { background: var(--color-primary-light); border-bottom-color: var(--color-primary); }
+.add-btn:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
 
 /* 草稿区 */
 .draft-section {
-  background: color-mix(in srgb, var(--color-primary) 6%, var(--card-bg));
+  background: var(--card-bg);
   border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
-  border-radius: 18px;
+  border-radius: 8px !important;
   padding: 16px 18px;
-  box-shadow: 0 14px 28px color-mix(in srgb, var(--color-primary) 8%, transparent);
+  box-shadow: none !important;
 }
 .section-label-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .section-label { font-size: 13px; font-weight: 700; color: var(--color-primary-dark); }
@@ -192,11 +198,12 @@ async function createTodo() {
 .draft-list { display: flex; flex-direction: column; gap: 8px; }
 .draft-card {
   display: flex; align-items: flex-start; justify-content: space-between;
-  background: var(--card-bg);
+  background: color-mix(in srgb, var(--color-primary) 2%, var(--card-bg));
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
-  border-radius: 14px;
+  border-radius: 10px !important;
   padding: 12px 14px;
   gap: 12px;
+  box-shadow: none !important;
 }
 .draft-info { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .draft-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
@@ -211,15 +218,15 @@ async function createTodo() {
   gap: 12px;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: 8px !important;
   padding: 16px 18px 18px;
-  box-shadow: 0 18px 32px color-mix(in srgb, var(--color-primary) 8%, transparent);
+  box-shadow: none !important;
 }
 .todo-filters {
   display: inline-flex;
   gap: 6px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--color-primary) 7%, var(--card-bg));
   border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
   align-self: flex-start;
@@ -227,12 +234,12 @@ async function createTodo() {
 .todo-filters button {
   background: transparent;
   border: none;
-  border-radius: 999px;
+  border-radius: 8px !important;
   padding: 6px 14px;
   font-size: 12px;
   cursor: pointer;
   color: var(--text-secondary);
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 .todo-filters button.active { background: var(--color-primary); color: #fff; font-weight: 700; }
 .todo-loading, .todo-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 30px 0; }
@@ -245,32 +252,28 @@ async function createTodo() {
 .todo-list { display: flex; flex-direction: column; gap: 6px; }
 .todo-item {
   display: flex; align-items: flex-start; gap: 12px;
-  background: color-mix(in srgb, var(--color-primary) 3%, var(--card-bg));
+  background: var(--card-bg);
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
-  border-radius: 14px;
+  border-left: 3px solid color-mix(in srgb, var(--color-primary) 36%, var(--border-color));
+  border-radius: 10px !important;
   padding: 12px 14px;
-  transition: opacity 0.2s, transform 0.2s ease, box-shadow 0.2s ease;
-  opacity: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow: none !important;
 }
 
 .todo-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 24px color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 2%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--border-color));
 }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+.todo-item.done {
+  opacity: 0.76;
+  border-left-color: color-mix(in srgb, var(--text-muted) 48%, var(--border-color));
+  border-color: color-mix(in srgb, var(--text-muted) 54%, var(--border-color));
 }
-
-.fade-in-up {
-  animation: fadeInUp 0.35s ease both;
-}
-.todo-item.done { opacity: 0.7; border-color: color-mix(in srgb, var(--text-muted) 54%, var(--border-color)); }
 .todo-check { cursor: pointer; flex-shrink: 0; margin-top: 2px; }
 .check-empty {
   width: 18px; height: 18px; border: 2px solid color-mix(in srgb, var(--border-color) 80%, var(--text-muted));
-  border-radius: 2px; transition: border-color 0.2s;
+  border-radius: 4px; transition: border-color 0.2s;
 }
 .todo-check:hover .check-empty { border-color: var(--color-primary); }
 .todo-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
@@ -286,23 +289,27 @@ async function createTodo() {
 
 /* 按钮 */
 .confirm-btn {
-  background: var(--color-primary); color: #fff; border: none;
-  border-radius: 999px;
-  padding: 7px 12px; font-size: 12px; cursor: pointer; transition: background 0.2s, transform 0.2s ease;
+  background: var(--color-primary); color: #fff; border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  padding: 7px 12px; font-size: 12px; cursor: pointer; transition: background 0.2s, border-color 0.2s;
 }
-.confirm-btn:hover { background: var(--color-primary-light); transform: translateY(-1px); }
+.confirm-btn:hover { background: var(--color-primary-light); border-color: var(--color-primary-light); }
 .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
 .discard-btn {
-  background: color-mix(in srgb, var(--border-color) 42%, var(--card-bg));
+  background: transparent;
   color: var(--text-secondary);
-  border: none;
-  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: 8px;
   padding: 7px 12px;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
-.discard-btn:hover { background: color-mix(in srgb, var(--border-color) 62%, var(--card-bg)); }
+.discard-btn:hover {
+  background: color-mix(in srgb, var(--border-color) 46%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--border-color) 82%, transparent);
+  color: var(--text-primary);
+}
 
 /* 弹窗 */
 .modal-overlay {
@@ -312,16 +319,16 @@ async function createTodo() {
 .modal {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 20px;
-  box-shadow: 0 28px 54px rgba(0,0,0,0.24);
+  border-radius: 10px;
+  box-shadow: 0 18px 34px rgba(0,0,0,0.18);
   padding: 24px; width: min(380px, calc(100vw - 28px));
   display: flex; flex-direction: column; gap: 12px;
 }
 .modal h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-primary); }
 .modal-input, .modal-textarea {
   border: 1px solid var(--border-color); padding: 8px 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--color-primary) 4%, var(--card-bg));
+  border-radius: 8px;
+  background: transparent;
   font-size: 13px; outline: none; width: 100%; box-sizing: border-box;
   transition: border-color 0.2s;
   color: var(--text-primary);

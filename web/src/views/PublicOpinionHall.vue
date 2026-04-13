@@ -35,7 +35,7 @@
         <div class="panel-header">
           <span class="panel-dot"></span>
           <span>热门政策 Top5</span>
-          <LearnMoreLink label="查看全部" compact @click="router.push('/discovery-home')" />
+          <LearnMoreLink class="panel-more-link" label="查看全部" compact @click="router.push('/discovery-home')" />
         </div>
         <div v-for="(doc, i) in hotDocs" :key="doc.id" class="hot-doc-item" @click="openDoc(doc)">
           <span class="hot-rank" :class="{ top3: i < 3 }">{{ i + 1 }}</span>
@@ -160,7 +160,7 @@ const feedSkip = ref(0)
 const viewMode = ref('list')
 const wordcloudRef = ref(null)
 const loadMoreRef = ref(null)
-const cloudHeight = ref(240)
+const cloudHeight = ref(280)
 
 const SLIDE_COLORS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#e67e22']
 const carouselImageModules = import.meta.glob('/src/assets/photos/opinion-carousel/*.{jpg,jpeg,png,webp}', { eager: true })
@@ -174,7 +174,7 @@ let bubbleRaf = null
 let resizeHandler = null
 const BUBBLE_PADDING = 14
 
-const updateCloudHeight = (nodes, minHeight = 180) => {
+const updateCloudHeight = (nodes, minHeight = 240) => {
   if (!nodes.length) {
     cloudHeight.value = minHeight
     return
@@ -263,11 +263,11 @@ const startBubbleCluster = () => {
 
   const estimatedRows = Math.max(2, Math.ceil(Math.sqrt(cloudWords.value.length) * 0.72))
   const avgDiameter = cloudWords.value.reduce((sum, w) => sum + w.radius * 2, 0) / cloudWords.value.length
-  cloudHeight.value = Math.max(190, Math.ceil(estimatedRows * avgDiameter * 0.72))
+  cloudHeight.value = Math.max(260, Math.ceil(estimatedRows * avgDiameter * 0.92))
 
   const cx = width / 2
   const cy = cloudHeight.value / 2
-  const baseR = Math.min(width, cloudHeight.value) * 0.14
+  const baseR = Math.min(width, cloudHeight.value) * 0.16
   cloudWords.value.forEach((w, i) => {
     const angle = (i / cloudWords.value.length) * Math.PI * 2
     const dist = baseR + (i % 4) * 8
@@ -606,6 +606,36 @@ onUnmounted(() => {
 }
 .panel-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
 .panel-more { margin-left: auto; font-size: 12px; color: var(--color-primary); text-decoration: none; }
+.panel-header :deep(.panel-more-link) {
+  margin-left: auto;
+}
+
+.panel-header :deep(.panel-more-link .learn-more-link__circle) {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--border-color));
+  box-shadow: none;
+}
+
+.panel-header :deep(.panel-more-link .learn-more-link__icon) {
+  background: var(--color-primary);
+}
+
+.panel-header :deep(.panel-more-link .learn-more-link__icon::before) {
+  border-color: var(--color-primary);
+}
+
+.panel-header :deep(.panel-more-link .learn-more-link__text) {
+  color: var(--text-secondary);
+}
+
+.panel-header :deep(.panel-more-link:hover .learn-more-link__circle) {
+  background: color-mix(in srgb, var(--color-primary) 82%, var(--color-secondary) 18%);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.panel-header :deep(.panel-more-link:hover .learn-more-link__text) {
+  color: #fff;
+}
 
 .hot-doc-item {
   display: flex; align-items: flex-start; gap: 10px;
@@ -639,6 +669,7 @@ onUnmounted(() => {
 .wordcloud-container {
   position: relative;
   width: 100%;
+  min-height: 260px;
   overflow: visible;
   transition: height 0.25s ease;
 }

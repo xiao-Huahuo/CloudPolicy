@@ -916,6 +916,16 @@ const getComplexityClass = (item) => {
   font-size: 13px; color: #fff; background: transparent;
 }
 .tsb-input-wrap input::placeholder { color: rgba(255,255,255,0.72); }
+[data-theme='dark'] .tsb-input-wrap input,
+[data-theme='dark'] .tsb-input-wrap input:-webkit-autofill,
+[data-theme='dark'] .tsb-input-wrap input:-webkit-autofill:hover,
+[data-theme='dark'] .tsb-input-wrap input:-webkit-autofill:focus {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+}
 .tsb-clear {
   background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.8); padding: 0; display: flex;
 }
@@ -1066,12 +1076,7 @@ const getComplexityClass = (item) => {
 }
 
 .brick-item {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--brick-color, #1565c0) 78%, #000 22%) 0%,
-    var(--brick-color, #1565c0) 48%,
-    color-mix(in srgb, var(--brick-color, #1565c0) 72%, #fff 28%) 100%
-  );
+  background: color-mix(in srgb, var(--brick-color, #1565c0) 84%, #10161f 16%);
   border-radius: 0;
   box-sizing: border-box;
   padding: 12px 16px;
@@ -1081,38 +1086,35 @@ const getComplexityClass = (item) => {
   gap: 10px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   min-height: 100%;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15);
+  border: 1px solid color-mix(in srgb, var(--brick-color, #1565c0) 58%, rgba(255,255,255,0.22));
+  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
 }
 .brick-item.brick-lg { padding: 16px 18px; }
 .brick-item.brick-sm { padding: 10px 14px; }
+[data-theme='light'] .brick-item {
+  background: color-mix(in srgb, var(--brick-color, #1565c0) 90%, #ffffff 10%);
+}
 
 .brick-item:not(.disabled):hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--brick-color, #1565c0) 72%, rgba(255,255,255,0.28));
+  box-shadow: 0 12px 22px rgba(0,0,0,0.22);
 }
-.brick-item.disabled { opacity: 0.55; cursor: not-allowed; }
+.brick-item.disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* 反光效果 */
+/* 保留节点用于布局，不再显示反光动效 */
 .brick-shine {
-  position: absolute;
-  top: 0; left: -60%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
-  pointer-events: none;
-  transition: left 0.4s ease;
+  display: none;
 }
-.brick-item:not(.disabled):hover .brick-shine { left: 120%; }
 
 /* 边缘高光 */
 .brick-edge {
   position: absolute;
   inset: 0;
   border-radius: 0;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid color-mix(in srgb, var(--brick-color, #1565c0) 42%, rgba(255,255,255,0.18));
   pointer-events: none;
 }
 .brick-icon {
@@ -1123,7 +1125,7 @@ const getComplexityClass = (item) => {
 }
 .brick-info { display: flex; flex-direction: column; gap: 2px; }
 .brick-name { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; }
-.brick-desc { font-size: 10px; color: rgba(255,255,255,0.65); white-space: nowrap; }
+.brick-desc { font-size: 10px; color: rgba(255,255,255,0.76); white-space: nowrap; }
 .brick-badge {
   position: absolute;
   top: 6px;
@@ -1430,8 +1432,15 @@ const getComplexityClass = (item) => {
     width: calc(100% - 24px);
   }
   .search-popover { left: 0; width: 100%; }
-  .masonry-wall { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .brick-item { grid-column: span 4 !important; grid-row: span 2 !important; }
+  .masonry-wall {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+  .brick-item {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    min-height: 88px;
+  }
   .news-card-view { grid-template-columns: 1fr; }
   .card-skeleton { grid-template-columns: 1fr; }
   .news-header,

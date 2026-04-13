@@ -95,12 +95,14 @@
     <div class="sidebar-footer" v-show="!isIconMode">
       <div v-if="!userStore.token" class="login-btn" @click="emitLogin">登录</div>
       <div v-else class="user-info">
-        <img v-if="displayAvatar" :src="displayAvatar" class="avatar" alt="avatar" />
-        <div v-else class="avatar-placeholder">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
+        <div class="avatar-shell">
+          <img v-if="displayAvatar" :src="displayAvatar" class="avatar" alt="avatar" />
+          <div v-else class="avatar-placeholder">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
         </div>
         <span class="username">{{ userStore.user?.username }}</span>
       </div>
@@ -650,31 +652,42 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 8px;
   padding: 4px 0;
 }
 
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
+.avatar-shell {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   border: 1px solid var(--shell-glass-border);
-  flex-shrink: 0;
-  transition: border-color 0.35s ease;
-}
-
-.avatar-placeholder {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--shell-glass-bg);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.35s ease, color 0.35s ease;
+  box-shadow: none;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  border: none;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--shell-text-muted);
 }
 
 .username {
@@ -688,7 +701,7 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
 
 .footer-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
 }
 
 .footer-actions > button.footer-icon-btn {
@@ -699,19 +712,29 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   color: var(--shell-text-muted);
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid var(--shell-glass-border);
+  box-shadow: none;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .footer-icon-btn:hover {
-  background: var(--shell-glass-hover);
+  background: var(--sidebar-hover-bg);
+  color: var(--shell-text);
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--shell-glass-border));
+  box-shadow: 0 10px 18px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+.footer-icon-btn.router-link-active {
+  background: var(--sidebar-active-bg);
+  box-shadow: inset 0 0 0 1px var(--sidebar-active-border);
   color: var(--shell-text);
 }
 

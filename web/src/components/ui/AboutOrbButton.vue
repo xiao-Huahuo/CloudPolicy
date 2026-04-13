@@ -21,33 +21,26 @@ defineProps({
 <style scoped>
 .about-orb-btn {
   position: relative;
-  width: 48px;
-  height: 48px;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--border-color));
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--shell-glass-border, rgba(255, 255, 255, 0.16)) 88%, transparent);
   border-radius: 999px;
-  background:
-    linear-gradient(147deg, color-mix(in srgb, var(--color-secondary) 72%, #ffffff 28%) 0%, color-mix(in srgb, var(--color-primary) 84%, #ffffff 16%) 74%);
-  color: #fff;
+  background: transparent;
+  color: var(--shell-text-muted, var(--text-secondary));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow:
-    0 14px 24px color-mix(in srgb, var(--color-primary) 20%, transparent),
-    0 0 16px color-mix(in srgb, var(--color-secondary) 20%, transparent);
-  transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease;
+  box-shadow: none;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .about-orb-btn:hover {
-  transform: translateY(-1px) scale(1.02);
-  filter: saturate(1.06);
-  box-shadow:
-    0 18px 28px color-mix(in srgb, var(--color-primary) 26%, transparent),
-    0 0 22px color-mix(in srgb, var(--color-secondary) 24%, transparent);
-}
-
-.about-orb-btn:hover svg {
-  animation: about-orb-jello 0.7s both;
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--shell-text, var(--text-primary));
+  border-color: color-mix(in srgb, var(--color-primary) 26%, var(--shell-glass-border, rgba(255, 255, 255, 0.16)));
+  box-shadow: 0 10px 18px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .about-orb-btn__tooltip {
@@ -58,15 +51,15 @@ defineProps({
   min-width: 48px;
   padding: 6px 10px;
   border-radius: 10px;
-  background:
-    linear-gradient(147deg, color-mix(in srgb, var(--color-secondary) 72%, #ffffff 28%) 0%, color-mix(in srgb, var(--color-primary) 84%, #ffffff 16%) 74%);
-  color: #fff;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   font-size: 11px;
   font-weight: 700;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.22s ease, transform 0.22s ease;
-  box-shadow: 0 12px 22px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  box-shadow: 0 12px 22px rgba(10, 17, 28, 0.18);
 }
 
 .about-orb-btn__tooltip::before {
@@ -83,15 +76,5 @@ defineProps({
 .about-orb-btn:hover .about-orb-btn__tooltip {
   opacity: 1;
   transform: translateX(-50%) translateY(-2px);
-}
-
-@keyframes about-orb-jello {
-  0% { transform: scale3d(1, 1, 1); }
-  30% { transform: scale3d(0.75, 1.25, 1); }
-  40% { transform: scale3d(1.25, 0.75, 1); }
-  50% { transform: scale3d(0.85, 1.15, 1); }
-  65% { transform: scale3d(1.05, 0.95, 1); }
-  75% { transform: scale3d(0.95, 1.05, 1); }
-  100% { transform: scale3d(1, 1, 1); }
 }
 </style>

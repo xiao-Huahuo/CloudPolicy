@@ -244,7 +244,7 @@ const handleRegister = async () => {
   width: 100%;
   height: 100%;
   font-size: 14px;
-  background: transparent;
+  background: transparent !important;
   color: #fff7f1;
   -webkit-text-fill-color: #fff7f1;
   caret-color: #fff7f1;
@@ -262,7 +262,7 @@ const handleRegister = async () => {
   caret-color: #fff7f1;
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   box-shadow: 0 0 0 1000px transparent inset !important;
-  -webkit-background-clip: text;
+  -webkit-background-clip: padding-box;
   transition: background-color 9999s ease-out 0s;
 }
 

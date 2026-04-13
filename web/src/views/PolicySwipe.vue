@@ -456,7 +456,10 @@ onBeforeUnmount(() => {
 .swipe-page { padding: 24px; max-width: 1600px; margin: 0 auto; height: calc(100vh - 80px); display: flex; flex-direction: column; }
 .swipe-header { margin-bottom: 20px; }
 .swipe-desc { color: var(--text-secondary, #666); font-size: 14px; margin: 4px 0 0; }
-.swipe-search { margin-top: 16px; max-width: 680px; }
+.swipe-search {
+  margin: 16px 0 22px;
+  max-width: 680px;
+}
 
 .swipe-layout {
   display: grid;
@@ -821,14 +824,9 @@ onBeforeUnmount(() => {
 }
 
 .red-header-bar {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-primary, #c0392b) 12%, #ffffff) 0%,
-    color-mix(in srgb, var(--color-primary-light, #e74c3c) 18%, #ffffff) 100%
-  );
-  color: var(--color-primary-dark, #8e231b);
-  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 16%, rgba(255, 255, 255, 0.92));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 90%, var(--color-primary-dark, #8e231b) 10%);
+  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 34%, rgba(255, 255, 255, 0.24));
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;

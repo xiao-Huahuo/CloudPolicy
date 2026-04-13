@@ -1359,13 +1359,9 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   top: 50%;
   transform: translateY(-50%);
   width: 40px;
-  background:
-    linear-gradient(
-      180deg,
-      var(--color-primary-dark) 0%,
-      var(--color-primary) 58%,
-      var(--color-secondary) 100%
-    );
+  background: color-mix(in srgb, var(--color-primary) 84%, var(--color-primary-dark) 16%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 42%, rgba(255, 255, 255, 0.18));
+  border-left: none;
   color: #fff;
   border-radius: 0 8px 8px 0;
   cursor: pointer;
@@ -1379,11 +1375,11 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  box-shadow: 2px 0 10px color-mix(in srgb, var(--color-primary) 24%, transparent);
-  transition: filter 0.2s ease, transform 0.2s ease;
+  box-shadow: 2px 0 10px color-mix(in srgb, var(--color-primary) 16%, transparent);
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 .drawer-tab:hover {
-  filter: brightness(1.05);
+  background: color-mix(in srgb, var(--color-primary) 90%, var(--color-primary-light) 10%);
   transform: translateY(-50%) translateX(1px);
 }
 
@@ -1542,25 +1538,20 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 
 .history-restore-btn {
   align-self: flex-start;
-  background:
-    linear-gradient(
-      135deg,
-      var(--color-primary-dark) 0%,
-      var(--color-primary) 62%,
-      var(--color-secondary) 100%
-    );
+  background: color-mix(in srgb, var(--color-primary) 86%, var(--color-primary-dark) 14%);
   color: #fff;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 46%, var(--border-color));
   padding: 4px 10px;
   font-size: 11px;
   cursor: pointer;
   border-radius: 999px;
-  box-shadow: 0 10px 18px color-mix(in srgb, var(--color-primary) 18%, transparent);
-  transition: filter 0.2s ease, transform 0.2s ease;
+  box-shadow: none;
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
 .history-restore-btn:hover {
-  filter: brightness(1.04);
+  background: color-mix(in srgb, var(--color-primary) 78%, var(--color-primary-light) 22%);
+  border-color: color-mix(in srgb, var(--color-primary-light) 42%, var(--border-color));
   transform: translateY(-1px);
 }
 
@@ -2744,13 +2735,8 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 
 .red-header-bar {
-  background:
-    linear-gradient(
-      90deg,
-      var(--color-primary-dark) 0%,
-      var(--color-primary) 54%,
-      var(--color-secondary) 100%
-    );
+  background: color-mix(in srgb, var(--color-primary) 92%, var(--color-primary-dark) 8%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 42%, rgba(255, 255, 255, 0.16));
   color: #fff;
   text-align: center;
   padding: 6px 10px;

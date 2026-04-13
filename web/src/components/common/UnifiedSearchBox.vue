@@ -641,6 +641,18 @@ onBeforeUnmount(() => {
   color: var(--text-muted);
 }
 
+[data-theme='dark'] .search-bar input,
+[data-theme='dark'] .search-bar input:-webkit-autofill,
+[data-theme='dark'] .search-bar input:-webkit-autofill:hover,
+[data-theme='dark'] .search-bar input:-webkit-autofill:focus {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+}
+
 .search-clear,
 .search-submit,
 .dropdown-link,
