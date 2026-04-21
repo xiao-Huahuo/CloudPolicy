@@ -27,6 +27,8 @@ ENV/
 
 # Environment files
 .env
+.server.env
+*.env
 .env.*
 !.env.example
 

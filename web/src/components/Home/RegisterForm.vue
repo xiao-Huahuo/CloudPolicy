@@ -265,7 +265,7 @@ import { useUserStore } from '@/stores/auth.js';
 const emit = defineEmits(['success', 'switch-to-login']);
 const userStore = useUserStore();
 
-const titleChars = '云析观策'.split('');
+const titleChars = '云枢观策'.split('');
 const hasIcon = ref(true);
 const mode = ref('phone');
 

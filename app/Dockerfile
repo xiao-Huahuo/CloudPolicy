@@ -26,8 +26,6 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
 # 6. 拷贝代码（虽然开发时会被 volumes 覆盖，但构建镜像仍需此步）
 # 明确拷贝 app 文件夹到 /server/app
 COPY ./app ./app
-# 拷贝其他根目录必要的单个文件（如 database.db 初始文件等）
-COPY .env .
 
 # 7. 启动命令
 # 必须指定 --host 0.0.0.0，否则外部无法访问

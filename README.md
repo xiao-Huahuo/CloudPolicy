@@ -1,4 +1,4 @@
-# 云枢观策 - 面向民生政策理解、公共服务提效与基层信息可达性的智能化服务平台  
+﻿# 云枢观策 - 面向民生政策理解、公共服务提效与基层信息可达性的智能化服务平台  
 >  让政策不再停留在纸面，让民生服务真正抵达每个人。  
 
 ## 软件宗旨 (Project Mission)
@@ -375,11 +375,13 @@ $$
 以下为**所有可配置字段**的模板，按需填写即可：
 ```env
 # 基础服务配置
+# DEBUG: 是否开启调试模式，生产/演示环境建议设为 false
 # HOST: 后端监听地址，本地开发用 127.0.0.1，Docker 部署改为 0.0.0.0
 # PORT: 后端监听端口
 # SECRET_KEY: JWT 签名密钥，建议用 openssl rand -hex 32 生成，勿泄露
 # ALGORITHM: JWT 签名算法，保持默认即可
 # ACCESS_TOKEN_EXPIRE_DAYS: 登录 Token 有效天数
+DEBUG=false
 HOST=127.0.0.1
 PORT=8080
 SECRET_KEY=your_random_secret_key
@@ -391,10 +393,12 @@ ACCESS_TOKEN_EXPIRE_DAYS=30
 # ADMIN_PASSWORD: 管理员初始密码，生产环境请改为强密码
 # ADMIN_EMAIL: 管理员邮箱
 # ADMIN_PHONE: 管理员手机号，格式：11位数字
+# REALTIME_STREAM_INTERVAL_SECONDS: 实时流推送间隔（秒），保持默认即可
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=111111
 ADMIN_EMAIL=admin@example.com
 ADMIN_PHONE=your_phone
+REALTIME_STREAM_INTERVAL_SECONDS=3
 
 # SMTP 邮件系统（真实发信需配置，不配置则邮件落盘至 mail_outbox/）
 # SMTP_HOST: SMTP 服务器地址，如 smtp.qq.com、smtp.163.com
@@ -419,10 +423,19 @@ SMTP_USE_TLS=false
 # EMAIL_VERIFICATION_EXPIRE_MINUTES: 验证码有效期（分钟）
 # PUBLIC_BASE_URL: 后端公开访问地址，用于邮件中的链接跳转
 # FRONTEND_BASE_URL: 前端访问地址，用于邮件验证后的页面回跳
+# PUBLIC_BASE_URL_DOCKER: Docker 场景下后端公开访问地址，可单独覆盖
+# FRONTEND_BASE_URL_DOCKER: Docker 场景下前端访问地址，可单独覆盖
 EMAIL_VERIFICATION_CODE_LENGTH=6
 EMAIL_VERIFICATION_EXPIRE_MINUTES=15
+AUTH_CAPTCHA_EXPIRE_SECONDS=300
+AUTH_CODE_EXPIRE_MINUTES=10
+AUTH_SEND_COOLDOWN_SECONDS=60
+AUTH_MAX_VERIFY_ATTEMPTS=5
+AUTH_SANDBOX_SMS=true
 PUBLIC_BASE_URL=http://127.0.0.1:8080
 FRONTEND_BASE_URL=http://127.0.0.1:5173
+PUBLIC_BASE_URL_DOCKER=http://127.0.0.1:8080
+FRONTEND_BASE_URL_DOCKER=http://127.0.0.1
 
 # Redis/任务队列
 # REDIS_HOST: Redis 服务地址，Docker 部署时改为服务名 redis
@@ -488,6 +501,7 @@ PADDLEOCR_LANG=ch
 PADDLEOCR_USE_ANGLE_CLS=true
 PADDLEOCR_ENABLE_STRUCTURE=true
 ```
+其中 `AUTH_*` 为认证与验证码流程相关参数；公网部署时建议将 `AUTH_SANDBOX_SMS=false`，避免接口直接返回短信验证码预览。
 说明：未配置 SMTP 时系统会自动将邮件写入 `mail_outbox` 目录供本地预览。
 OCR 运行策略说明：
 - 图片、截图、扫描型 PDF、图片型 PDF、图文混排 PDF、DOCX 内嵌图片默认优先走本地 PaddleOCR。
@@ -498,7 +512,7 @@ OCR 运行策略说明：
 
 ### 运行
 
-#### 前端(web):
+#### 前端(web)
 ```shell
 cd web
 npm install --verbose
@@ -532,9 +546,7 @@ uvicorn app.main:app --reload
 ```
 初次启动时会进行数据库初始化+Embedding模型下载+PaddleOCR模型下载+向量库初始化(建议科学上网以稳定下载).
 当前 OCR 链路为“PaddleOCR 优先，LLM OCR 兜底”；如果只想先保证服务可启动，也可以暂时关闭 `PADDLEOCR_ENABLED`，系统会保留 LLM OCR 备选机制。
-对于两个模型下载,app/scripts目录下也提供了独立的下载脚本,可以单独执行以提前准备好模型文件,避免在容器环境下下载失败.
-其中 PaddleOCR 的显式模型会落在 `app/resources/paddleocr`，PaddleX 自动拉取的官方缓存会落在 `app/resources/paddlex/official_models`。
-或者可以在.env中添加以下两句,自定义初始化管理员账户,然后再进行后台启动:
+可以在.env中配置以下两句,自定义初始化管理员账户,然后再进行后台启动:
 ```
 ADMIN_USERNAME = your_admin_username
 ADMIN_PASSWORD = your_admin_password
@@ -554,8 +566,6 @@ npm run build
 构建完成后，将在 `web/dist` 目录下生成静态文件 , 可以直接将其部署至 Nginx 的`html/`目录.
 **若集成到后端**: 将 `dist` 内的所有内容拷贝至后端项目的静态文件目录，并在 FastAPI 中挂载：
 app.mount("/", StaticFiles(directory="dist", html=True), name="static")
-
-
 
 ### Docker 部署 
 
@@ -594,13 +604,16 @@ docker pull node:16-alpine
 docker pull nginx:stable-alpine
 docker pull python:3.12-slim-bullseye
 ```
-0. 在 Docker 部署前，必须先准备好本地 Embedding；如果你要启用文档图片 OCR，也建议同时准备好本地 PaddleOCR 模型。否则容器启动时只会检查并直接报错，不会在容器内自动下载。可以先在本地跑一次后端，或单独执行以下脚本：
+1. 在 Docker 部署前，必须先准备好本地 Embedding(强制)；如果你要启用文档图片 OCR，也可以选择性准备好本地 PaddleOCR 模型(不强制,不影响运行)。容器启动时只会检查并直接报错，不会在容器内自动下载模型。可以先在本地跑一次后端，或单独执行以下脚本：
     ```bash
     python -m app.scripts.download_embedding
     python -m app.scripts.download_paddleocr_models
     ```
-   说明：线上部署推荐使用“本地 PaddleOCR + LLM OCR 兜底”策略；如果部署环境无法顺利下载或预热本地模型，也可以先关闭 `PADDLEOCR_ENABLED`，保留 LLM OCR 作为备选链路。执行上述脚本后，`app/resources/paddleocr` 与 `app/resources/paddlex/official_models` 都会在项目目录内完成准备。
-1.  **启动服务**:
+   说明：
+   - 执行paddleocr脚本需要3.12版本的python.
+   - 如果部署环境无法顺利下载或预热paddleOCR模型，也可以先关闭 `PADDLEOCR_ENABLED`，保留 LLM OCR 作为备选链路。
+   - 执行上述脚本后，`app/resources/paddleocr` 与 `app/resources/paddlex/official_models` 都会在项目目录内完成准备。
+2.  **启动服务**:
     在项目根目录执行以下命令：
     ```bash
     docker-compose up --build -d
@@ -608,13 +621,13 @@ docker pull python:3.12-slim-bullseye
     *   `--build`: 首次运行时或当 Dockerfile 有更新时，用于重新构建镜像。
     *   `-d`: 在后台运行服务。
 
-2. **访问应用**:
+3. **访问应用**:
     *   可以在docker-compose完成构建后在浏览器中访问`http://localhost`访问应用.
     *   前端应用将通过 Nginx 运行在 `http://localhost:80`。
     *   后端 API 将在 Docker 内部运行于 `http://app:8080`，并通过前端 Nginx 代理访问。
     *   API 文档可通过 `http://localhost/api/docs`、`http://localhost/api/redoc`、`http://localhost/api/openapi.json` 与 `http://localhost/api/openapi.yaml` 访问。
     *   也可以打开Docker Desktop找到CloudPolicy容器,即可运行,点击web的链接即可打开网页.
-3. **停止服务**:
+4. **停止服务**:
     在项目根目录执行：
     ```bash
     docker-compose down
@@ -624,6 +637,81 @@ docker pull python:3.12-slim-bullseye
     ```bash
     docker-compose up
     ```
+
+
+### 公网部署
+1. 准备云服务器
+  - 系统建议 Ubuntu 22.04/24.04。
+  - 安装 Docker 和 Compose 插件 和 Git。
+    ``` bash
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
+    sudo systemctl enable --now docker
+    ```
+2. 配安全组/防火墙
+   - 放行 22、80。
+   - 如果后面要上 HTTPS，再放行 443。
+   - 不要对公网放行 6379。
+   - 不要对公网放行 8080。
+     说明：生产部署使用的 `docker-compose.prod.yml` 只对外暴露 80 端口；Redis(6379) 和后端 app(8080) 仅在容器内部网络中使用，不应该对公网开放。
+
+3. 在服务器中 clone 项目源代码
+    ``` bash
+    cd /opt
+    sudo git clone https://github.com/xiao-Huahuo/CloudPolicy.git cloudpolicy
+    sudo chown -R $USER:$USER /opt/cloudpolicy
+    cd /opt/cloudpolicy
+    ```
+4. 在服务器上创建环境变量文件
+   在根目录 `/opt/cloudpolicy` 创建生产环境专用的 `.server.env`。
+   `.server.env` 建议直接参考上面的环境变量模板填写，字段体系与 `.env` 基本一致；Docker 场景下由 `docker-compose.prod.yml` 自动覆盖 `DOCKER_DEPLOYMENT`、`HOST`、`REDIS_HOST` 等运行时差异。
+   若服务器公网 IP 为 `47.86.23.163`，则至少应修改以下字段：
+    ```env
+    FRONTEND_BASE_URL_DOCKER=http://47.86.23.163
+    PUBLIC_BASE_URL_DOCKER=http://47.86.23.163/api
+    ```
+   另外建议同时确认以下字段：
+   - `SECRET_KEY`：替换为新的随机密钥
+   - `AUTH_SANDBOX_SMS=false`：公网部署时关闭短信验证码预览
+   - `SMTP_*`、`LLM_*`：替换为服务器实际可用的配置
+   - `PADDLEOCR_ENABLED`：如首次部署因 OCR 模型准备失败，可先临时设为 `false`
+
+5. 下载模型资源
+   云服务器部署与本地 Docker 部署一样：如果 embedding 模型还没有准备好，就直接执行 `docker compose up`，部署可能失败，或在容器启动阶段因模型检查失败而无法完成。
+   至少确认以下目录中的模型文件已就绪：
+   - `app/resources/embedding`
+   **独立下载脚本见"### Docker部署"的第0条.**
+
+6. 构建容器
+    使用生产环境专用的 `docker-compose.prod.yml` 构建：
+    ```bash
+    docker compose --env-file .server.env -f docker-compose.prod.yml up --build -d
+    docker compose --env-file .server.env -f docker-compose.prod.yml logs -f
+    ```
+
+7. 公网访问
+   在浏览器访问：
+   - `http://47.86.23.163/`
+   - `http://47.86.23.163/api/docs`
+  如果首页能开、`/api/docs` 能开，说明前后端代理链路通了。
+
+注:
+- 运行时:
+  - 项目根目录为 `/opt/cloudpolicy/`。
+  - 业务运行时数据统一落到 Docker named volume `cloudpolicy_app_runtime`，包括 `database.db`、`uploads`、`logs`、`mail_outbox`、OCR/embedding 目录。
+  - Redis 数据统一落到 Docker named volume `cloudpolicy_redis_data`。
+- 公网运行时目录:
+```shell
+/opt/cloudpolicy/
+├── docker-compose.prod.yml      # 公网部署使用的 Compose 文件
+├── .server.env                  # 服务器环境变量
+├── app/                         # 后端源码与 Dockerfile
+├── web/                         # 前端源码与 Nginx 配置
+└── Docker named volumes
+    ├── cloudpolicy_app_runtime  # 运行时数据卷：database.db、uploads、logs、mail_outbox、OCR/embedding
+    └── cloudpolicy_redis_data   # Redis 数据卷
+```
+
 ---
 ## 文档
 ### 静态文档

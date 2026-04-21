@@ -25,6 +25,13 @@ venv/
 env/
 ENV/
 
+# Secrets / env files
+.env
+.server.env
+.env.*
+!.env.example
+!.env.server.example
+
 
 # IDE / OS
 .idea/
@@ -58,7 +65,12 @@ mail_outbox/
 !app/resources/vector_init/**
 !app/resources/sensitive/
 !app/resources/sensitive/**
-app/resources/embedding/
+!app/resources/embedding/
+!app/resources/embedding/**
+!app/resources/paddleocr/
+!app/resources/paddleocr/**
+!app/resources/paddlex/
+!app/resources/paddlex/**
 
 
 # Frontend (Vue/Vite)

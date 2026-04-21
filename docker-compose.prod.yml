@@ -1,0 +1,92 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: CloudPolicy_Redis_Service
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    container_name: CloudPolicy_Service
+    restart: unless-stopped
+    working_dir: /server
+    env_file:
+      - .server.env
+    environment:
+      DOCKER_DEPLOYMENT: "true"
+      DEBUG: "false"
+      HOST: 0.0.0.0
+      PORT: ${PORT:-8080}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL_DOCKER:-http://127.0.0.1:8080}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL_DOCKER:-http://127.0.0.1}
+      REDIS_HOST: redis
+    expose:
+      - "8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - app_runtime:/runtime
+    command:
+      - /bin/sh
+      - -lc
+      - |
+          set -eu
+          mkdir -p /runtime/uploads /runtime/logs /runtime/mail_outbox /runtime/resources/embedding /runtime/resources/paddleocr /runtime/resources/paddlex
+          touch /runtime/database.db
+          if [ -d /server/app/resources/embedding ] && [ -z "$(ls -A /runtime/resources/embedding 2>/dev/null)" ]; then cp -a /server/app/resources/embedding/. /runtime/resources/embedding/; fi
+          if [ -d /server/app/resources/paddleocr ] && [ -z "$(ls -A /runtime/resources/paddleocr 2>/dev/null)" ]; then cp -a /server/app/resources/paddleocr/. /runtime/resources/paddleocr/; fi
+          if [ -d /server/app/resources/paddlex ] && [ -z "$(ls -A /runtime/resources/paddlex 2>/dev/null)" ]; then cp -a /server/app/resources/paddlex/. /runtime/resources/paddlex/; fi
+          ln -snf /runtime/database.db /server/database.db
+          rm -rf /server/uploads /server/logs /server/mail_outbox /server/app/resources/embedding /server/app/resources/paddleocr /server/app/resources/paddlex
+          ln -snf /runtime/uploads /server/uploads
+          ln -snf /runtime/logs /server/logs
+          ln -snf /runtime/mail_outbox /server/mail_outbox
+          ln -snf /runtime/resources/embedding /server/app/resources/embedding
+          ln -snf /runtime/resources/paddleocr /server/app/resources/paddleocr
+          ln -snf /runtime/resources/paddlex /server/app/resources/paddlex
+          exec uvicorn app.main:app --host 0.0.0.0 --port 8080
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/docs", timeout=5)
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: CloudPolicy_Web
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  redis_data:
+  app_runtime:
