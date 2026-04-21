@@ -680,7 +680,7 @@ docker pull python:3.12-slim-bullseye
    云服务器部署与本地 Docker 部署一样：如果 embedding 模型还没有准备好，就直接执行 `docker compose up`，部署可能失败，或在容器启动阶段因模型检查失败而无法完成。
    至少确认以下目录中的模型文件已就绪：
    - `app/resources/embedding`
-   **独立下载脚本见"### Docker部署"的第0条.**
+   **独立下载脚本见"### Docker部署"的第1条.**
 
 6. 构建容器
     使用生产环境专用的 `docker-compose.prod.yml` 构建：
