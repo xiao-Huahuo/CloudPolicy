@@ -15,11 +15,9 @@
       />
     </div>
 
-    <div class="swipe-layout" :class="{ 'article-open': activeDoc }">
-      <!-- 左侧：概览栏（初始）/ 文章内容（点击后） -->
-      <div class="left-section" :class="{ 'show-article': activeDoc }">
-        <!-- 概览面板 -->
-        <div class="overview-panel" v-show="!activeDoc">
+    <div class="swipe-layout">
+      <div class="left-section">
+        <div class="overview-panel">
           <!-- 轮播图 -->
           <div class="carousel-section">
             <transition name="slide-fade" mode="out-in">
@@ -72,37 +70,40 @@
           </div>
         </div>
 
-        <!-- 文章阅读面板 -->
-        <div class="reader-panel" v-show="activeDoc">
-          <template v-if="activeDoc">
-            <div class="rp-header">
-              <button class="rp-close" @click="closeDoc()">✕</button>
-              <div class="rp-tags">
-                <span v-if="activeDoc.category" class="rp-cat">{{ activeDoc.category }}</span>
-                <span v-for="tag in parsedTags" :key="tag" class="rp-tag">{{ tag }}</span>
-              </div>
+      </div>
+
+      <div class="middle-section">
+        <div v-if="activeDoc" class="reader-panel">
+          <div class="rp-header">
+            <button class="rp-close" @click="closeDoc()">✕</button>
+            <div class="rp-tags">
+              <span v-if="activeDoc.category" class="rp-cat">{{ activeDoc.category }}</span>
+              <span v-for="tag in parsedTags" :key="tag" class="rp-tag">{{ tag }}</span>
             </div>
-            <h1 class="rp-title">{{ activeDoc.title }}</h1>
-            <div class="rp-meta">
-              <span>{{ activeDoc.uploader_name || '认证主体' }}</span>
-              <span>{{ formatDate(activeDoc.created_time) }}</span>
-              <span>{{ activeDoc.view_count }} 次浏览</span>
-            </div>
-            <div class="rp-body">{{ activeDoc.content }}</div>
-            <div class="rp-actions">
-              <button class="rp-like" @click="likeDoc(activeDoc)">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/></svg>
-                {{ activeDoc.like_count }} 点赞
-              </button>
-            </div>
-          </template>
+          </div>
+          <h1 class="rp-title">{{ activeDoc.title }}</h1>
+          <div class="rp-meta">
+            <span>{{ activeDoc.uploader_name || '认证主体' }}</span>
+            <span>{{ formatDate(activeDoc.created_time) }}</span>
+            <span>{{ activeDoc.view_count }} 次浏览</span>
+          </div>
+          <div class="rp-body">{{ activeDoc.content }}</div>
+          <div class="rp-actions">
+            <button class="rp-like" @click="likeDoc(activeDoc)">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/></svg>
+              {{ activeDoc.like_count }} 点赞
+            </button>
+          </div>
+        </div>
+        <div v-else class="reader-placeholder">
+          <span class="reader-placeholder-tag">阅读区</span>
+          <h3>从左侧选择一条政策，直接在这里展开阅读</h3>
+          <p>政策概览会继续保留，方便连续切换不同条目，不再因为打开正文而挤掉左侧浏览区。</p>
         </div>
       </div>
 
-      <!-- 右侧：中央文件栏（初始）/ 合并面板（点击后） -->
-      <div class="right-section" :class="{ 'merged': activeDoc }">
-        <!-- 面板头部（点击后显示切换开关） -->
-        <div class="panel-header" v-if="activeDoc">
+      <div class="right-section">
+        <div class="panel-header">
           <span class="panel-dot" :class="rightPanelMode === 'docs' ? 'dot-red' : 'dot-blue'"></span>
           <h3 class="panel-title">{{ rightPanelMode === 'docs' ? '中央文件' : '时事热点' }}</h3>
           <div class="right-panel-switch">
@@ -112,8 +113,7 @@
         </div>
 
         <!-- 中央文件内容 -->
-        <div class="docs-content" v-show="!activeDoc || rightPanelMode === 'docs'">
-          <h3 class="section-title" v-if="!activeDoc">中央文件</h3>
+        <div class="docs-content" v-show="rightPanelMode === 'docs'">
           <div class="doc-titles-scroll">
             <div
               v-for="(doc, idx) in centralDocs"
@@ -148,8 +148,7 @@
         </div>
 
         <!-- 时事热点内容 -->
-        <div class="news-content" v-show="!activeDoc || rightPanelMode === 'news'">
-          <h3 class="section-title" v-if="!activeDoc">时事热点</h3>
+        <div class="news-content" v-show="rightPanelMode === 'news'">
           <div class="news-list">
             <div
               v-for="(item, idx) in hotNews"
@@ -463,21 +462,15 @@ onBeforeUnmount(() => {
 
 .swipe-layout {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 420px);
   gap: 20px;
   flex: 1;
   min-height: 0;
-  transition: grid-template-columns 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.swipe-layout.article-open {
-  grid-template-columns: 1fr 400px;
 }
 
 /* 左侧区域 */
 .left-section {
-  position: relative;
-  overflow: hidden;
+  min-height: 0;
 }
 
 .overview-panel {
@@ -485,32 +478,57 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   height: 100%;
-  transition: opacity 0.3s, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.left-section.show-article .overview-panel {
-  opacity: 0;
-  transform: translateX(-30px);
-  pointer-events: none;
+.middle-section {
+  min-height: 0;
+  display: flex;
 }
 
 .reader-panel {
-  position: absolute;
-  inset: 0;
+  width: 100%;
   background: var(--card-bg, #fff);
   border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
   overflow-y: auto;
   padding: 24px;
-  opacity: 0;
-  transform: translateX(30px);
-  pointer-events: none;
-  transition: opacity 0.3s, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.left-section.show-article .reader-panel {
-  opacity: 1;
-  transform: translateX(0);
-  pointer-events: auto;
+.reader-placeholder {
+  width: 100%;
+  border: 1px dashed color-mix(in srgb, var(--color-primary, #c0392b) 24%, var(--border-color, #e8e8e8));
+  border-radius: 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary, #c0392b) 3%, var(--card-bg, #fff)), var(--card-bg, #fff));
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary, #666);
+}
+
+.reader-placeholder-tag {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 10%, var(--card-bg, #fff));
+  color: var(--color-primary, #c0392b);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.reader-placeholder h3 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.4;
+  color: var(--text-primary, #111);
+}
+
+.reader-placeholder p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
 }
 
 /* 右侧区域 */
@@ -950,4 +968,26 @@ onBeforeUnmount(() => {
 
 .slide-fade-enter-active, .slide-fade-leave-active { transition: opacity 0.4s; }
 .slide-fade-enter-from, .slide-fade-leave-to { opacity: 0; }
+
+@media (max-width: 1180px) {
+  .swipe-layout {
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  }
+
+  .right-section {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .swipe-page {
+    padding: 16px;
+    height: auto;
+    min-height: calc(100vh - 80px);
+  }
+
+  .swipe-layout {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
