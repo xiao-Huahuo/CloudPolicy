@@ -15,7 +15,7 @@
             :style="{ '--delay': `${index * 110}ms` }"
           >
             <div class="card-image">
-              <img v-if="card.image" :src="card.image" :alt="card.title" loading="lazy" decoding="async" />
+              <img v-if="card.image" :src="card.image" :alt="card.title" loading="eager" decoding="async" />
             </div>
             <div class="card-body">
               <span class="card-tag">优势</span>
@@ -48,7 +48,7 @@
             :style="{ '--delay': `${(index + advantageCards.length) * 110}ms` }"
           >
             <div class="card-image">
-              <img v-if="card.image" :src="card.image" :alt="card.title" loading="lazy" decoding="async" />
+              <img v-if="card.image" :src="card.image" :alt="card.title" loading="eager" decoding="async" />
             </div>
             <div class="card-body">
               <span class="card-tag">痛点</span>

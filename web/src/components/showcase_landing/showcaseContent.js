@@ -6,6 +6,14 @@ import highlightSwipeImage from '@/assets/photos/showcase-highlights/刷剧资�
 const sortEntries = (modules) => Object.entries(modules).sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
 const normalizeModuleList = (modules) => sortEntries(modules).map(([, mod]) => mod.default)
 const pickImage = (...candidates) => candidates.find(Boolean) || null
+const uniqueValues = (values) => {
+  const seen = new Set()
+  return values.filter((value) => {
+    if (!value || seen.has(value)) return false
+    seen.add(value)
+    return true
+  })
+}
 
 const discoverSlides = normalizeModuleList(
   import.meta.glob('/src/assets/photos/discover/slide*.jpg', { eager: true })
@@ -304,6 +312,13 @@ export const landingImageManifest = [
   '05 理念卡片：当前不再使用右下角配图，保留纯文案主张表达',
   '06 亮点卡片：web/src/assets/photos/showcase-highlights/云小圆.png；web/src/assets/photos/showcase-highlights/公共数据大屏.png；web/src/assets/photos/showcase-highlights/可视化知识图谱.png；web/src/assets/photos/showcase-highlights/刷剧资讯体验.png',
 ]
+
+export const showcasePreloadImages = uniqueValues([
+  ...uiSlides.flatMap((slide) => slide.images),
+  ...advantageCards.map((card) => card.image),
+  ...disadvantageCards.map((card) => card.image),
+  ...highlightCards.map((card) => card.image),
+])
 
 export const ctaMetrics = [
   { label: '全链路体验', value: '10 个章节' },

@@ -28,13 +28,13 @@
               >
                 <div class="slide-grid">
                   <div class="slide-hero-shot">
-                    <img :src="slide.images[0]" :alt="slide.title" loading="lazy" decoding="async" />
+                    <img :src="slide.images[0]" :alt="slide.title" loading="eager" decoding="async" />
                   </div>
                   <div class="slide-side-shot top">
-                    <img :src="slide.images[1]" :alt="`${slide.title} 细节 1`" loading="lazy" decoding="async" />
+                    <img :src="slide.images[1]" :alt="`${slide.title} 细节 1`" loading="eager" decoding="async" />
                   </div>
                   <div class="slide-side-shot bottom">
-                    <img :src="slide.images[2]" :alt="`${slide.title} 细节 2`" loading="lazy" decoding="async" />
+                    <img :src="slide.images[2]" :alt="`${slide.title} 细节 2`" loading="eager" decoding="async" />
                   </div>
                 </div>
 

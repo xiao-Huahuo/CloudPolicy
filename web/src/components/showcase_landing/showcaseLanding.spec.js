@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import DesignPhilosophySection from './DesignPhilosophySection.vue'
 import UiShowcaseSection from './UiShowcaseSection.vue'
-import { highlightCards } from './showcaseContent'
+import { highlightCards, showcasePreloadImages } from './showcaseContent'
 
 describe('showcase landing content', () => {
   it('uses the formal overview copy in section 02', () => {
@@ -36,5 +36,22 @@ describe('showcase landing content', () => {
       'web/src/assets/photos/showcase-highlights/可视化知识图谱.png',
       'web/src/assets/photos/showcase-highlights/刷剧资讯体验.png',
     ])
+  })
+
+  it('marks section 02 screenshots as eager once the section is mounted', () => {
+    vi.useFakeTimers()
+    const wrapper = mount(UiShowcaseSection)
+    const slideImages = wrapper.findAll('.stage-slide img')
+
+    expect(slideImages.length).toBeGreaterThan(0)
+    expect(slideImages.every((image) => image.attributes('loading') === 'eager')).toBe(true)
+
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('prepares a dedicated image preload list for the showcase landing page', () => {
+    expect(showcasePreloadImages.length).toBeGreaterThan(10)
+    expect(showcasePreloadImages).toEqual(expect.arrayContaining(highlightCards.map((item) => item.image)))
   })
 })

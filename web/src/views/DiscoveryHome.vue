@@ -180,9 +180,8 @@
                 v-if="getNewsCover(idx)"
                 :src="getNewsCover(idx)"
                 :alt="item.title || 'news cover'"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
-                fetchpriority="low"
               />
             </div>
             <span class="nl-type" :class="item.source_type === 'policy' ? 'type-policy' : 'type-news'">
@@ -224,9 +223,8 @@
                 class="nc-cover"
                 :src="getNewsCover(idx)"
                 :alt="item.title || 'news cover'"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
-                fetchpriority="low"
               />
               <span class="nc-header-mask"></span>
               <span class="nc-type">{{ item.source_type === 'policy' ? '政策' : '时事' }}</span>
@@ -336,6 +334,7 @@ import { useRouter } from 'vue-router';
 import { getHotNews, getCentralDocs, getDailySummary, searchNews } from '@/api/news';
 import { apiClient, API_ROUTES } from '@/router/api_routes';
 import { useUserStore } from '@/stores/auth.js';
+import { preloadImages } from '@/utils/imagePreload';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -409,20 +408,10 @@ const getNewsThumbStyle = (idx) => {
   return { background: cardColors[idx % cardColors.length] };
 };
 const prewarmNewsCovers = () => {
-  if (!discoverNewsImages.length) return;
-  const run = () => {
-    discoverNewsImages.forEach((src) => {
-      const img = new Image();
-      img.decoding = 'async';
-      img.src = src;
-      if (img.decode) img.decode().catch(() => {});
-    });
-  };
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    window.requestIdleCallback(run, { timeout: 1200 });
-  } else {
-    setTimeout(run, 160);
-  }
+  preloadImages([
+    ...discoverSlideImages,
+    ...discoverNewsImages,
+  ]);
 };
 // ── 传送带 ────────────────────────────────────────────────────────────────────
 // 使用 CSS animation，无需 JS timer

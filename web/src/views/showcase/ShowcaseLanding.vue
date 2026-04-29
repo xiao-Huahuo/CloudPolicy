@@ -56,6 +56,8 @@ import FlowSection from '@/components/showcase_landing/FlowSection.vue'
 import CtaSection from '@/components/showcase_landing/CtaSection.vue'
 import SponsorsSection from '@/components/showcase_landing/SponsorsSection.vue'
 import FooterSection from '@/components/showcase_landing/FooterSection.vue'
+import { showcasePreloadImages } from '@/components/showcase_landing/showcaseContent'
+import { preloadImages } from '@/utils/imagePreload'
 
 const sections = [
   { id: 'hero', label: '序章', component: HeroSection },
@@ -163,6 +165,7 @@ const handleShowcaseGoto = (event) => {
 onMounted(() => {
   previousBodyOverflow.value = document.body.style.overflow
   document.body.style.overflow = 'hidden'
+  preloadImages(showcasePreloadImages)
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('showcase-goto', handleShowcaseGoto)
   containerRef.value?.focus()
