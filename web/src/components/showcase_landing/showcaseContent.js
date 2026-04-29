@@ -1,3 +1,8 @@
+import highlightAgentImage from '@/assets/photos/showcase-highlights/云小圆.png'
+import highlightScreenImage from '@/assets/photos/showcase-highlights/公共数据大屏.png'
+import highlightScanImage from '@/assets/photos/showcase-highlights/可视化知识图谱.png'
+import highlightSwipeImage from '@/assets/photos/showcase-highlights/刷剧资讯体验.png'
+
 const sortEntries = (modules) => Object.entries(modules).sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
 const normalizeModuleList = (modules) => sortEntries(modules).map(([, mod]) => mod.default)
 const pickImage = (...candidates) => candidates.find(Boolean) || null
@@ -16,6 +21,9 @@ const opinionSlides = normalizeModuleList(
 )
 const whyUsImages = normalizeModuleList(
   import.meta.glob('/src/assets/photos/landing/why-us/*.{jpg,jpeg,png,webp}', { eager: true })
+)
+const philosophyImages = normalizeModuleList(
+  import.meta.glob('/src/assets/photos/landing/phylosophy/*.{jpg,jpeg,png,webp}', { eager: true })
 )
 const partnerLogos = sortEntries(
   import.meta.glob('/src/assets/photos/partners/*.{svg,png,jpg,jpeg,webp}', { eager: true })
@@ -58,8 +66,10 @@ export const uiSlides = [
     title: '从一句话问题直接进入政策原文',
     subtitle: '搜索、摘要、卡片与证据定位同屏联动。',
     description:
-      '左侧保留检索过程，右侧直接给出政策卡片和行动入口，让信息获取像浏览企业品牌首页一样流畅。',
+      '围绕政策检索、摘要生成和证据定位构建同屏体验，让用户从提问到进入原文只保留一条清晰路径。',
     bullets: ['多模态检索入口', '结构化政策卡片', '摘要与重点高亮'],
+    resourceTitle: '检索体验已接入首页展示',
+    resourceDesc: '首页轮播使用真实政策资讯、文档示例和检索场景图片，呈现从问题到答案的完整路径。',
     accent: '#ff7a18',
     images: [
       pickImage(discoverSlides[0], discoverNews[0], mainExamples[0]),
@@ -72,8 +82,10 @@ export const uiSlides = [
     title: '把复杂统计压缩成一眼能读懂的仪表视图',
     subtitle: '数字、图表、趋势与地区分布形成一块整屏叙事面板。',
     description:
-      '面向管理端和展示端的视觉系统保持统一语气，既有数据密度，也保留品牌感和节奏感。',
+      '面向管理端和展示端统一数据语言，让趋势、地区分布和用户反馈在同一组视觉节奏里被快速理解。',
     bullets: ['实时趋势图', '地区与角色分布', '高亮指标级联展示'],
+    resourceTitle: '大屏素材用于支撑汇报场景',
+    resourceDesc: '轮播图组以政策广场、舆情图表和数据面板图片组合，补足演示时的数据氛围。',
     accent: '#41c6ff',
     images: [
       pickImage(discoverSlides[1], discoverSlides[2], opinionSlides[0]),
@@ -86,8 +98,10 @@ export const uiSlides = [
     title: '把政策解释能力收拢进一个持续对话界面',
     subtitle: '消息气泡、结构化结论和证据片段一起出现。',
     description:
-      '用户不再在多个页签之间来回跳转，而是在一个沉浸式空间里完成提问、验证与执行。',
+      '用户在同一个沉浸式空间内完成提问、追问、证据核验和任务推进，减少跨页面来回跳转。',
     bullets: ['多轮上下文理解', '证据链片段回指', '任务结果结构化输出'],
+    resourceTitle: '对话场景突出 Agent 闭环',
+    resourceDesc: '轮播中的文档、答案和资讯图片共同说明云小圆如何承接复杂政策理解任务。',
     accent: '#86f7a7',
     images: [
       pickImage(mainExamples[7], mainExamples[8], opinionSlides[2]),
@@ -100,8 +114,10 @@ export const uiSlides = [
     title: '一边浏览政策，一边阅读原文与群众反馈',
     subtitle: '发现、阅读、理解和评价被折叠成一个连续体验。',
     description:
-      '这不是传统的列表页，而是带有展示节奏的内容广场，让大量信息仍然具备首页级视觉秩序。',
+      '政策广场以图片资讯、专题内容和反馈信息组织成连续阅读体验，让大量内容仍保持首页级秩序。',
     bullets: ['信息流式发现', '阅读视图并排展开', '民意反馈同步浮现'],
+    resourceTitle: '政策广场已经填充真实资讯图',
+    resourceDesc: '发现页与资讯图组共用同一批图片资源，保证演示首页和内容广场之间视觉一致。',
     accent: '#ffd56a',
     images: [
       pickImage(discoverNews[4], discoverNews[5], discoverSlides[0]),
@@ -114,8 +130,10 @@ export const uiSlides = [
     title: '把账号、偏好与系统能力收口到统一控制台',
     subtitle: '设置面板与个性化统计并列出现，既强大也清晰。',
     description:
-      '最后一组画面用来说明产品不是只有炫技，而是已经具备完整的使用闭环和长期运营能力。',
+      '个人中心承接账号安全、历史记录、偏好管理和长期运营，让演示从视觉亮点落回完整产品闭环。',
     bullets: ['偏好与权限管理', '历史记录归档', '跨端风格统一'],
+    resourceTitle: '个人中心补足产品闭环',
+    resourceDesc: '用示例文档、扫描图片和资讯图片组合展示账号管理后的持续使用场景。',
     accent: '#ff7dc2',
     images: [
       pickImage(mainExamples[9], mainExamples[4], discoverNews[8]),
@@ -207,6 +225,8 @@ export const philosophyNotes = [
   '既做工具，也做叙事，把技术能力包装成有气场的公共产品。',
 ]
 
+export const philosophyHeroImage = philosophyImages[0] || pickImage(whyUsImages[1], discoverSlides[2], opinionSlides[0])
+
 export const highlightCards = [
   {
     title: 'Agent 智能体',
@@ -214,9 +234,10 @@ export const highlightCards = [
     route: '/agent',
     gradient: 'linear-gradient(135deg, rgba(255,125,120,0.95), rgba(255,182,92,0.92))',
     tag: 'AI Agent',
-    previewLabel: '能力切片',
-    previewTitle: '对话、结构化结论、证据回指同时出现',
-    previewLines: ['适合承接复杂政策问答', '可继续补对话截图横图', '建议后续加入角色形象视觉'],
+    image: highlightAgentImage,
+    imageName: '云小圆.png',
+    imagePath: 'web/src/assets/photos/showcase-highlights/云小圆.png',
+    imageCaption: '云小圆智能体对话与任务协同展示',
   },
   {
     title: '超酷炫公共数据大屏',
@@ -224,9 +245,10 @@ export const highlightCards = [
     route: '/showcase/screen',
     gradient: 'linear-gradient(135deg, rgba(64,168,255,0.95), rgba(90,227,255,0.92))',
     tag: 'Visual Screen',
-    previewLabel: '展示方式',
-    previewTitle: '适合汇报、演示、厅堂展示和运营复盘',
-    previewLines: ['建议补一张宽屏大屏照片', '强化蓝色科技感纹理', '突出实时数据与氛围灯效'],
+    image: highlightScreenImage,
+    imageName: '公共数据大屏.png',
+    imagePath: 'web/src/assets/photos/showcase-highlights/公共数据大屏.png',
+    imageCaption: '公共数据大屏与汇报型可视化展示',
   },
   {
     title: '可视化政策扫描图谱',
@@ -234,9 +256,10 @@ export const highlightCards = [
     route: '/home',
     gradient: 'linear-gradient(135deg, rgba(131,239,166,0.95), rgba(70,212,214,0.92))',
     tag: 'Scan Map',
-    previewLabel: '阅读路径',
-    previewTitle: '从原文扫描到结构化结果只保留一条清晰路径',
-    previewLines: ['适合补政策图谱或流程示意', '可换成结构图宣传图', '强化“看懂”而不只是“看到”'],
+    image: highlightScanImage,
+    imageName: '可视化知识图谱.png',
+    imagePath: 'web/src/assets/photos/showcase-highlights/可视化知识图谱.png',
+    imageCaption: '可视化知识图谱与政策关系扫描体验',
   },
   {
     title: '刷剧式无底资讯体验',
@@ -244,9 +267,10 @@ export const highlightCards = [
     route: '/policy-swipe',
     gradient: 'linear-gradient(135deg, rgba(255,118,204,0.95), rgba(132,116,255,0.92))',
     tag: 'Swipe Feed',
-    previewLabel: '停留机制',
-    previewTitle: '用连续流内容把访问时长真正拉起来',
-    previewLines: ['建议补手机端或竖屏效果图', '可加入资讯封面占位图', '强化高频浏览与节奏感'],
+    image: highlightSwipeImage,
+    imageName: '刷剧资讯体验.png',
+    imagePath: 'web/src/assets/photos/showcase-highlights/刷剧资讯体验.png',
+    imageCaption: '连续资讯流与刷剧式浏览体验',
   },
 ]
 
@@ -255,17 +279,30 @@ export const flowSteps = [
     title: '注册并完成身份接入',
     desc: '保留简洁入口与清晰引导，用户第一次到访就能快速理解系统是做什么的。',
     tip: '30 秒内可开始体验',
+    process: ['手机号验证码一键进入', '完善身份与偏好', '根据角色开启对应功能'],
+    outcome: '建立账号基础与权限边界',
   },
   {
     title: '发现政策与主题内容',
     desc: '在政策广场、大屏和首页叙事之间无缝切换，快速锁定真正需要的内容。',
     tip: '支持连续浏览与筛选',
+    process: ['浏览政策广场和资讯流', '打开政策原文阅读区', '收藏、点赞或提交反馈'],
+    outcome: '沉淀个人政策阅读路径',
   },
   {
     title: '交给 AI Agent 深入解析',
     desc: '从摘要提炼到任务建议，整个分析链路以对话和结构化结果同步呈现。',
     tip: '输出可直接行动',
+    process: ['上传或选择政策文件', '提取材料、对象和办理事项', '生成可执行建议与证据回指'],
+    outcome: '形成可复用的政策理解结果',
   },
+]
+
+export const landingImageManifest = [
+  '02 轮播图组：web/src/assets/photos/discover/slide1.jpg - slide5.jpg；web/src/assets/photos/discover/news/discover-news-01.jpg - discover-news-22.jpg；web/src/assets/photos/main-examples/*.png',
+  '04 优势与痛点：web/src/assets/photos/landing/why-us/advantage-1.jpg - advantage-3.jpg；disadvantage-1.jpg - disadvantage-3.jpg',
+  '05 理念卡片：当前不再使用右下角配图，保留纯文案主张表达',
+  '06 亮点卡片：web/src/assets/photos/showcase-highlights/云小圆.png；web/src/assets/photos/showcase-highlights/公共数据大屏.png；web/src/assets/photos/showcase-highlights/可视化知识图谱.png；web/src/assets/photos/showcase-highlights/刷剧资讯体验.png',
 ]
 
 export const ctaMetrics = [

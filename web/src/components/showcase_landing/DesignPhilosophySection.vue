@@ -55,9 +55,9 @@ const philosophyPillars = [
     placeholder: false,
   },
   {
-    kicker: 'Visual Placeholder',
-    title: '这里可补一张理念主视觉',
-    desc: '建议后续换成抽象人群、城市轮廓或装置感海报，让这页在超宽屏下更饱满。',
+    kicker: 'Vision Poster',
+    title: '以城市、人群与智能服务构成理念主视觉',
+    desc: '用宽幅视觉承接“连接群众与政策”的产品命题，让理念页在演示时拥有明确画面焦点。',
     placeholder: true,
   },
 ]
@@ -191,9 +191,8 @@ const philosophyPillars = [
 }
 
 .philosophy-card.placeholder {
-  border-style: dashed;
   background:
-    linear-gradient(135deg, rgba(255, 157, 127, 0.1), transparent 40%, rgba(126, 229, 255, 0.1)),
+    linear-gradient(135deg, rgba(255, 157, 127, 0.14), transparent 40%, rgba(126, 229, 255, 0.14)),
     rgba(255, 255, 255, 0.62);
 }
 

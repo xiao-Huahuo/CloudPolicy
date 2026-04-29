@@ -38,11 +38,6 @@
               <strong>整屏叙事，视觉统一</strong>
             </div>
           </div>
-          <div class="core-placeholder">
-            <span class="placeholder-label">待补主视觉</span>
-            <strong>横向品牌 KV / 城市与人群结合画面</strong>
-            <p>这块建议后面换成一张宽幅企业感图片，作为左右对比之间的视觉缓冲层。</p>
-          </div>
         </div>
 
         <div class="comparison-column disadvantage-column">
@@ -156,9 +151,15 @@ const ready = useSectionReady()
   align-items: center;
   padding: 16px 18px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #111;
-  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.16);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)),
+    rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 22px 44px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(22px) saturate(138%);
   opacity: 0;
   transition:
     opacity 0.65s ease,
@@ -190,7 +191,8 @@ const ready = useSectionReady()
   height: 120px;
   border-radius: 50%;
   overflow: hidden;
-  background: rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .card-image img {
@@ -213,13 +215,13 @@ const ready = useSectionReady()
 }
 
 .advantage .card-tag {
-  background: rgba(108, 224, 162, 0.18);
-  color: #13895b;
+  background: rgba(128, 250, 176, 0.18);
+  color: #fff;
 }
 
 .disadvantage .card-tag {
-  background: rgba(255, 122, 111, 0.18);
-  color: #c54e43;
+  background: rgba(255, 143, 122, 0.2);
+  color: #fff;
 }
 
 .card-body h3 {
@@ -230,7 +232,7 @@ const ready = useSectionReady()
 
 .card-body p {
   margin: 0;
-  color: #586173;
+  color: rgba(255, 255, 255, 0.74);
   line-height: 1.72;
 }
 
@@ -292,39 +294,6 @@ const ready = useSectionReady()
   font-size: 14px;
   line-height: 1.6;
   color: #fff;
-}
-
-.core-placeholder {
-  width: 100%;
-  padding: 18px;
-  border-radius: 24px;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  background:
-    linear-gradient(135deg, rgba(255, 158, 120, 0.12), transparent 38%, rgba(88, 202, 255, 0.12)),
-    rgba(255, 255, 255, 0.04);
-}
-
-.placeholder-label {
-  display: inline-flex;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-}
-
-.core-placeholder strong {
-  display: block;
-  margin-top: 12px;
-  font-size: 16px;
-  line-height: 1.55;
-}
-
-.core-placeholder p {
-  margin: 10px 0 0;
-  color: rgba(255, 255, 255, 0.62);
-  line-height: 1.72;
-  font-size: 13px;
 }
 
 @media (max-width: 1180px) {

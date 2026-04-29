@@ -16,6 +16,13 @@
           <span class="step-index">0{{ index + 1 }}</span>
           <h3>{{ step.title }}</h3>
           <p>{{ step.desc }}</p>
+          <div class="process-block">
+            <span class="process-label">业务流程</span>
+            <ol>
+              <li v-for="line in step.process" :key="line">{{ line }}</li>
+            </ol>
+          </div>
+          <strong class="step-outcome">{{ step.outcome }}</strong>
           <span class="step-tip">{{ step.tip }}</span>
           <div v-if="index < flowSteps.length - 1" class="step-connector">→</div>
         </article>
@@ -102,9 +109,14 @@ const ready = useSectionReady()
   position: relative;
   padding: 28px;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(18, 25, 37, 0.08);
-  box-shadow: 0 24px 56px rgba(26, 31, 57, 0.1);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18)),
+    rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(18, 25, 37, 0.1);
+  box-shadow:
+    0 24px 56px rgba(26, 31, 57, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(20px) saturate(132%);
   opacity: 0;
   transform: translateY(24px);
   transition:
@@ -115,8 +127,10 @@ const ready = useSectionReady()
 }
 
 [data-theme='dark'] .flow-card {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.34);
 }
 
@@ -152,6 +166,44 @@ const ready = useSectionReady()
   margin: 0;
   color: var(--text-secondary, #666);
   line-height: 1.84;
+}
+
+.process-block {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(18, 25, 37, 0.08);
+}
+
+[data-theme='dark'] .process-block {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.process-label {
+  display: block;
+  color: var(--text-secondary, #666);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.process-block ol {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--text-primary, #111);
+  line-height: 1.78;
+}
+
+[data-theme='dark'] .process-block ol {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.step-outcome {
+  display: block;
+  margin-top: 18px;
+  color: var(--color-primary, #c0392b);
+  line-height: 1.56;
 }
 
 .step-tip {

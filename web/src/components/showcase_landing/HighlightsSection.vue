@@ -27,12 +27,9 @@
           <span class="card-tag">{{ item.tag }}</span>
           <h3>{{ item.title }}</h3>
           <p>{{ item.description }}</p>
-          <div class="card-preview">
-            <span class="preview-label">{{ item.previewLabel }}</span>
-            <strong>{{ item.previewTitle }}</strong>
-            <ul class="preview-list">
-              <li v-for="line in item.previewLines" :key="line">{{ line }}</li>
-            </ul>
+          <div class="card-image">
+            <img :src="item.image" :alt="item.imageCaption" loading="eager" decoding="async" />
+            <span>{{ item.imageCaption }}</span>
           </div>
           <button class="card-link" @click="router.push(item.route)">进入体验</button>
         </article>
@@ -40,12 +37,12 @@
 
       <div class="highlight-footer">
         <div class="footer-note">
-          <span>资源占位</span>
-          <strong>每个亮点后面都可以补一张横向宣传图或局部截图。</strong>
+          <span>图片资源</span>
+          <strong>亮点卡片已使用真实资源图：Agent 文档解析、数据专题、结构化扫描和资讯流封面。</strong>
         </div>
         <div class="footer-note">
           <span>版式目的</span>
-          <strong>避免大屏下卡片显空，同时增强“企业官网”而不是“功能入口”的观感。</strong>
+          <strong>图片区替代文字预览卡，让入口更像正式产品展示，而不是功能占位列表。</strong>
         </div>
       </div>
     </div>
@@ -173,7 +170,8 @@ const typedTitle = useTypewriter('亮点速览 / Showcase Highlights', 60, 180)
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 14px;
   padding: 24px;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.04);
@@ -219,6 +217,7 @@ const typedTitle = useTypewriter('亮点速览 / Showcase Highlights', 60, 180)
 .card-tag,
 .highlight-card h3,
 .highlight-card p,
+.card-image,
 .card-link {
   position: relative;
   z-index: 1;
@@ -241,47 +240,38 @@ const typedTitle = useTypewriter('亮点速览 / Showcase Highlights', 60, 180)
 }
 
 .highlight-card p {
-  margin: 0 0 28px;
+  margin: 0;
   color: rgba(255, 255, 255, 0.76);
   line-height: 1.82;
 }
 
-.card-preview {
+.card-image {
   position: relative;
   z-index: 1;
-  margin-top: auto;
-  margin-bottom: 18px;
-  padding: 16px 16px 18px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  min-height: 208px;
 }
 
-.preview-label {
-  display: inline-flex;
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-}
-
-.card-preview strong {
+.card-image img {
+  width: 100%;
+  height: 208px;
   display: block;
-  margin-top: 10px;
-  font-size: 15px;
-  line-height: 1.55;
+  object-fit: cover;
 }
 
-.preview-list {
-  margin: 10px 0 0;
-  padding-left: 18px;
+.card-image span {
+  display: block;
+  padding: 10px 12px 12px;
   color: rgba(255, 255, 255, 0.72);
-  line-height: 1.7;
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .card-link {
+  margin-top: auto;
   height: 46px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);

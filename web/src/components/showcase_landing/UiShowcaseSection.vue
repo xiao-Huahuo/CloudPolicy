@@ -5,8 +5,8 @@
         <span class="section-eyebrow">UI 概览</span>
         <h2>用轮播式组件展台，把产品能力拍成一支品牌短片</h2>
         <p>
-          左侧集中展示 5 组关键界面，右侧保留叙事和说明文本。
-          每一次切换都像在浏览一套完成过美术调性的产品展示页，而不是普通后台截图。
+          通过五组核心界面联动展示检索、分析、阅读与交互能力，以统一的叙事节奏呈现产品完整体验，
+          使展示页兼具信息密度与正式、克制的品牌表达。
         </p>
       </div>
 
@@ -78,10 +78,15 @@
             </div>
           </div>
 
-          <div class="placeholder-panel">
-            <span class="placeholder-tag">可继续补图</span>
-            <strong>{{ currentSlide.eyebrow }}主题特写图 / 局部品牌细节图</strong>
-            <p>这里预留给你后面补一张更统一的 UI 宣传图，用来压住右侧的信息密度，让画面更满、更高级。</p>
+          <div class="resource-panel">
+            <div class="resource-image">
+              <img :src="currentSlide.images[1]" :alt="currentSlide.resourceTitle" loading="eager" decoding="async" />
+            </div>
+            <div class="resource-copy">
+              <span class="resource-tag">演示素材</span>
+              <strong>{{ currentSlide.resourceTitle }}</strong>
+              <p>{{ currentSlide.resourceDesc }}</p>
+            </div>
           </div>
         </aside>
       </div>
@@ -474,24 +479,45 @@ onUnmounted(() => {
   box-shadow: 0 0 12px currentColor;
 }
 
-.placeholder-panel {
+.resource-panel {
   margin-top: 18px;
-  padding: 18px 18px 20px;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
   border-radius: 22px;
-  border: 1px dashed rgba(17, 17, 17, 0.16);
+  border: 1px solid rgba(17, 17, 17, 0.1);
   background:
-    linear-gradient(135deg, rgba(255, 122, 24, 0.08), transparent 40%, rgba(91, 207, 255, 0.08)),
+    linear-gradient(135deg, rgba(255, 122, 24, 0.1), transparent 40%, rgba(91, 207, 255, 0.12)),
     rgba(255, 255, 255, 0.55);
 }
 
-[data-theme='dark'] .placeholder-panel {
+[data-theme='dark'] .resource-panel {
   border-color: rgba(255, 255, 255, 0.14);
   background:
     linear-gradient(135deg, rgba(255, 122, 24, 0.12), transparent 40%, rgba(91, 207, 255, 0.12)),
     rgba(255, 255, 255, 0.03);
 }
 
-.placeholder-tag {
+.resource-image {
+  min-height: 116px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.resource-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.resource-copy {
+  min-width: 0;
+}
+
+.resource-tag {
   display: inline-flex;
   padding: 6px 10px;
   border-radius: 999px;
@@ -500,18 +526,18 @@ onUnmounted(() => {
   letter-spacing: 0.14em;
 }
 
-[data-theme='dark'] .placeholder-tag {
+[data-theme='dark'] .resource-tag {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.placeholder-panel strong {
+.resource-panel strong {
   display: block;
   margin-top: 12px;
   font-size: 16px;
   line-height: 1.55;
 }
 
-.placeholder-panel p {
+.resource-panel p {
   margin: 10px 0 0;
   color: var(--text-secondary, #666);
   line-height: 1.72;
@@ -552,6 +578,10 @@ onUnmounted(() => {
   }
 
   .aside-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-panel {
     grid-template-columns: 1fr;
   }
 }
