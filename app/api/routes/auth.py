@@ -190,10 +190,6 @@ async def send_phone_code(
         existing = session.exec(select(User).where(User.login_phone == phone)).first()
         if existing:
             raise HTTPException(status_code=400, detail="该手机号已注册")
-    elif payload.purpose == "login":
-        existing = session.exec(select(User).where(User.login_phone == phone)).first()
-        if not existing:
-            raise HTTPException(status_code=404, detail="该手机号尚未注册")
     elif payload.purpose == "reset_password":
         user = session.exec(select(User).where(User.login_phone == phone)).first()
         if not user or not user.phone_verified:
@@ -304,8 +300,6 @@ def phone_login(
     if not is_valid_login_phone(phone):
         raise HTTPException(status_code=400, detail="请输入有效的中国大陆手机号")
     user = session.exec(select(User).where(User.login_phone == phone)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="该手机号尚未注册")
 
     ok, reason, _ = verify_code(
         "phone",
@@ -316,6 +310,19 @@ def phone_login(
     )
     if not ok:
         raise HTTPException(status_code=400, detail="验证码错误或已过期" if reason != "too_many_attempts" else "验证码错误次数过多，请重新获取")
+
+    if not user:
+        user = User(
+            uname=_build_default_phone_username(session, phone),
+            email=build_placeholder_email(phone),
+            login_phone=phone,
+            hashed_pwd=get_password_hash(secrets.token_urlsafe(24)),
+            email_verified=False,
+            phone_verified=True,
+            password_login_enabled=False,
+            preferred_login_method="phone_code",
+            last_login_method="phone_code",
+        )
 
     user.phone_verified = True
     _update_login_tracking(user, request, "phone_code")

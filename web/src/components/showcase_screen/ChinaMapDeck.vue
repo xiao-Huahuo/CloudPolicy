@@ -26,6 +26,14 @@
 
       <aside class="map-side">
         <div class="side-group">
+          <span class="side-label">地图来源</span>
+          <strong class="side-title">{{ CHINA_MAP_SOURCE_NAME }}</strong>
+          <p class="side-text">
+            数据来自天地图行政区划 GeoJSON，审图号：{{ CHINA_MAP_APPROVAL_NUMBER }}
+          </p>
+        </div>
+
+        <div class="side-group">
           <span class="side-label">地图提示</span>
           <strong class="side-title">拖动与滚轮可以继续缩放和漫游</strong>
           <p class="side-text">鼠标移动会驱动地图舞台轻微偏转，营造展示级立体视差。地图本体仍保留省级 hover 与缩放能力。</p>
@@ -68,6 +76,11 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import LuminousFrame from './LuminousFrame.vue'
 import { formatCompactNumber, provinceCoords, screenPalette } from './screenTheme'
+import {
+  CHINA_MAP_APPROVAL_NUMBER,
+  CHINA_MAP_SOURCE_NAME,
+  registerChinaMap,
+} from '@/utils/chinaMapSource'
 
 defineOptions({ name: 'ChinaMapDeck' })
 
@@ -120,23 +133,9 @@ const buildScatterData = () =>
       value: [...provinceCoords[item.name], item.value],
     }))
 
-const ensureChinaMap = async () => {
-  if (echarts.getMap('china')) return true
-  try {
-    const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-    const geoJson = await response.json()
-    echarts.registerMap('china', geoJson)
-    return true
-  } catch (error) {
-    console.warn('中国地图 GeoJSON 加载失败', error)
-    return false
-  }
-}
-
 const renderMap = async () => {
   if (!chartRef.value) return
-  const loaded = await ensureChinaMap()
-  if (!loaded) return
+  registerChinaMap(echarts)
 
   if (!chart) {
     chart = echarts.init(chartRef.value)
@@ -349,7 +348,7 @@ onUnmounted(() => {
 
 .map-side {
   display: grid;
-  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr) 188px;
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 0.96fr) minmax(0, 1.04fr) 188px;
   gap: 8px;
   align-items: stretch;
 }

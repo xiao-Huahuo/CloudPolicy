@@ -260,6 +260,7 @@ import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
 import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 import { resolveAvatarUrl } from '@/utils/avatar.js';
+import { registerChinaMap } from '@/utils/chinaMapSource';
 
 echarts.use([LineChart, BarChart, PieChart, MapChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent, CanvasRenderer]);
 
@@ -460,15 +461,7 @@ function renderDistributionCharts() {
 
 async function renderChinaMap() {
   if (!chinaMapRef.value) return;
-  if (!echarts.getMap('china')) {
-    try {
-      const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
-      echarts.registerMap('china', await response.json());
-    } catch (error) {
-      console.warn('China map load failed', error);
-      return;
-    }
-  }
+  registerChinaMap(echarts);
 
   const theme = getChartTheme();
   if (!chinaMapChart) chinaMapChart = echarts.init(chinaMapRef.value);
