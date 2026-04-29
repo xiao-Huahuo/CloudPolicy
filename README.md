@@ -658,7 +658,7 @@ docker pull python:3.12-slim-bullseye
    ```
    注意：如果你之前装过 `docker.io`，可能出现 `containerd.io conflicts: containerd`。这种情况下不要混装，统一使用 Docker 官方这一套即可。
 2. 阿里云安全组放行 80
-   如果服务器本机容器正常，但浏览器打不开 `http://47.86.23.163/`，最常见原因不是代码，而是云安全组没有放行 80。
+   如果服务器本机容器正常，但浏览器打不开 `http://47.86.36.101/`，最常见原因不是代码，而是云安全组没有放行 80。
    本次真实配置为：
    - 授权策略：`允许`
    - 优先级：`1`
@@ -680,10 +680,10 @@ docker pull python:3.12-slim-bullseye
 4. 在服务器上创建环境变量文件
    在根目录 `/opt/cloudpolicy` 创建生产环境专用的 `.server.env`。
    `.server.env` 建议直接参考上面的环境变量模板填写，字段体系与 `.env` 基本一致；Docker 场景下由 `docker-compose.prod.yml` 自动覆盖 `DOCKER_DEPLOYMENT`、`HOST`、`REDIS_HOST` 等运行时差异。
-   若服务器公网 IP 为 `47.86.23.163`，则至少应修改以下字段：
+   若服务器公网 IP 为 `47.86.36.101`，则至少应修改以下字段：
     ```env
-    FRONTEND_BASE_URL_DOCKER=http://47.86.23.163
-    PUBLIC_BASE_URL_DOCKER=http://47.86.23.163/api
+    FRONTEND_BASE_URL_DOCKER=http://47.86.36.101
+    PUBLIC_BASE_URL_DOCKER=http://47.86.36.101/api
     ```
    另外建议同时确认以下字段：
    - `SECRET_KEY`：替换为新的随机密钥
