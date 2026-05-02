@@ -308,6 +308,12 @@
     <Modal :isOpen="showAvatarEditor" @close="showAvatarEditor = false">
       <AvatarEditor @close="showAvatarEditor = false" @saved="handleAvatarSaved" />
     </Modal>
+
+    <LogoutConfirmDialog
+      :is-open="showLogoutConfirm"
+      @cancel="showLogoutConfirm = false"
+      @confirm="confirmLogout"
+    />
   </div>
 </template>
 
@@ -316,6 +322,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import Modal from '@/components/common/Modal.vue';
+import LogoutConfirmDialog from '@/components/common/LogoutConfirmDialog.vue';
 import AvatarEditor from '@/components/common/AvatarEditor.vue';
 import AgentLoader from '@/components/ui/AgentLoader.vue';
 import LearnMoreLink from '@/components/ui/LearnMoreLink.vue';
@@ -339,6 +346,7 @@ const recentTodos = ref([]);
 const allTodos = ref([]);
 const favoriteCount = ref(0);
 const showAvatarEditor = ref(false);
+const showLogoutConfirm = ref(false);
 
 const quickActionIcons = {
   parse: '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>',
@@ -574,7 +582,11 @@ async function handleAvatarSaved() {
 }
 
 function handleLogout() {
-  if (!confirm('确定要退出登录吗？')) return;
+  showLogoutConfirm.value = true;
+}
+
+function confirmLogout() {
+  showLogoutConfirm.value = false;
   userStore.logout();
   router.push('/showcase');
 }

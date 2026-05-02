@@ -75,7 +75,7 @@
       <div class="middle-section">
         <div v-if="activeDoc" class="reader-panel">
           <div class="rp-header">
-            <button class="rp-close" @click="closeDoc()">✕</button>
+            <button class="rp-close" @click="closeDoc()">×</button>
             <div class="rp-tags">
               <span v-if="activeDoc.category" class="rp-cat">{{ activeDoc.category }}</span>
               <span v-for="tag in parsedTags" :key="tag" class="rp-tag">{{ tag }}</span>
@@ -93,7 +93,46 @@
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/></svg>
               {{ activeDoc.like_count }} 点赞
             </button>
+            <button class="rp-favorite" :class="{ active: isDocFavorited(activeDoc.id) }" @click="toggleFavoriteDoc(activeDoc)">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" :fill="isDocFavorited(activeDoc.id) ? 'currentColor' : 'none'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              {{ isDocFavorited(activeDoc.id) ? '已收藏' : '收藏' }}
+            </button>
           </div>
+
+          <section class="policy-feedback-source">
+            <div class="feedback-source-header">
+              <div>
+                <span class="feedback-source-kicker">民生反馈来源</span>
+                <h2>评论区与发表意见</h2>
+              </div>
+              <span class="policy-audit-note">意见提交后进入审核机制，通过后同步进入民生大厅展示</span>
+            </div>
+
+            <div class="policy-comments">
+              <div class="policy-comments-title">评论区</div>
+              <div v-for="comment in activePolicyFeedbacks" :key="comment.id" class="policy-comment">
+                <div class="policy-comment-meta">
+                  <span class="policy-comment-user">{{ comment.user }}</span>
+                  <span class="policy-comment-status" :class="{ pending: comment.status === '待审核' }">{{ comment.status }}</span>
+                </div>
+                <p>{{ comment.content }}</p>
+              </div>
+            </div>
+
+            <form class="policy-opinion-form" @submit.prevent="submitPolicyOpinion">
+              <label for="policyOpinionInput">发表意见</label>
+              <textarea
+                id="policyOpinionInput"
+                v-model="policyOpinionDraft"
+                rows="3"
+                placeholder="写下你对政策落地、办理体验或解析内容的意见"
+              ></textarea>
+              <div class="opinion-form-footer">
+                <span>提交后先进入审核队列，演示版会在当前政策下方标记为待审核。</span>
+                <button type="submit" :disabled="!policyOpinionDraft.trim()">提交意见</button>
+              </div>
+            </form>
+          </section>
         </div>
         <div v-else class="reader-placeholder">
           <span class="reader-placeholder-tag">阅读区</span>
@@ -201,7 +240,6 @@ const carouselImages = Object.entries(carouselImageModules)
   .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
   .map(([, mod]) => mod.default)
 
-// 中央文件和热点新闻
 const centralDocs = ref([])
 const hotNews = ref([])
 const docsLoading = ref(true)
@@ -210,10 +248,36 @@ const selectedDocIdx = ref(0)
 const rightPanelMode = ref('docs')
 const searchQuery = ref('')
 const searchTypes = ref([])
+const POLICY_DOC_FAVORITES_KEY = 'cloudpolicy.policyDocFavorites'
+const favoriteDocIds = ref([])
+const policyOpinionDraft = ref('')
+const submittedPolicyOpinions = ref([])
+const policyDocOpinions = ref({})
 
 const parsedTags = computed(() => {
   if (!activeDoc.value?.tags) return []
   return activeDoc.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+})
+
+const activePolicyFeedbacks = computed(() => {
+  if (!activeDoc.value) return []
+  const loadedOpinions = policyDocOpinions.value[activeDoc.value.id] || []
+  const base = loadedOpinions.length ? loadedOpinions : [
+    {
+      id: `sample-${activeDoc.value.id}-1`,
+      user: '群众代表',
+      status: '已审核',
+      content: `希望继续跟进“${activeDoc.value.title}”在基层办理中的材料简化和窗口协同情况。`,
+    },
+    {
+      id: `sample-${activeDoc.value.id}-2`,
+      user: '企业用户',
+      status: '已审核',
+      content: '政策条款已经比较清楚，建议后续补充适用对象和申报时间节点的提醒。',
+    },
+  ]
+  const local = submittedPolicyOpinions.value.filter((item) => item.docId === activeDoc.value.id)
+  return [...local, ...base]
 })
 
 const formatDate = (t) => t ? new Date(t).toLocaleDateString('zh-CN') : ''
@@ -237,6 +301,55 @@ const getCarouselStyle = (doc) => {
 const normalizeDocId = (value) => {
   const parsed = Number.parseInt(String(value ?? ''), 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+const readFavoriteDocIds = () => {
+  if (typeof window === 'undefined') return []
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(POLICY_DOC_FAVORITES_KEY) || '[]')
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((item) => normalizeDocId(item)).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+const persistFavoriteDocIds = (docIds) => {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(POLICY_DOC_FAVORITES_KEY, JSON.stringify(docIds))
+}
+
+const isDocFavorited = (docId) => favoriteDocIds.value.includes(normalizeDocId(docId))
+
+const syncDocPatch = (docId, patch) => {
+  docs.value = docs.value.map((item) => (item.id === docId ? { ...item, ...patch } : item))
+  carouselDocs.value = carouselDocs.value.map((item) => (item.id === docId ? { ...item, ...patch } : item))
+  if (activeDoc.value?.id === docId) {
+    activeDoc.value = { ...activeDoc.value, ...patch }
+  }
+}
+
+const mapOpinionFeedback = (opinion) => ({
+  id: opinion.id,
+  user: opinion.user_name || '匿名用户',
+  status: '已审核',
+  content: opinion.content,
+})
+
+const loadDocOpinions = async (docId) => {
+  const normalizedId = normalizeDocId(docId)
+  if (!normalizedId || policyDocOpinions.value[normalizedId]) return
+
+  try {
+    const res = await apiClient.get(API_ROUTES.OPINIONS_BY_DOC(normalizedId), { params: { limit: 6 } })
+    policyDocOpinions.value = {
+      ...policyDocOpinions.value,
+      [normalizedId]: (res.data || []).map(mapOpinionFeedback),
+    }
+  } catch (error) {
+    console.warn('政策评议加载失败', error)
+    policyDocOpinions.value = { ...policyDocOpinions.value, [normalizedId]: [] }
+  }
 }
 
 const syncDocRoute = async (docId) => {
@@ -274,7 +387,7 @@ const loadMore = async () => {
     skip.value += items.length
     if (items.length < LIMIT) hasMore.value = false
 
-    // 初始化轮播图数据
+    // 鍒濆鍖栬疆鎾浘鏁版嵁
     if (carouselDocs.value.length === 0 && items.length > 0) {
       carouselDocs.value = items.slice(0, 5).map((doc, i) => ({
         ...doc,
@@ -318,6 +431,7 @@ const openDoc = async (doc, options = {}) => {
   activeDoc.value = doc
   activeId.value = doc.id
   if (syncRoute) await syncDocRoute(doc.id)
+  await loadDocOpinions(doc.id)
   if (incrementView) {
     apiClient.post(API_ROUTES.POLICY_DOC_VIEW(doc.id)).then((res) => {
       const viewCount = res.data?.view_count
@@ -339,8 +453,36 @@ const closeDoc = async (options = {}) => {
 const likeDoc = async (doc) => {
   try {
     const res = await apiClient.post(API_ROUTES.POLICY_DOC_LIKE(doc.id))
-    doc.like_count = res.data.like_count
+    if (typeof res.data?.like_count === 'number') {
+      syncDocPatch(doc.id, { like_count: res.data.like_count })
+    }
   } catch (e) { console.error(e) }
+}
+
+const toggleFavoriteDoc = (doc) => {
+  const normalizedId = normalizeDocId(doc?.id)
+  if (!normalizedId) return
+
+  const nextIds = isDocFavorited(normalizedId)
+    ? favoriteDocIds.value.filter((item) => item !== normalizedId)
+    : [...favoriteDocIds.value, normalizedId]
+
+  favoriteDocIds.value = nextIds
+  persistFavoriteDocIds(nextIds)
+}
+
+const submitPolicyOpinion = () => {
+  const content = policyOpinionDraft.value.trim()
+  if (!content || !activeDoc.value) return
+
+  submittedPolicyOpinions.value.unshift({
+    id: `local-${activeDoc.value.id}-${Date.now()}`,
+    docId: activeDoc.value.id,
+    user: '当前用户',
+    status: '待审核',
+    content,
+  })
+  policyOpinionDraft.value = ''
 }
 
 const trackExternalBrowse = (payload) => {
@@ -441,6 +583,7 @@ watch(
 )
 
 onMounted(async () => {
+  favoriteDocIds.value = readFavoriteDocIds()
   await Promise.all([loadMore(), loadCentralDocs(), loadHotNews()])
   await syncDocFromRoute()
   startCarousel()
@@ -468,7 +611,7 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-/* 左侧区域 */
+/* 宸︿晶鍖哄煙 */
 .left-section {
   min-height: 0;
 }
@@ -531,7 +674,7 @@ onBeforeUnmount(() => {
   line-height: 1.8;
 }
 
-/* 右侧区域 */
+/* 鍙充晶鍖哄煙 */
 .right-section {
   display: flex;
   flex-direction: column;
@@ -552,7 +695,7 @@ onBeforeUnmount(() => {
   border-bottom: 2px solid var(--color-primary, #c0392b);
 }
 
-/* 面板头部 */
+/* 闈㈡澘澶撮儴 */
 .panel-header {
   display: flex;
   align-items: center;
@@ -601,7 +744,7 @@ onBeforeUnmount(() => {
   color: #fff;
 }
 
-/* 轮播图 */
+/* 杞挱鍥?*/
 .carousel-section {
   position: relative;
   height: 200px;
@@ -779,9 +922,186 @@ onBeforeUnmount(() => {
 .rp-title { font-size: 20px; font-weight: 800; margin: 0 0 12px; line-height: 1.4; color: var(--text-primary, #111); }
 .rp-meta { display: flex; gap: 16px; font-size: 12px; color: #999; margin-bottom: 20px; flex-wrap: wrap; }
 .rp-body { font-size: 15px; line-height: 1.9; color: var(--text-primary, #333); white-space: pre-wrap; }
-.rp-actions { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color, #eee); }
-.rp-like { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--border-color, #eee); padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 13px; color: #666; transition: all 0.2s; }
+.rp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color, #eee); }
+.rp-like,
+.rp-favorite {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--border-color, #eee);
+  padding: 8px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  transition: all 0.2s;
+}
 .rp-like:hover { border-color: #c0392b; color: #c0392b; }
+.rp-favorite:hover,
+.rp-favorite.active {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.policy-feedback-source {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 14%, var(--border-color, #eee));
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-primary, #c0392b) 8%, transparent), transparent 32%),
+    color-mix(in srgb, var(--color-primary, #c0392b) 3%, var(--card-bg, #fff));
+}
+
+.feedback-source-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.feedback-source-kicker {
+  display: inline-flex;
+  color: var(--color-primary, #c0392b);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.feedback-source-header h2 {
+  margin: 0;
+  color: var(--text-primary, #111);
+  font-size: 18px;
+}
+
+.policy-audit-note {
+  max-width: 260px;
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.policy-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.policy-comments-title {
+  color: var(--text-primary, #111);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.policy-comment {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 10%, var(--border-color, #eee));
+  background: var(--card-bg, #fff);
+}
+
+.policy-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.policy-comment-user {
+  color: var(--text-primary, #111);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.policy-comment-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--color-primary, #c0392b);
+  background: color-mix(in srgb, var(--color-primary, #c0392b) 10%, var(--card-bg, #fff));
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.policy-comment-status.pending {
+  color: color-mix(in srgb, var(--color-secondary, #e67e22) 82%, #7a3f00);
+  background: color-mix(in srgb, var(--color-secondary, #e67e22) 12%, var(--card-bg, #fff));
+}
+
+.policy-comment p {
+  margin: 0;
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.policy-opinion-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.policy-opinion-form label {
+  color: var(--text-primary, #111);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.policy-opinion-form textarea {
+  resize: vertical;
+  min-height: 84px;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #c0392b) 12%, var(--border-color, #eee));
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--card-bg, #fff);
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+}
+
+.policy-opinion-form textarea:focus {
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 42%, var(--border-color, #eee));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary, #c0392b) 10%, transparent);
+}
+
+.opinion-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.opinion-form-footer span {
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.opinion-form-footer button {
+  flex-shrink: 0;
+  border: 1px solid var(--color-primary, #c0392b);
+  border-radius: 999px;
+  background: var(--color-primary, #c0392b);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.opinion-form-footer button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.opinion-form-footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 
 /* 中央文件样式 */
 .doc-titles-scroll {

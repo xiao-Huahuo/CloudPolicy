@@ -100,7 +100,7 @@
                     <path d="M14 11a5 5 0 0 0-7.07 0L5.5 12.41a5 5 0 0 0 7.07 7.07L14 19"></path>
                   </svg>
                 </CoreFeatureButton>
-                <CoreFeatureButton class="upload-round-btn" label="截图识别" hint="图像" @click.stop="handleScreenshot">
+                <CoreFeatureButton class="upload-round-btn" label="拍照识别" hint="图像" @click.stop="handleScreenshot">
                   <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 16V8a2 2 0 0 0-2-2h-3l-2-2H10L8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2Z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
@@ -242,7 +242,7 @@
                     {{ ttsActive ? '停止' : '播报' }}
                   </button>
                   <button class="result-action-btn" @click="addFavorite" :title="isFavorited ? '已收藏' : '收藏'" :class="{ favorited: isFavorited }">
-                    <svg viewBox="0 0 24 24" width="16" height="16" :stroke="isFavorited ? '#c0392b' : 'currentColor'" stroke-width="2" :fill="isFavorited ? '#c0392b' : 'none'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" :stroke="isFavorited ? 'var(--color-primary)' : 'currentColor'" stroke-width="2" :fill="isFavorited ? 'var(--color-primary)' : 'none'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                     {{ isFavorited ? '已收藏' : '收藏' }}
                   </button>
                   <button class="result-action-btn" @click="handleExportConversation" :disabled="!aiResponse?.id" title="导出会话 JSON">
@@ -1699,17 +1699,18 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
 }
 .hero-action-btn,
 .result-header-btn {
-  background: #fff;
-  border: 1px solid #ddd;
-  color: #333;
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--border-color));
+  color: var(--text-primary);
   padding: 8px 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .hero-action-btn:hover,
 .result-header-btn:hover {
-  border-color: #c0392b;
-  color: #c0392b;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--border-color));
+  color: var(--color-primary);
 }
 .main-title {
   font-size: 36px;
@@ -2519,13 +2520,14 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   align-items: center;
   margin-bottom: 14px;
   flex-shrink: 0;
+  color: var(--text-primary);
 }
 .result-header-actions {
   margin-left: auto;
 }
 .back-btn {
-  background: none;
-  border: 1px solid #ccc;
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--border-color));
   padding: 6px 14px;
   border-radius: 20px;
   cursor: pointer;
@@ -2535,41 +2537,59 @@ const getComplexityClass = (level) => {  if (level === '高') return 'level-high
   gap: 5px;
   font-size: 13px;
   transition: all 0.2s;
-  color: #000;
+  color: var(--text-primary);
 }
-.back-btn:hover { background: #f0f0f0; }
-.result-header h2 { margin: 0; font-size: 18px; }
+.back-btn:hover {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--border-color));
+  color: var(--color-primary);
+}
+.result-header h2 { margin: 0; font-size: 18px; color: var(--text-primary); }
 
 .response-section {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
 }
-.fixed-result-header { padding: 16px 24px; border-bottom: 1px solid #eee; flex-shrink: 0; position: relative; }
+.fixed-result-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
+  flex-shrink: 0;
+  position: relative;
+}
 .parse-mode-badge {
   position: absolute;
   right: 16px;
   bottom: 6px;
   font-size: 10px;
-  color: #888;
+  color: var(--text-muted);
   opacity: 0.7;
 }
 .header-top-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.result-title { margin: 0; font-size: 20px; color: #000; font-weight: bold; }
+.result-title { margin: 0; font-size: 20px; color: var(--text-primary); font-weight: bold; }
 .tags-container { display: flex; gap: 8px; flex: 1; }
 .result-actions { display: flex; gap: 8px; margin-left: auto; }
 .result-action-btn {
   display: flex; align-items: center; gap: 4px;
-  background: #f5f5f5; border: 1px solid #e0e0e0;
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--border-color));
   padding: 5px 12px; font-size: 12px; cursor: pointer;
-  color: #444; transition: all 0.2s;
+  color: var(--text-secondary); transition: all 0.2s;
 }
-.result-action-btn:hover { border-color: #c0392b; color: #c0392b; background: #fff0f0; }
-.result-action-btn.favorited { color: #c0392b; border-color: #c0392b; background: #fff0f0; }
+.result-action-btn:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 36%, var(--border-color));
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--card-bg));
+}
+.result-action-btn.favorited {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 44%, var(--border-color));
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--card-bg));
+}
 .highlight-tag { background: #000; color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 .info-tag { background: var(--color-primary, #ffe066); color: #000; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 

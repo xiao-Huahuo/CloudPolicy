@@ -414,6 +414,15 @@ const emitLogin = () => window.dispatchEvent(new CustomEvent('open-login-modal')
   transition: color 0.35s ease;
 }
 
+.logo-text {
+  font-family: "STKaiti", "KaiTi", "Noto Serif SC", "Source Han Serif SC", serif;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.18);
+}
+
 .logo-icon {
   width: 24px;
   height: 24px;

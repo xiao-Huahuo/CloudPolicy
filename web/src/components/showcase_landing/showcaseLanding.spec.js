@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest'
 import DesignPhilosophySection from './DesignPhilosophySection.vue'
 import UiShowcaseSection from './UiShowcaseSection.vue'
 import { highlightCards, showcasePreloadImages } from './showcaseContent'
+import HeroSectionSource from './HeroSection.vue?raw'
+import ShowcaseHeaderSource from '../showcase/ShowcaseHeader.vue?raw'
 
 describe('showcase landing content', () => {
   it('uses the formal overview copy in section 02', () => {
@@ -53,5 +55,14 @@ describe('showcase landing content', () => {
   it('prepares a dedicated image preload list for the showcase landing page', () => {
     expect(showcasePreloadImages.length).toBeGreaterThan(10)
     expect(showcasePreloadImages).toEqual(expect.arrayContaining(highlightCards.map((item) => item.image)))
+  })
+
+  it('uses the formal platform wording on the showcase hero', () => {
+    expect(HeroSectionSource).toContain('政策一体化平台')
+    expect(HeroSectionSource).not.toContain('政务系统')
+  })
+
+  it('uses the shared brand title font in the showcase top bar', () => {
+    expect(ShowcaseHeaderSource).toMatch(/\.sc-logo span\s*\{[\s\S]*font-family: "STKaiti", "KaiTi", "Noto Serif SC", "Source Han Serif SC", serif;/)
   })
 })

@@ -345,8 +345,62 @@ select:-webkit-autofill:focus {
 }
 
 [data-theme='dark'] .home-container .tag {
-  background: rgba(192, 57, 43, 0.2);
-  border-color: rgba(192, 57, 43, 0.4);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 36%, rgba(255, 255, 255, 0.08));
+  color: color-mix(in srgb, var(--color-primary-light) 72%, #ffffff 28%);
+}
+
+[data-theme='dark'] .auth-page .inputForm {
+  background: transparent !important;
+  border-color: color-mix(in srgb, var(--color-primary) 18%, rgba(255, 255, 255, 0.12)) !important;
+  background-clip: padding-box !important;
+}
+
+[data-theme='dark'] .auth-page .inputForm:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent-cool) 38%, rgba(255, 255, 255, 0.14)) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent-cool) 16%, transparent) !important;
+}
+
+[data-theme='dark'] .auth-page .input,
+[data-theme='dark'] .auth-page input,
+[data-theme='dark'] .auth-page textarea {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-text-fill-color: inherit !important;
+  background-clip: padding-box !important;
+  color-scheme: normal !important;
+}
+
+[data-theme='dark'] .auth-page :where(input, textarea, select) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-text-fill-color: inherit !important;
+  caret-color: inherit !important;
+  color-scheme: normal !important;
+}
+
+.auth-page input::-ms-reveal,
+.auth-page input::-ms-clear,
+.auth-page input::-webkit-credentials-auto-fill-button,
+.auth-page input::-webkit-contacts-auto-fill-button {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 [data-theme='dark'] .home-container .loading-banner {
@@ -461,7 +515,17 @@ select:-webkit-autofill:focus {
 }
 
 [data-theme='dark'] .kg-panel {
+  --kg-panel-border: color-mix(in srgb, var(--color-primary) 28%, var(--border-color));
   --kg-panel-shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
+  --kg-card-surface:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 42%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--color-secondary) 14%, transparent), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 8%, var(--card-bg)), color-mix(in srgb, var(--color-secondary) 6%, var(--card-bg)));
+  --kg-graph-surface:
+    radial-gradient(circle at 12% 16%, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--color-secondary) 18%, transparent), transparent 24%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 10%, var(--card-bg)), color-mix(in srgb, var(--color-secondary) 8%, var(--card-bg)));
+  --kg-soft-border: color-mix(in srgb, var(--color-secondary) 18%, var(--border-color));
   --kg-button-shadow: 0 12px 22px rgba(0, 0, 0, 0.26);
 }
 

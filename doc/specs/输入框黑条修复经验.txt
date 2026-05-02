@@ -1,0 +1,125 @@
+登录注册页输入框黑条的排查与修复经验
+
+一、问题现象
+
+在登录、注册、找回密码页面中，输入框外层边框和容器背景已经是透明的，但输入文字所在的一条区域仍然会出现深色长方形。这个现象不是整个输入框变黑，而是输入框内部文字背后额外铺了一层深色底。
+
+从实际截图来看，黑条紧贴输入内容区域，宽度通常接近整条文字行。这说明问题重点不在 input 外层容器，而在真正的 input 元素本身，或者浏览器/扩展对 input 的二次样式注入。
+
+二、这次为什么前几轮修复没有真正解决
+
+前几轮修复主要集中在下面几类样式：
+
+1. 把 `.inputForm` 容器背景改为透明。
+2. 给 `.input` 加 `background: transparent !important;`。
+3. 处理 `:-webkit-autofill`，避免浏览器自动填充时出现默认底色。
+
+这些修改本身没有错，但仍然不够，因为这次的真实干扰源不只是浏览器自动填充，还有浏览器扩展对输入框样式的覆盖。
+
+三、真正根因
+
+这次最终确认的根因是：用户实际使用的 Edge 环境里启用了 Dark Reader。
+
+Dark Reader 会在页面运行时主动接管输入框相关颜色，给 `input` 注入深色背景、文字颜色、阴影等样式。即使项目代码里已经写了透明背景，扩展仍可能在更后面覆盖一层新的深色样式。因此看起来就会变成：
+
+- 外层输入框是透明的；
+- 但文字后面那一条还是黑的。
+
+这也解释了为什么在干净浏览器环境、测试环境或普通构建里不一定能稳定复现，而在用户自己的日常浏览器里会稳定出现。
+
+四、这次是如何定位到根因的
+
+这次排查不是继续盲改 CSS，而是按下面的顺序收缩问题范围：
+
+1. 先看用户真实截图，确认黑条只出现在输入文字那一条区域。
+2. 重新区分“外层容器问题”和“input 本体问题”。
+3. 检查认证页组件的局部样式，确认 `.inputForm` 已经透明。
+4. 补强 `.input` 和 `:-webkit-autofill` 的透明样式。
+5. 发现这些修复在构建和单测里都通过，但用户截图问题仍在。
+6. 转而怀疑真实浏览器环境差异。
+7. 检查本机 Edge 配置，确认用户活跃配置文件中存在 Dark Reader 扩展。
+8. 阅读扩展本地代码，确认它支持 `data-darkreader-inline-*` 标记与对应的 `--darkreader-inline-*` 变量。
+
+到这里，问题就从“普通输入框透明样式不生效”变成了一个更准确的结论：
+
+不是项目没把输入框设透明，而是 Dark Reader 在输入框上又重新覆盖了一层深色样式。
+
+五、最终修复策略
+
+最终采用的是“兼容扩展”的方案，而不是继续和普通 CSS 优先级硬拼。
+
+做法有两部分：
+
+1. 给认证页所有输入框补上 Dark Reader 可识别的属性：
+
+- `data-darkreader-inline-bg`
+- `data-darkreader-inline-bgcolor`
+- `data-darkreader-inline-color`
+- `data-darkreader-inline-boxshadow`
+
+2. 在输入框样式里声明对应变量，显式告诉扩展：
+
+- `--darkreader-inline-bg: transparent;`
+- `--darkreader-inline-bgcolor: transparent;`
+- `--darkreader-inline-color: #fff7f1;` 或 `#fff`
+- `--darkreader-inline-boxshadow: none;`
+
+这样即使 Dark Reader 接管了输入框样式，它拿到的也仍然是“透明背景”和项目期望的文字颜色，而不是自己推导出一条深色底。
+
+六、实际落点
+
+本次修复落在以下文件：
+
+1. `web/src/components/Home/LoginForm.vue`
+2. `web/src/components/Home/RegisterForm.vue`
+3. `web/src/components/Home/ForgotPasswordForm.vue`
+4. `web/src/components/Home/authInputStyles.spec.js`
+
+其中前三个组件里：
+
+- 所有认证输入框都统一绑定了 `darkreaderInputAttrs`
+- `.input` 样式中新增了 `--darkreader-inline-*` 变量
+
+测试文件中则补了断言，防止后续有人把这些兼容标记删掉后又回归出黑条。
+
+七、为什么这是比继续加 `!important` 更稳的方案
+
+如果只继续叠更多 `background: transparent !important;`，问题通常有三个：
+
+1. 很难保证一定压过扩展注入顺序。
+2. 即使这次压过去，扩展更新后仍可能重新覆盖。
+3. 会让样式越来越像“碰运气堆优先级”。
+
+而这次方案等于直接和 Dark Reader 的兼容入口对接，告诉它：
+
+“这个输入框的背景就是透明，请不要替我算成深色。”
+
+所以稳定性更高，也更适合沉淀成团队经验。
+
+八、以后再遇到类似黑条，建议按这个顺序排查
+
+1. 先看截图，确认是外层容器发黑，还是文字背后单独一条发黑。
+2. 如果只是文字背后发黑，优先怀疑 `input` 本体、自动填充、密码管理器、浏览器扩展。
+3. 先检查：
+   - `.inputForm` 是否透明
+   - `.input` 是否透明
+   - `:-webkit-autofill` 是否已经覆盖
+4. 如果代码看起来都对，但用户浏览器里仍有问题，优先检查：
+   - Dark Reader
+   - 其他深色模式扩展
+   - 密码管理器注入
+5. 如果确认是 Dark Reader，优先使用：
+   - `data-darkreader-inline-*`
+   - `--darkreader-inline-*`
+
+九、这次经验的核心结论
+
+登录注册页输入框出现黑条时，不要默认把问题归结为“普通 CSS 没写对”。
+
+如果现象是“只有输入文字背后那一条发黑”，就要优先怀疑浏览器运行环境，尤其是 Dark Reader 这类扩展的二次样式注入。此时最佳做法不是继续盲加透明背景，而是直接使用扩展支持的兼容标记，让它沿着我们的透明设计渲染。
+
+十、可复用的简化经验
+
+一句话版：
+
+输入框黑条如果只出现在文字背后，八成要把排查重点放到 `input` 本体、`autofill` 和浏览器扩展，尤其是 Dark Reader；确认扩展存在后，用 `data-darkreader-inline-*` + `--darkreader-inline-*` 做兼容，比继续堆 `!important` 稳得多。

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="admin-page">
     <div class="admin-header">
       <div class="header-left">
@@ -238,12 +238,6 @@
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-head">
-          <span class="section-label">用户 IP 地理分布</span>
-        </div>
-        <div ref="chinaMapRef" class="china-map-area"></div>
-      </div>
     </template>
   </div>
 </template>
@@ -253,16 +247,14 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import AgentLoader from '@/components/ui/AgentLoader.vue';
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart, PieChart, MapChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, TitleComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
+import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { apiClient, API_ROUTES } from '@/router/api_routes.js';
 import { useUserStore } from '@/stores/auth.js';
 import { getChartTheme, observeChartAppearance, withAlpha } from '@/utils/chartTheme';
 import { resolveAvatarUrl } from '@/utils/avatar.js';
-import { registerChinaMap } from '@/utils/chinaMapSource';
-
-echarts.use([LineChart, BarChart, PieChart, MapChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent, CanvasRenderer]);
+echarts.use([LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer]);
 
 const userStore = useUserStore();
 const isAdmin = computed(() => Boolean(userStore.isAdmin));
@@ -273,7 +265,6 @@ const myStats = ref(null);
 const allStats = ref(null);
 const opinionStats = ref(null);
 const roleDist = ref(null);
-const geoData = ref([]);
 const usersLoading = ref(true);
 const timeChartType = ref('line');
 const distScope = ref('personal');
@@ -286,8 +277,6 @@ const diffChartRef = ref(null);
 const opTypePieRef = ref(null);
 const opRatingBarRef = ref(null);
 const rolePieRef = ref(null);
-const chinaMapRef = ref(null);
-
 let timeChart = null;
 let roseChart = null;
 let materialsComboChart = null;
@@ -296,7 +285,6 @@ let diffChart = null;
 let opTypePieChart = null;
 let opRatingBarChart = null;
 let rolePieChart = null;
-let chinaMapChart = null;
 let statsEventSource = null;
 let themeObserver = null;
 
@@ -312,14 +300,13 @@ const getDistData = () => (distScope.value === 'personal' ? myStats.value : allS
 async function loadAll() {
   usersLoading.value = true;
   try {
-    const [usersRes, statsRes, myRes, allRes, opinionRes, roleRes, geoRes] = await Promise.all([
+    const [usersRes, statsRes, myRes, allRes, opinionRes, roleRes] = await Promise.all([
       apiClient.get(API_ROUTES.ADMIN_USERS),
       apiClient.get(API_ROUTES.ADMIN_STATS),
       apiClient.get(API_ROUTES.ANALYSIS_ME),
       apiClient.get(API_ROUTES.ADMIN_ANALYSIS_ALL),
       apiClient.get(API_ROUTES.ADMIN_OPINION_STATS),
       apiClient.get(API_ROUTES.ADMIN_USER_ROLE_DIST),
-      apiClient.get(API_ROUTES.ADMIN_USER_GEO),
     ]);
     users.value = usersRes.data;
     stats.value = statsRes.data;
@@ -327,7 +314,6 @@ async function loadAll() {
     allStats.value = allRes.data;
     opinionStats.value = opinionRes.data;
     roleDist.value = roleRes.data;
-    geoData.value = geoRes.data.geo_dist || [];
     await nextTick();
     renderAllCharts();
     connectRealtimeStream();
@@ -363,7 +349,6 @@ function renderAllCharts() {
   renderTimeChart();
   renderDistributionCharts();
   renderOpinionCharts();
-  renderChinaMap();
 }
 
 function renderTimeChart() {
@@ -459,22 +444,6 @@ function renderDistributionCharts() {
   }
 }
 
-async function renderChinaMap() {
-  if (!chinaMapRef.value) return;
-  registerChinaMap(echarts);
-
-  const theme = getChartTheme();
-  if (!chinaMapChart) chinaMapChart = echarts.init(chinaMapRef.value);
-  const data = geoData.value;
-  const max = Math.max(...data.map((item) => item.value), 1);
-
-  chinaMapChart.setOption({
-    tooltip: { trigger: 'item', formatter: '{b}: {c} 人', backgroundColor: theme.tooltipBg, borderColor: theme.tooltipBorder, textStyle: { color: theme.textPrimary } },
-    visualMap: { min: 0, max, left: 'left', bottom: 20, text: ['高', '低'], inRange: { color: [withAlpha(theme.accentCool, theme.dark ? 0.2 : 0.1), theme.primary] }, textStyle: { fontSize: 11, color: theme.textSecondary } },
-    series: [{ type: 'map', map: 'china', roam: true, emphasis: { itemStyle: { areaColor: theme.secondary }, label: { show: true, color: theme.textPrimary } }, data, itemStyle: { areaColor: withAlpha(theme.accentCool, theme.dark ? 0.08 : 0.04), borderColor: withAlpha(theme.textSecondary, theme.dark ? 0.42 : 0.24), borderWidth: 0.5 }, label: { color: theme.textSecondary } }],
-  }, true);
-}
-
 function renderOpinionCharts() {
   const theme = getChartTheme();
   const typeMap = { review: '落地评价', correction: '解析纠错', message: '办事留言' };
@@ -534,7 +503,7 @@ async function deleteUser(uid) {
 }
 
 function resizeCharts() {
-  [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart, chinaMapChart].forEach((chart) => chart?.resize());
+  [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart].forEach((chart) => chart?.resize());
 }
 
 const maxCount = computed(() => Math.max(...(stats.value.user_message_counts || []).map((item) => item.count), 1));
@@ -546,7 +515,6 @@ watch(isAdmin, (value) => {
 watch([timeChartType, myStats, allStats], () => nextTick(renderTimeChart), { deep: true });
 watch([distScope, myStats, allStats], () => nextTick(renderDistributionCharts), { deep: true });
 watch([opinionStats, roleDist], () => nextTick(renderOpinionCharts), { deep: true });
-watch(geoData, () => nextTick(renderChinaMap), { deep: true });
 
 onMounted(() => {
   if (isAdmin.value) loadAll();
@@ -557,7 +525,7 @@ onMounted(() => {
 onUnmounted(() => {
   themeObserver?.disconnect();
   window.removeEventListener('resize', resizeCharts);
-  [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart, chinaMapChart].forEach((chart) => chart?.dispose());
+  [timeChart, roseChart, materialsComboChart, barChart, diffChart, opTypePieChart, opRatingBarChart, rolePieChart].forEach((chart) => chart?.dispose());
   statsEventSource?.close();
 });
 </script>
@@ -642,7 +610,6 @@ onUnmounted(() => {
 .hot-word--secondary { background: color-mix(in srgb, var(--color-secondary) 12%, transparent); }
 .hot-word--cool { background: color-mix(in srgb, var(--color-accent-cool) 12%, transparent); }
 .hot-word:hover { transform: scale(1.08); }
-.china-map-area { width: 100%; height: 480px; }
 @media (max-width: 1280px) { .time-cards-row, .dist-grid, .opinion-overview { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 900px) { .stats-row, .doc-status-row { flex-direction: column; } .time-cards-row, .dist-grid, .opinion-overview { grid-template-columns: 1fr; } }
 </style>

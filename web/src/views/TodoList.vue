@@ -5,34 +5,40 @@
       <button class="add-btn" @click="showAdd = true">+ 新建待办</button>
     </div>
 
-    <!-- 草稿待确认区 -->
     <div v-if="drafts.length" class="draft-section">
       <div class="section-label-row">
         <span class="section-label">待确认草稿</span>
         <span class="draft-hint">来自自动解析，请确认后保存</span>
       </div>
       <div class="draft-list">
-        <div v-for="d in drafts" :key="d.id" class="draft-card">
+        <div v-for="draft in drafts" :key="draft.id" class="draft-card">
           <div class="draft-info">
-            <span class="draft-title">{{ d.title }}</span>
-            <span v-if="d.deadline" class="draft-deadline">截止：{{ d.deadline }}</span>
-            <p v-if="d.detail" class="draft-detail">{{ d.detail }}</p>
+            <span class="draft-title">{{ draft.title }}</span>
+            <span v-if="draft.deadline" class="draft-deadline">截止：{{ draft.deadline }}</span>
+            <p v-if="draft.detail" class="draft-detail">{{ draft.detail }}</p>
           </div>
           <div class="draft-actions">
-            <button class="confirm-btn" @click="confirmDraft(d.id)">确认保存</button>
-            <button class="discard-btn" @click="deleteTodo(d.id)">废弃</button>
+            <button class="confirm-btn" @click="confirmDraft(draft.id)">确认保存</button>
+            <button class="discard-btn" @click="deleteTodo(draft.id)">废弃</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 主 Todo 列表 -->
     <div class="todo-main">
-      <div class="todo-filters">
-        <button :class="{ active: filter === 'all' }" @click="filter = 'all'">全部</button>
-        <button :class="{ active: filter === 'pending' }" @click="filter = 'pending'">待完成</button>
-        <button :class="{ active: filter === 'done' }" @click="filter = 'done'">已完成</button>
+      <div class="todo-toolbar">
+        <div class="todo-filters">
+          <button :class="{ active: filter === 'all' }" @click="filter = 'all'">全部</button>
+          <button :class="{ active: filter === 'pending' }" @click="filter = 'pending'">待完成</button>
+          <button :class="{ active: filter === 'done' }" @click="filter = 'done'">已完成</button>
+        </div>
+        <label class="completed-toggle">
+          <input v-model="showCompleted" type="checkbox" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">显示已完成</span>
+        </label>
       </div>
+
       <div v-if="loading" class="todo-loading">
         <AgentLoader :size="34" />
         <span>加载中...</span>
@@ -40,28 +46,40 @@
       <div v-else-if="filteredTodos.length === 0" class="todo-empty">暂无待办事项</div>
       <div v-else class="todo-list">
         <div v-for="todo in filteredTodos" :key="todo.id" class="todo-item" :class="{ done: todo.is_done }">
-          <div class="todo-check" @click="toggleTodo(todo.id)">
-            <svg v-if="todo.is_done" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#c0392b" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div class="todo-check" @click="toggleTodo(todo)">
+            <svg
+              v-if="todo.is_done"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="#c0392b"
+              stroke-width="2.5"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
             <div v-else class="check-empty"></div>
           </div>
-          <div class="todo-body">
+          <div class="todo-body" @click="toggleTodo(todo)">
             <span class="todo-title">{{ todo.title }}</span>
             <span v-if="todo.deadline" class="todo-deadline">{{ todo.deadline }}</span>
             <p v-if="todo.detail" class="todo-detail">{{ todo.detail }}</p>
           </div>
           <button class="todo-del" @click="deleteTodo(todo.id)">
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 新建弹窗 -->
     <div v-if="showAdd" class="modal-overlay" @click.self="showAdd = false">
       <div class="modal">
         <h3>新建待办</h3>
         <input v-model="newTitle" placeholder="待办标题 *" class="modal-input" />
-        <input v-model="newDeadline" placeholder="截止时间（如：2025-12-31）" class="modal-input" />
+        <input v-model="newDeadline" type="date" class="modal-input" />
         <textarea v-model="newDetail" placeholder="详细说明（可选）" class="modal-textarea"></textarea>
         <div class="modal-actions">
           <button class="confirm-btn" @click="createTodo" :disabled="!newTitle.trim()">保存</button>
@@ -73,79 +91,115 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import PolicyTitle from '@/components/common/PolicyTitle.vue';
-import AgentLoader from '@/components/ui/AgentLoader.vue';
-import { apiClient, API_ROUTES } from '@/router/api_routes.js';
+import { computed, onMounted, ref } from 'vue'
+import PolicyTitle from '@/components/common/PolicyTitle.vue'
+import AgentLoader from '@/components/ui/AgentLoader.vue'
+import { apiClient, API_ROUTES } from '@/router/api_routes.js'
 
-const todos = ref([]);
-const drafts = ref([]);
-const loading = ref(true);
-const filter = ref('all');
-const showAdd = ref(false);
-const newTitle = ref('');
-const newDeadline = ref('');
-const newDetail = ref('');
+const todos = ref([])
+const drafts = ref([])
+const loading = ref(true)
+const filter = ref('all')
+const showCompleted = ref(false)
+const showAdd = ref(false)
+const newTitle = ref('')
+const newDeadline = ref('')
+const newDetail = ref('')
 
 const filteredTodos = computed(() => {
-  if (filter.value === 'pending') return todos.value.filter(t => !t.is_done);
-  if (filter.value === 'done') return todos.value.filter(t => t.is_done);
-  return todos.value;
-});
+  if (filter.value === 'pending') return todos.value.filter((item) => !item.is_done)
+  if (filter.value === 'done') return todos.value.filter((item) => item.is_done)
+  if (!showCompleted.value) return todos.value.filter((item) => !item.is_done)
+  return todos.value
+})
 
-onMounted(loadTodos);
+onMounted(loadTodos)
 
 async function loadTodos() {
-  loading.value = true;
+  loading.value = true
   try {
     const [confirmedRes, allRes] = await Promise.all([
       apiClient.get(API_ROUTES.TODO),
-      apiClient.get(API_ROUTES.TODO + '?confirmed_only=false'),
-    ]);
-    todos.value = confirmedRes.data;
-    drafts.value = allRes.data.filter(t => !t.is_confirmed);
-  } catch (e) {
-    console.warn('Todo 加载失败', e);
+      apiClient.get(`${API_ROUTES.TODO}?confirmed_only=false`),
+    ])
+    todos.value = confirmedRes.data
+    drafts.value = allRes.data.filter((item) => !item.is_confirmed)
+  } catch (error) {
+    console.warn('Todo 加载失败', error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
-async function toggleTodo(id) {
+async function toggleTodo(todo) {
+  const id = todo?.id
+  if (!id) return
   try {
-    const res = await apiClient.patch(`/todo/${id}/toggle`);
-    const idx = todos.value.findIndex(t => t.id === id);
-    if (idx !== -1) todos.value[idx] = res.data;
-  } catch (e) { console.warn(e); }
+    const res = await apiClient.patch(`/todo/${id}/toggle`)
+    todos.value = todos.value.map((item) => {
+      if (item.id !== id) return item
+      return {
+        ...item,
+        ...(res.data || {}),
+        id,
+      }
+    })
+  } catch (error) {
+    console.warn(error)
+  }
 }
 
 async function confirmDraft(id) {
   try {
-    const res = await apiClient.patch(`/todo/${id}/confirm`);
-    drafts.value = drafts.value.filter(d => d.id !== id);
-    todos.value.unshift(res.data);
-  } catch (e) { console.warn(e); }
+    const res = await apiClient.patch(`/todo/${id}/confirm`)
+    drafts.value = drafts.value.filter((item) => item.id !== id)
+    todos.value.unshift(res.data)
+  } catch (error) {
+    console.warn(error)
+  }
 }
 
 async function deleteTodo(id) {
   try {
-    await apiClient.delete(`/todo/${id}`);
-    todos.value = todos.value.filter(t => t.id !== id);
-    drafts.value = drafts.value.filter(d => d.id !== id);
-  } catch (e) { console.warn(e); }
+    await apiClient.delete(`/todo/${id}`)
+    todos.value = todos.value.filter((item) => item.id !== id)
+    drafts.value = drafts.value.filter((item) => item.id !== id)
+  } catch (error) {
+    console.warn(error)
+  }
 }
 
 async function createTodo() {
-  if (!newTitle.value.trim()) return;
+  const title = newTitle.value.trim()
+  const deadline = newDeadline.value
+  const detail = newDetail.value.trim()
+  if (!title) return
+
   try {
-    const params = new URLSearchParams({ title: newTitle.value });
-    if (newDeadline.value) params.append('deadline', newDeadline.value);
-    if (newDetail.value) params.append('detail', newDetail.value);
-    const res = await apiClient.post(API_ROUTES.TODO + '?' + params.toString());
-    todos.value.unshift(res.data);
-    showAdd.value = false;
-    newTitle.value = ''; newDeadline.value = ''; newDetail.value = '';
-  } catch (e) { console.warn(e); }
+    const params = new URLSearchParams({ title })
+    if (deadline) params.append('deadline', deadline)
+    if (detail) params.append('detail', detail)
+
+    const res = await apiClient.post(`${API_ROUTES.TODO}?${params.toString()}`)
+    todos.value.unshift({
+      title,
+      deadline: deadline || null,
+      detail: detail || null,
+      is_done: false,
+      is_confirmed: true,
+      ...(res.data || {}),
+      title: res.data?.title || title,
+      deadline: res.data?.deadline ?? (deadline || null),
+      detail: res.data?.detail ?? (detail || null),
+    })
+
+    showAdd.value = false
+    newTitle.value = ''
+    newDeadline.value = ''
+    newDetail.value = ''
+  } catch (error) {
+    console.warn(error)
+  }
 }
 </script>
 
@@ -156,6 +210,7 @@ async function createTodo() {
   gap: 16px;
   padding: 16px 20px 24px;
   height: 100%;
+  min-height: 0;
   box-sizing: border-box;
   overflow-y: auto;
 }
@@ -178,13 +233,13 @@ async function createTodo() {
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
+
 .add-btn:hover {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: #fff;
 }
 
-/* 草稿区 */
 .draft-section {
   background: var(--card-bg);
   border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
@@ -192,12 +247,35 @@ async function createTodo() {
   padding: 16px 18px;
   box-shadow: none !important;
 }
-.section-label-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.section-label { font-size: 13px; font-weight: 700; color: var(--color-primary-dark); }
-.draft-hint { font-size: 11px; color: var(--text-muted); }
-.draft-list { display: flex; flex-direction: column; gap: 8px; }
+
+.section-label-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.draft-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.draft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .draft-card {
-  display: flex; align-items: flex-start; justify-content: space-between;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   background: color-mix(in srgb, var(--color-primary) 2%, var(--card-bg));
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
   border-radius: 10px !important;
@@ -205,23 +283,58 @@ async function createTodo() {
   gap: 12px;
   box-shadow: none !important;
 }
-.draft-info { display: flex; flex-direction: column; gap: 3px; flex: 1; }
-.draft-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.draft-deadline { font-size: 11px; color: var(--color-secondary); }
-.draft-detail { font-size: 11px; color: var(--text-secondary); margin: 0; }
-.draft-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-/* 主列表 */
+.draft-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.draft-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.draft-deadline {
+  font-size: 11px;
+  color: var(--color-secondary);
+}
+
+.draft-detail {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .todo-main {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px !important;
   padding: 16px 18px 18px;
   box-shadow: none !important;
 }
+
+.todo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .todo-filters {
   display: inline-flex;
   gap: 6px;
@@ -231,6 +344,57 @@ async function createTodo() {
   border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--border-color));
   align-self: flex-start;
 }
+
+.completed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.completed-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 22%, var(--border-color));
+  border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.completed-toggle input:checked + .toggle-track {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.completed-toggle input:checked + .toggle-track::after {
+  transform: translateX(18px);
+  background: #fff;
+}
+
 .todo-filters button {
   background: transparent;
   border: none;
@@ -241,17 +405,41 @@ async function createTodo() {
   color: var(--text-secondary);
   transition: background 0.2s ease, color 0.2s ease;
 }
-.todo-filters button.active { background: var(--color-primary); color: #fff; font-weight: 700; }
-.todo-loading, .todo-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 30px 0; }
+
+.todo-filters button.active {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.todo-loading,
+.todo-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 30px 0;
+}
+
 .todo-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
 }
-.todo-list { display: flex; flex-direction: column; gap: 6px; }
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
 .todo-item {
-  display: flex; align-items: flex-start; gap: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   background: var(--card-bg);
   border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--border-color));
   border-left: 3px solid color-mix(in srgb, var(--color-primary) 36%, var(--border-color));
@@ -265,36 +453,96 @@ async function createTodo() {
   background: color-mix(in srgb, var(--color-primary) 2%, var(--card-bg));
   border-color: color-mix(in srgb, var(--color-primary) 22%, var(--border-color));
 }
+
 .todo-item.done {
   opacity: 0.76;
   border-left-color: color-mix(in srgb, var(--text-muted) 48%, var(--border-color));
   border-color: color-mix(in srgb, var(--text-muted) 54%, var(--border-color));
 }
-.todo-check { cursor: pointer; flex-shrink: 0; margin-top: 2px; }
-.check-empty {
-  width: 18px; height: 18px; border: 2px solid color-mix(in srgb, var(--border-color) 80%, var(--text-muted));
-  border-radius: 4px; transition: border-color 0.2s;
-}
-.todo-check:hover .check-empty { border-color: var(--color-primary); }
-.todo-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.todo-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.todo-item.done .todo-title { text-decoration: line-through; color: var(--text-muted); }
-.todo-deadline { font-size: 11px; color: var(--color-secondary); }
-.todo-detail { font-size: 11px; color: var(--text-secondary); margin: 0; }
-.todo-del {
-  background: none; border: none; cursor: pointer;
-  color: var(--text-muted); padding: 2px; flex-shrink: 0; transition: color 0.2s;
-}
-.todo-del:hover { color: var(--color-primary); }
 
-/* 按钮 */
-.confirm-btn {
-  background: var(--color-primary); color: #fff; border: 1px solid var(--color-primary);
-  border-radius: 8px;
-  padding: 7px 12px; font-size: 12px; cursor: pointer; transition: background 0.2s, border-color 0.2s;
+.todo-check {
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
-.confirm-btn:hover { background: var(--color-primary-light); border-color: var(--color-primary-light); }
-.confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+.check-empty {
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--border-color) 80%, var(--text-muted));
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.todo-check:hover .check-empty {
+  border-color: var(--color-primary);
+}
+
+.todo-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.todo-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.todo-item.done .todo-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.todo-deadline {
+  font-size: 11px;
+  color: var(--color-secondary);
+}
+
+.todo-detail {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.todo-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.todo-del:hover {
+  color: var(--color-primary);
+}
+
+.confirm-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.confirm-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+}
+
+.confirm-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
 .discard-btn {
   background: transparent;
   color: var(--text-secondary);
@@ -305,37 +553,71 @@ async function createTodo() {
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
+
 .discard-btn:hover {
   background: color-mix(in srgb, var(--border-color) 46%, var(--card-bg));
   border-color: color-mix(in srgb, var(--border-color) 82%, transparent);
   color: var(--text-primary);
 }
 
-/* 弹窗 */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
+
 .modal {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  box-shadow: 0 18px 34px rgba(0,0,0,0.18);
-  padding: 24px; width: min(380px, calc(100vw - 28px));
-  display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
+  padding: 24px;
+  width: min(380px, calc(100vw - 28px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.modal h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-primary); }
-.modal-input, .modal-textarea {
-  border: 1px solid var(--border-color); padding: 8px 12px;
+
+.modal h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-input,
+.modal-textarea {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
   border-radius: 8px;
   background: transparent;
-  font-size: 13px; outline: none; width: 100%; box-sizing: border-box;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
   transition: border-color 0.2s;
   color: var(--text-primary);
 }
-.modal-input:focus, .modal-textarea:focus { border-color: var(--color-primary); }
-.modal-textarea { height: 80px; resize: vertical; }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.modal-input:focus,
+.modal-textarea:focus {
+  border-color: var(--color-primary);
+}
+
+.modal-textarea {
+  height: 80px;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 
 @media (max-width: 768px) {
   .todo-page {
@@ -373,6 +655,14 @@ async function createTodo() {
   .todo-filters {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .todo-toolbar {
+    align-items: stretch;
+  }
+
+  .completed-toggle {
+    justify-content: flex-end;
   }
 
   .todo-filters button {

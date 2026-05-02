@@ -16,6 +16,7 @@
         </svg>
         <input
           v-model="identifier"
+          v-bind="darkreaderInputAttrs"
           type="text"
           class="input"
           placeholder="手机号 / 邮箱 / 用户名"
@@ -49,6 +50,7 @@
             </svg>
             <input
               v-model="captchaAnswer"
+              v-bind="darkreaderInputAttrs"
               type="text"
               class="input"
               maxlength="4"
@@ -75,7 +77,7 @@
             <path d="M9 12l2 2 4-4"></path>
             <path d="M21 12c.552 0 1-.449.973-1A10 10 0 1 0 12 22c.551.027 1-.421 1-.973V18"></path>
           </svg>
-          <input v-model="code" type="text" class="input" maxlength="6" placeholder="输入收到的验证码" required />
+          <input v-model="code" v-bind="darkreaderInputAttrs" type="text" class="input" maxlength="6" placeholder="输入收到的验证码" required />
         </div>
 
         <div class="flex-column">
@@ -86,7 +88,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <input v-model="newPassword" type="password" class="input" placeholder="至少 6 位密码" required />
+          <input v-model="newPassword" v-bind="darkreaderInputAttrs" type="password" class="input" placeholder="至少 6 位密码" required />
         </div>
 
         <div class="flex-column">
@@ -97,7 +99,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <input v-model="confirmPassword" type="password" class="input" placeholder="再次输入新密码" required />
+          <input v-model="confirmPassword" v-bind="darkreaderInputAttrs" type="password" class="input" placeholder="再次输入新密码" required />
         </div>
       </template>
 
@@ -124,6 +126,12 @@ import { getCaptcha, getRecoveryOptions, resetPassword, sendRecoveryCode } from 
 defineEmits(['switch-to-login']);
 
 const identifier = ref('');
+const darkreaderInputAttrs = {
+  'data-darkreader-inline-bg': '',
+  'data-darkreader-inline-bgcolor': '',
+  'data-darkreader-inline-color': '',
+  'data-darkreader-inline-boxshadow': '',
+};
 const methods = ref([]);
 const channel = ref('phone');
 const step = ref('lookup');
@@ -309,7 +317,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -330,14 +338,42 @@ onMounted(() => {
 .input {
   border: none;
   outline: none;
-  background: transparent;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   width: 100%;
+  --darkreader-inline-bg: transparent;
+  --darkreader-inline-bgcolor: transparent;
+  --darkreader-inline-color: #fff;
+  --darkreader-inline-boxshadow: none;
   color: #fff;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  color-scheme: normal !important;
   font-size: 14px;
 }
 
 .input::placeholder {
   color: rgba(245, 247, 255, 0.44);
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  caret-color: #fff !important;
+  transition: background-color 99999s ease-out 0s;
 }
 
 .method-grid {

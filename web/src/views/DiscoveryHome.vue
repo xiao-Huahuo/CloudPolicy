@@ -81,7 +81,7 @@
         <div class="gov-summary-card">
           <div class="summary-header">
             <span class="summary-dot"></span>
-            <span class="summary-title">今日政务概况</span>
+            <span class="summary-title">今日政策概况</span>
             <span class="summary-time">{{ summaryData.update_time || '--:--' }} 更新</span>
           </div>
           <div class="summary-body" v-if="!summaryLoading">
@@ -269,13 +269,13 @@
       </div>
     </div>
 
-    <!-- ══ 全景政策广场：认证主体上传的真实政务文件 ══ -->
+    <!-- ══ 全景政策广场：认证主体上传的真实政策文件 ══ -->
     <div class="policy-square">
       <div class="ps-header">
         <div class="ps-title-row">
           <span class="ps-dot"></span>
           <h3 class="section-label" style="margin:0">全景政策广场</h3>
-          <span class="ps-sub">认证主体发布的最新政务文件</span>
+          <span class="ps-sub">认证主体发布的最新政策文件</span>
         </div>
         <div class="ps-controls">
           <button class="ps-mode-btn" :class="{ active: policyDocViewMode === 'list' }" @click="policyDocViewMode = 'list'">
@@ -294,7 +294,7 @@
         <div v-for="i in 4" :key="i" class="skeleton-card"></div>
       </div>
       <div v-else-if="!policyDocs.length" class="ps-empty">
-        暂无已审核的政务文件，认证主体上传后经管理员审核即可展示
+        暂无已审核的政策文件，认证主体上传后经管理员审核即可展示
       </div>
       <div v-else class="ps-list" :class="policyDocViewMode">
         <div v-for="(doc, i) in policyDocs" :key="doc.id" class="ps-card">
@@ -364,7 +364,7 @@ const slideMetaPool = [
   },
   {
     tag: '数据分析',
-    title: '可视化政务数据',
+    title: '可视化政策数据',
     desc: '多维度图表，直观呈现文件处理统计',
     bg: 'linear-gradient(135deg, #16a085 0%, #2980b9 100%)',
     action: () => router.push('/feature-b'),
@@ -379,7 +379,7 @@ const slideMetaPool = [
   {
     tag: '效能数据',
     title: '监测与趋势可视化',
-    desc: '联通政务场景与访问数据，支持决策分析',
+    desc: '联通政策场景与访问数据，支持决策分析',
     bg: 'linear-gradient(135deg, #e67e22 0%, #f39c12 100%)',
     action: () => router.push('/data-analysis-and-visualization'),
   },
@@ -427,7 +427,7 @@ const recentNews = ref([]);
 const nextSlide = () => { slideIdx.value = (slideIdx.value + 1) % slides.length; };
 const prevSlide = () => { slideIdx.value = (slideIdx.value - 1 + slides.length) % slides.length; };
 
-// ── 今日政务概况 ──────────────────────────────────────────────────────────────
+// ── 今日政策概况 ──────────────────────────────────────────────────────────────
 const summaryData = ref({});
 const summaryLoading = ref(true);
 
@@ -490,7 +490,7 @@ const bricks = [
   },
 ];
 
-// ── 全景政策广场（认证主体上传的真实政务文件）────────────────────────────────
+// ── 全景政策广场（认证主体上传的真实政策文件）────────────────────────────────
 const policyDocs = ref([]);
 const policyDocsLoading = ref(true);
 const policyDocViewMode = ref('list');
@@ -501,7 +501,7 @@ async function loadPolicyDocs() {
     const res = await apiClient.get(API_ROUTES.POLICY_DOCS_APPROVED, { params: { limit: 20 } });
     policyDocs.value = res.data;
   } catch (e) {
-    console.warn('政务文件加载失败', e);
+    console.warn('政策文件加载失败', e);
   } finally {
     policyDocsLoading.value = false;
   }
@@ -548,7 +548,7 @@ async function loadSummary() {
     const res = await getDailySummary();
     summaryData.value = res.data;
   } catch (e) {
-    console.warn('政务概况加载失败', e);
+    console.warn('政策概况加载失败', e);
   } finally {
     summaryLoading.value = false;
   }
@@ -997,7 +997,7 @@ const getComplexityClass = (item) => {
   margin: 0; font-size: 15px; font-weight: 700; color: #fff;
   text-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
-/* 今日政务概况 */
+/* 今日政策概况 */
 .gov-summary-card {
   position: absolute;
   right: 14px;

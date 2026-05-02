@@ -251,6 +251,12 @@
       <AvatarEditor @close="showAvatarEditor = false" />
     </Modal>
 
+    <LogoutConfirmDialog
+      :is-open="showLogoutConfirm"
+      @cancel="showLogoutConfirm = false"
+      @confirm="confirmLogout"
+    />
+
     <AccountSecurityModal
       :is-open="showSecurityModal"
       :mode="securityMode"
@@ -266,6 +272,7 @@ import { useRouter } from 'vue-router';
 import PolicyTitle from '@/components/common/PolicyTitle.vue';
 import Modal from '@/components/common/Modal.vue';
 import AvatarEditor from '@/components/common/AvatarEditor.vue';
+import LogoutConfirmDialog from '@/components/common/LogoutConfirmDialog.vue';
 import AccountSecurityModal from '@/components/settings/AccountSecurityModal.vue';
 import AgentLoader from '@/components/ui/AgentLoader.vue';
 import LogoutPillButton from '@/components/ui/LogoutPillButton.vue';
@@ -279,6 +286,7 @@ const settingsStore = useSettingsStore();
 
 const showAvatarEditor = ref(false);
 const showSecurityModal = ref(false);
+const showLogoutConfirm = ref(false);
 const securityMode = ref('bind-phone');
 const isColorSchemeUpdating = ref(false);
 
@@ -336,7 +344,11 @@ const handleColorSchemeChange = async (scheme) => {
 };
 
 const handleLogout = () => {
-  if (!window.confirm('确定要退出登录吗？')) return;
+  showLogoutConfirm.value = true;
+};
+
+const confirmLogout = () => {
+  showLogoutConfirm.value = false;
   userStore.logout();
   router.push('/showcase');
 };

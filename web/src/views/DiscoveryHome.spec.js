@@ -55,6 +55,7 @@ vi.mock('@/stores/auth.js', () => ({
 }))
 
 import DiscoveryHome from './DiscoveryHome.vue'
+import DiscoveryHomeSource from './DiscoveryHome.vue?raw'
 
 const flushView = async () => {
   await Promise.resolve()
@@ -96,5 +97,11 @@ describe('DiscoveryHome image loading strategy', () => {
     wrapper.unmount()
     globalThis.Image = originalImage
     vi.useRealTimers()
+  })
+
+  it('uses policy wording instead of government-affairs wording on the discovery page', () => {
+    expect(DiscoveryHomeSource).not.toContain('政务')
+    expect(DiscoveryHomeSource).toContain('今日政策概况')
+    expect(DiscoveryHomeSource).toContain('最新政策文件')
   })
 })

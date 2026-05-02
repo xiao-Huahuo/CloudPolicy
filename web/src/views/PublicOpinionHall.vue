@@ -90,11 +90,11 @@
           <span>民生反馈</span>
         </div>
         <div class="feed-controls">
-          <button class="mode-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
+          <button class="mode-btn" :class="{ active: viewMode === 'list' }" @click="setViewMode('list')">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
             条形
           </button>
-          <button class="mode-btn" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">
+          <button class="mode-btn" :class="{ active: viewMode === 'grid' }" @click="setViewMode('grid')">
             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             砖块
           </button>
@@ -106,7 +106,7 @@
       </div>
 
       <div class="opinion-list" :class="viewMode">
-        <div v-for="op in feedOpinions" :key="op.id" class="opinion-card">
+        <div v-for="op in pagedFeedOpinions" :key="op.id" class="opinion-card">
           <div class="op-meta">
             <span class="op-type-badge" :class="op.opinion_type">{{ opTypeLabel(op.opinion_type) }}</span>
             <span class="op-user">{{ op.user_name }}</span>
@@ -125,6 +125,12 @@
         </div>
       </div>
 
+      <div v-if="feedOpinions.length" class="feedback-pager">
+        <button class="pager-btn feedback-prev" :disabled="feedPage <= 1" @click="prevFeedbackPage">上一页</button>
+        <span class="pager-status">{{ feedPage }} / {{ totalFeedbackPages }}</span>
+        <button class="pager-btn feedback-next" :disabled="feedPage >= totalFeedbackPages" @click="nextFeedbackPage">下一页</button>
+      </div>
+
       <div v-if="feedLoading" class="loading-tip">
         <AgentLoader :size="20" compact :center="false" />
         <span>加载中...</span>
@@ -136,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import PolicyTitle from '@/components/common/PolicyTitle.vue'
 import LearnMoreLink from '@/components/ui/LearnMoreLink.vue'
 import AgentLoader from '@/components/ui/AgentLoader.vue'
@@ -158,6 +164,7 @@ const feedLoading = ref(false)
 const feedHasMore = ref(true)
 const feedSkip = ref(0)
 const viewMode = ref('list')
+const feedPage = ref(1)
 const wordcloudRef = ref(null)
 const loadMoreRef = ref(null)
 const cloudHeight = ref(280)
@@ -173,6 +180,30 @@ let observer = null
 let bubbleRaf = null
 let resizeHandler = null
 const BUBBLE_PADDING = 14
+
+const feedbackPageSize = computed(() => (viewMode.value === 'list' ? 10 : 15))
+const totalFeedbackPages = computed(() => Math.max(1, Math.ceil(feedOpinions.value.length / feedbackPageSize.value)))
+const pagedFeedOpinions = computed(() => {
+  const start = (feedPage.value - 1) * feedbackPageSize.value
+  return feedOpinions.value.slice(start, start + feedbackPageSize.value)
+})
+
+const setViewMode = (mode) => {
+  viewMode.value = mode
+  feedPage.value = 1
+}
+
+const prevFeedbackPage = () => {
+  feedPage.value = Math.max(1, feedPage.value - 1)
+}
+
+const nextFeedbackPage = () => {
+  feedPage.value = Math.min(totalFeedbackPages.value, feedPage.value + 1)
+}
+
+watch(totalFeedbackPages, (pages) => {
+  if (feedPage.value > pages) feedPage.value = pages
+})
 
 const getCloudBounds = (nodes) => {
   let minTop = Number.POSITIVE_INFINITY
@@ -440,6 +471,7 @@ const loadFeed = async () => {
 const refreshFeed = () => {
   feedOpinions.value = []
   feedSkip.value = 0
+  feedPage.value = 1
   feedHasMore.value = true
   loadFeed()
 }
@@ -764,6 +796,45 @@ onUnmounted(() => {
 .opinion-list.grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.feedback-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pager-btn {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--border-color));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--card-bg));
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.pager-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.pager-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pager-status {
+  min-width: 54px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .opinion-card {

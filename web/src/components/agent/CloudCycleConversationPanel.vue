@@ -243,6 +243,31 @@ watch(
 }
 
 .conversation-panel {
+  --cc-pill-bg: rgba(255, 255, 255, 0.62);
+  --cc-pill-border: rgba(255, 255, 255, 0.42);
+  --cc-pill-text: rgba(16, 33, 63, 0.72);
+  --cc-pill-active-bg:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 16%, rgba(255, 255, 255, 0.82)),
+      color-mix(in srgb, var(--color-accent-cool) 16%, rgba(255, 255, 255, 0.82))
+    );
+  --cc-pill-active-text: #15305a;
+  --cc-user-card-bg:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 82%, white 18%),
+      color-mix(in srgb, var(--color-accent-cool) 78%, white 22%)
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+  --cc-user-card-shadow: 0 22px 40px color-mix(in srgb, var(--color-primary) 24%, transparent);
+  --cc-loader-color: var(--color-primary);
+  --cc-loader-bg: color-mix(in srgb, var(--color-primary) 10%, rgba(255, 255, 255, 0.62));
+  --cc-loader-border: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --cc-thought-bg: color-mix(in srgb, var(--color-primary) 12%, rgba(255, 255, 255, 0.58));
+  --cc-thought-border: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  --cc-tool-bg: color-mix(in srgb, var(--color-accent-cool) 12%, rgba(255, 255, 255, 0.58));
+  --cc-tool-border: color-mix(in srgb, var(--color-accent-cool) 24%, transparent);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -342,21 +367,19 @@ watch(
 }
 
 .landing-pill {
-  border: none;
+  border: 1px solid var(--cc-pill-border);
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.62);
-  color: rgba(16, 33, 63, 0.6);
+  background: var(--cc-pill-bg);
+  color: var(--cc-pill-text);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .landing-pill.active {
-  background:
-    linear-gradient(135deg, rgba(76, 132, 255, 0.16), rgba(47, 211, 193, 0.16)),
-    rgba(255, 255, 255, 0.78);
-  color: #15305a;
+  background: var(--cc-pill-active-bg);
+  color: var(--cc-pill-active-text);
 }
 
 .message-row {
@@ -464,11 +487,9 @@ watch(
 }
 
 .message-card.user {
-  background:
-    linear-gradient(135deg, rgba(85, 136, 255, 0.96), rgba(53, 209, 191, 0.92)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+  background: var(--cc-user-card-bg);
   color: #ffffff;
-  box-shadow: 0 22px 40px rgba(51, 114, 220, 0.22);
+  box-shadow: var(--cc-user-card-shadow);
 }
 
 .message-meta {
@@ -517,7 +538,7 @@ watch(
 }
 
 .thinking-loader {
-  --loader-color: #ff8f7a;
+  --loader-color: var(--cc-loader-color);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -526,8 +547,8 @@ watch(
   height: 32px;
   flex-shrink: 0;
   border-radius: 16px;
-  background: rgba(255, 143, 122, 0.12);
-  border: 1px solid rgba(255, 143, 122, 0.18);
+  background: var(--cc-loader-bg);
+  border: 1px solid var(--cc-loader-border);
 }
 
 .thinking-loader.compact {
@@ -548,13 +569,13 @@ watch(
 }
 
 .thinking-item.thought {
-  background: rgba(255, 143, 122, 0.12);
-  border-color: rgba(255, 143, 122, 0.28);
+  background: var(--cc-thought-bg);
+  border-color: var(--cc-thought-border);
 }
 
 .thinking-item.tool {
-  background: rgba(88, 203, 255, 0.12);
-  border-color: rgba(88, 203, 255, 0.24);
+  background: var(--cc-tool-bg);
+  border-color: var(--cc-tool-border);
 }
 
 .thinking-item.placeholder {
@@ -1117,6 +1138,35 @@ watch(
 
 <style>
 [data-theme='dark'] .conversation-panel {
+  --cc-pill-bg:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-primary) 14%, rgba(8, 12, 18, 0.92)),
+      color-mix(in srgb, var(--color-accent-cool) 10%, rgba(8, 12, 18, 0.88))
+    );
+  --cc-pill-border: color-mix(in srgb, var(--color-primary) 22%, rgba(255, 255, 255, 0.08));
+  --cc-pill-text: rgba(237, 244, 255, 0.92);
+  --cc-pill-active-bg:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 34%, rgba(255, 255, 255, 0.06)),
+      color-mix(in srgb, var(--color-accent-cool) 24%, rgba(255, 255, 255, 0.04))
+    );
+  --cc-pill-active-text: #ffffff;
+  --cc-user-card-bg:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 44%, rgba(16, 20, 28, 0.98)),
+      color-mix(in srgb, var(--color-accent-cool) 28%, rgba(15, 19, 26, 0.96))
+    );
+  --cc-user-card-shadow: 0 20px 34px rgba(0, 0, 0, 0.24);
+  --cc-loader-color: color-mix(in srgb, var(--color-primary-light) 76%, #ffffff 24%);
+  --cc-loader-bg: color-mix(in srgb, var(--color-primary) 14%, rgba(9, 12, 18, 0.86));
+  --cc-loader-border: color-mix(in srgb, var(--color-primary) 24%, rgba(255, 255, 255, 0.08));
+  --cc-thought-bg: color-mix(in srgb, var(--color-primary) 18%, rgba(9, 12, 18, 0.88));
+  --cc-thought-border: color-mix(in srgb, var(--color-primary) 30%, rgba(255, 255, 255, 0.06));
+  --cc-tool-bg: color-mix(in srgb, var(--color-accent-cool) 16%, rgba(9, 12, 18, 0.86));
+  --cc-tool-border: color-mix(in srgb, var(--color-accent-cool) 28%, rgba(255, 255, 255, 0.06));
   background:
     linear-gradient(180deg, rgba(6, 9, 14, 0.97), rgba(8, 11, 16, 0.94)),
     linear-gradient(150deg, rgba(52, 88, 156, 0.1), rgba(24, 107, 97, 0.04) 58%, rgba(255, 255, 255, 0));
@@ -1176,32 +1226,29 @@ watch(
 }
 
 [data-theme='dark'] .conversation-panel .message-card.user {
-  background:
-    linear-gradient(180deg, rgba(24, 28, 36, 0.98), rgba(18, 22, 29, 0.96)),
-    linear-gradient(145deg, rgba(64, 117, 255, 0.09), rgba(41, 187, 173, 0.05));
+  background: var(--cc-user-card-bg);
   border: 1px solid rgba(118, 156, 255, 0.12);
-  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.24);
+  box-shadow: var(--cc-user-card-shadow);
 }
 
 [data-theme='dark'] .conversation-panel .landing-pill.active {
-  background:
-    linear-gradient(135deg, rgba(64, 117, 255, 0.28), rgba(41, 187, 173, 0.2)),
-    rgba(255, 255, 255, 0.04);
+  background: var(--cc-pill-active-bg);
+  color: var(--cc-pill-active-text);
 }
 
 [data-theme='dark'] .conversation-panel .thinking-item.thought {
-  background: rgba(255, 143, 122, 0.1);
-  border-color: rgba(255, 143, 122, 0.18);
+  background: var(--cc-thought-bg);
+  border-color: var(--cc-thought-border);
 }
 
 [data-theme='dark'] .conversation-panel .thinking-item.tool {
-  background: rgba(88, 203, 255, 0.1);
-  border-color: rgba(88, 203, 255, 0.18);
+  background: var(--cc-tool-bg);
+  border-color: var(--cc-tool-border);
 }
 
 [data-theme='dark'] .conversation-panel .thinking-loader {
-  background: rgba(255, 143, 122, 0.08);
-  border-color: rgba(255, 143, 122, 0.14);
+  background: var(--cc-loader-bg);
+  border-color: var(--cc-loader-border);
 }
 
 [data-theme='dark'] .conversation-panel .message-card.assistant .markdown-body.markdown-content {

@@ -110,6 +110,12 @@
       <!-- 閫€鍑虹櫥褰曟寜閽?-->
       <LogoutPillButton v-if="userStore.token" compact @click="handleLogout" />
     </div>
+
+    <LogoutConfirmDialog
+      :is-open="isLogoutConfirmOpen"
+      @cancel="isLogoutConfirmOpen = false"
+      @confirm="confirmLogout"
+    />
   </header>
 </template>
 
@@ -118,6 +124,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { trackHistoryEvent } from '@/api/history';
 import UnifiedSearchBox from '@/components/common/UnifiedSearchBox.vue';
+import LogoutConfirmDialog from '@/components/common/LogoutConfirmDialog.vue';
 import LogoutPillButton from '@/components/ui/LogoutPillButton.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
@@ -144,6 +151,7 @@ const { isAppearanceTransitioning } = useAppearanceTransition([isAgentShell]);
 
 const isDark = ref(false);
 const isSchemeSwitching = ref(false);
+const isLogoutConfirmOpen = ref(false);
 const searchQuery = ref(String(route.query.q || ''));
 const searchTypes = ref(normalizeSearchTypes(route.query.types));
 let themeObserver = null;
@@ -222,7 +230,14 @@ const displayAvatar = computed(() => {
 const goBack = () => router.back();
 const emitLoginEvent = () => window.dispatchEvent(new CustomEvent('open-login-modal'));
 const handleUserClick = () => { if (userStore.token) router.push('/profile'); };
-const handleLogout = () => { if (confirm('确定要退出登录吗？')) { userStore.logout(); router.push('/showcase'); } };
+const handleLogout = () => {
+  isLogoutConfirmOpen.value = true;
+};
+const confirmLogout = () => {
+  isLogoutConfirmOpen.value = false;
+  userStore.logout();
+  router.push('/showcase');
+};
 
 const toggleNotification = async () => {
   if (!userStore.token) return;

@@ -86,6 +86,7 @@
               <p class="di-title">{{ doc.title }}</p>
               <div class="di-meta">
                 <span v-if="doc.category" class="di-cat">{{ doc.category }}</span>
+                <span v-for="tag in docTags(doc.tags)" :key="`${doc.id}-${tag}`" class="di-tag-text">{{ tag }}</span>
                 <span class="di-stat">
                   <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   {{ doc.view_count }}
@@ -163,6 +164,11 @@ const filteredDocs = computed(() => {
 const tabCount = (tab) => tab === 'all' ? myDocs.value.length : myDocs.value.filter(d => d.status === tab).length
 
 const statusLabel = (s) => ({ approved: '已通过', pending: '待审核', rejected: '已拒绝' }[s] || s)
+
+const docTags = (tags) => {
+  if (!tags) return []
+  return String(tags).split(',').map((tag) => tag.trim()).filter(Boolean)
+}
 
 const formatDate = (t) => {
   if (!t) return ''
@@ -304,19 +310,25 @@ label { font-size: 13px; font-weight: 600; color: var(--text-primary, #111); }
 .doc-list { display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto; }
 .doc-item {
   border: 1px solid var(--border-color, #e8e8e8);
-  border-left: 3px solid var(--color-primary, #c0392b);
-  padding: 12px 14px; transition: box-shadow 0.2s;
+  padding: 12px 14px; transition: box-shadow 0.2s, border-color 0.2s;
 }
-.doc-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.doc-item:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-color: color-mix(in srgb, var(--color-primary, #c0392b) 24%, var(--border-color, #e8e8e8));
+}
 .di-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.di-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
-.di-status.approved { background: #e8f5e9; color: #2e7d32; }
-.di-status.pending { background: #fff8e1; color: #f57f17; }
-.di-status.rejected { background: #fce4e4; color: #c0392b; }
+.di-status { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.di-status.approved { color: #2e7d32; }
+.di-status.pending { color: #f57f17; }
+.di-status.rejected { color: #c0392b; }
 .di-date { font-size: 11px; color: #999; }
 .di-title { font-size: 14px; font-weight: 600; margin: 0 0 8px; line-height: 1.4; }
 .di-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.di-cat { font-size: 11px; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; }
+.di-cat,
+.di-tag-text {
+  font-size: 11px;
+  color: var(--text-secondary, #666);
+}
 .di-stat { display: flex; align-items: center; gap: 3px; font-size: 12px; color: #999; }
 .di-reject { font-size: 12px; color: #c0392b; margin: 6px 0 0; padding: 6px 10px; background: #fce4e4; border-radius: 4px; }
 

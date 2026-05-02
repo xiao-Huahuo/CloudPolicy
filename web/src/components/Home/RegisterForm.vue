@@ -50,7 +50,7 @@
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <input v-model="phoneUsername" type="text" class="input" placeholder="不填将自动生成用户名" />
+          <input v-model="phoneUsername" v-bind="darkreaderInputAttrs" type="text" class="input" placeholder="不填将自动生成用户名" />
         </div>
 
         <div class="flex-column">
@@ -61,7 +61,7 @@
             <rect x="7" y="2" width="10" height="20" rx="2"></rect>
             <line x1="11" y1="18" x2="13" y2="18"></line>
           </svg>
-          <input v-model="phone" type="text" class="input" placeholder="请输入 11 位手机号" required />
+          <input v-model="phone" v-bind="darkreaderInputAttrs" type="text" class="input" placeholder="请输入 11 位手机号" required />
         </div>
 
         <div class="flex-column">
@@ -74,6 +74,7 @@
           </svg>
           <input
             v-model="phonePassword"
+            v-bind="darkreaderInputAttrs"
             type="password"
             class="input"
             placeholder="留空则注册后建议尽快补设密码"
@@ -92,6 +93,7 @@
             </svg>
             <input
               v-model="captchaAnswer"
+              v-bind="darkreaderInputAttrs"
               type="text"
               class="input"
               maxlength="4"
@@ -119,6 +121,7 @@
             </svg>
             <input
               v-model="phoneCode"
+              v-bind="darkreaderInputAttrs"
               type="text"
               class="input"
               maxlength="6"
@@ -147,7 +150,7 @@
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <input v-model="emailUsername" type="text" class="input" placeholder="请输入用户名" required />
+          <input v-model="emailUsername" v-bind="darkreaderInputAttrs" type="text" class="input" placeholder="请输入用户名" required />
         </div>
 
         <div class="flex-column">
@@ -158,7 +161,7 @@
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
-          <input v-model="email" type="email" class="input" placeholder="请输入邮箱地址" required />
+          <input v-model="email" v-bind="darkreaderInputAttrs" type="email" class="input" placeholder="请输入邮箱地址" required />
         </div>
 
         <div class="flex-column">
@@ -169,7 +172,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <input v-model="emailPassword" type="password" class="input" placeholder="至少 6 位密码" required />
+          <input v-model="emailPassword" v-bind="darkreaderInputAttrs" type="password" class="input" placeholder="至少 6 位密码" required />
         </div>
 
         <div class="flex-column">
@@ -180,7 +183,7 @@
             <rect x="3" y="11" width="18" height="11" rx="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <input v-model="emailPasswordConfirm" type="password" class="input" placeholder="再次输入密码" required />
+          <input v-model="emailPasswordConfirm" v-bind="darkreaderInputAttrs" type="password" class="input" placeholder="再次输入密码" required />
         </div>
 
         <div v-if="emailVerificationPending" class="verify-panel">
@@ -195,6 +198,7 @@
               </svg>
               <input
                 v-model="emailVerificationCode"
+                v-bind="darkreaderInputAttrs"
                 type="text"
                 class="input"
                 maxlength="6"
@@ -268,6 +272,12 @@ const userStore = useUserStore();
 const titleChars = '云枢观策'.split('');
 const hasIcon = ref(true);
 const mode = ref('phone');
+const darkreaderInputAttrs = {
+  'data-darkreader-inline-bg': '',
+  'data-darkreader-inline-bgcolor': '',
+  'data-darkreader-inline-color': '',
+  'data-darkreader-inline-boxshadow': '',
+};
 
 const phoneUsername = ref('');
 const phone = ref('');
@@ -496,8 +506,9 @@ onMounted(() => {
 .logo-text {
   font-size: 36px;
   font-weight: 800;
+  font-family: "STKaiti", "KaiTi", "Noto Serif SC", "Source Han Serif SC", serif;
   margin: 0;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   display: flex;
   text-shadow:
     0 8px 24px rgba(255, 143, 122, 0.18),
@@ -596,7 +607,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -618,14 +629,42 @@ onMounted(() => {
 .input {
   border: none;
   outline: none;
-  background: transparent;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
   width: 100%;
+  --darkreader-inline-bg: transparent;
+  --darkreader-inline-bgcolor: transparent;
+  --darkreader-inline-color: #fff7f1;
+  --darkreader-inline-boxshadow: none;
   color: #fff7f1;
+  -webkit-text-fill-color: #fff7f1 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  color-scheme: normal !important;
   font-size: 14px;
 }
 
 .input::placeholder {
   color: rgba(245, 247, 255, 0.44);
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-text-fill-color: #fff7f1 !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  caret-color: #fff7f1 !important;
+  transition: background-color 99999s ease-out 0s;
 }
 
 .tip-text {

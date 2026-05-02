@@ -100,6 +100,12 @@
           </svg>
         </button>
       </div>
+
+      <LogoutConfirmDialog
+        :is-open="isLogoutConfirmOpen"
+        @cancel="isLogoutConfirmOpen = false"
+        @confirm="confirmLogout"
+      />
     </div>
   </header>
 </template>
@@ -107,6 +113,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import LogoutConfirmDialog from '@/components/common/LogoutConfirmDialog.vue';
 import { useUserStore } from '@/stores/auth.js';
 import { useAppearanceTransition } from '@/composables/useAppearanceTransition';
 import { COLOR_SCHEME_OPTIONS, useSettingsStore } from '@/stores/settings';
@@ -136,6 +143,7 @@ const scrolled = ref(false);
 const noImg = ref(false);
 const isDark = ref(false);
 const isSchemeSwitching = ref(false);
+const isLogoutConfirmOpen = ref(false);
 let themeObserver = null;
 const shouldStayTransparent = computed(() => route.name === 'showcase' || route.name === 'showcase-screen');
 const { isAppearanceTransitioning } = useAppearanceTransition([shouldStayTransparent]);
@@ -195,10 +203,12 @@ const handleUserClick = () => {
   if (userStore.token) router.push('/profile');
 };
 const handleLogout = () => {
-  if (confirm('确定要退出登录吗？')) {
-    userStore.logout();
-    router.push('/showcase');
-  }
+  isLogoutConfirmOpen.value = true;
+};
+const confirmLogout = () => {
+  isLogoutConfirmOpen.value = false;
+  userStore.logout();
+  router.push('/showcase');
 };
 
 onMounted(() => {
@@ -307,6 +317,13 @@ onBeforeUnmount(() => {
   height: 28px;
   object-fit: contain;
   filter: none;
+}
+
+.sc-logo span {
+  font-family: "STKaiti", "KaiTi", "Noto Serif SC", "Source Han Serif SC", serif;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.18);
 }
 
 .sc-nav {
