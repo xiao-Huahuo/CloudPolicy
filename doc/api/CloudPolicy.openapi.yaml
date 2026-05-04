@@ -3,6 +3,340 @@ info:
   title: FastAPI
   version: 0.1.0
 paths:
+  /auth/captcha:
+    get:
+      tags:
+      - auth
+      summary: Get Captcha
+      operationId: get_captcha_auth_captcha_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptchaResponse'
+  /auth/phone/send-code:
+    post:
+      tags:
+      - auth
+      summary: Send Phone Code
+      operationId: send_phone_code_auth_phone_send_code_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneCodeSendRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeDispatchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /auth/phone/register:
+    post:
+      tags:
+      - auth
+      summary: Phone Register
+      operationId: phone_register_auth_phone_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneRegisterRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/phone/login:
+    post:
+      tags:
+      - auth
+      summary: Phone Login
+      operationId: phone_login_auth_phone_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneLoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/login/password:
+    post:
+      tags:
+      - auth
+      summary: Password Login
+      operationId: password_login_auth_login_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordLoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/password/recovery/options:
+    post:
+      tags:
+      - auth
+      summary: Recovery Options
+      operationId: recovery_options_auth_password_recovery_options_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryOptionsRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryOptionsResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/password/recovery/send:
+    post:
+      tags:
+      - auth
+      summary: Send Recovery Code
+      operationId: send_recovery_code_auth_password_recovery_send_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoverySendRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeDispatchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/password/reset:
+    post:
+      tags:
+      - auth
+      summary: Reset Password
+      operationId: reset_password_auth_password_reset_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Reset Password Auth Password Reset Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/password/set:
+    post:
+      tags:
+      - auth
+      summary: Set Password
+      operationId: set_password_auth_password_set_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordSetRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Set Password Auth Password Set Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /auth/password/change:
+    post:
+      tags:
+      - auth
+      summary: Change Password
+      operationId: change_password_auth_password_change_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Change Password Auth Password Change Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /auth/email/send-code:
+    post:
+      tags:
+      - auth
+      summary: Send Bind Email Code
+      operationId: send_bind_email_code_auth_email_send_code_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailCodeSendRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeDispatchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /auth/email/bind:
+    post:
+      tags:
+      - auth
+      summary: Bind Email
+      operationId: bind_email_auth_email_bind_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BindEmailRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
+  /auth/phone/bind:
+    post:
+      tags:
+      - auth
+      summary: Bind Phone
+      operationId: bind_phone_auth_phone_bind_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BindPhoneRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /user/:
     post:
       tags:
@@ -801,9 +1135,9 @@ paths:
       tags:
       - upload
       summary: Ocr Image
-      description: '截图/扫描型PDF的OCR识别接口。
+      description: '截图/扫描型 PDF 的 OCR 识别接口。
 
-        上传图片或扫描PDF，调用 Kimi 视觉模型提取文字内容。'
+        优先使用本地 PaddleOCR，必要时回退到 LLM OCR。'
       operationId: ocr_image_upload_ocr_post
       requestBody:
         content:
@@ -895,6 +1229,8 @@ paths:
       - news
       summary: News Search
       operationId: news_search_news_search_get
+      security:
+      - OAuth2PasswordBearer: []
       parameters:
       - name: q
         in: query
@@ -912,6 +1248,13 @@ paths:
           type: integer
           default: 20
           title: Limit
+      - name: track
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Track
       responses:
         '200':
           description: Successful Response
@@ -988,6 +1331,134 @@ paths:
           content:
             application/json:
               schema: {}
+  /search/unified:
+    get:
+      tags:
+      - search
+      summary: Unified Search
+      operationId: unified_search_search_unified_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Q
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 60
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: types
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Types
+      - name: track
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Track
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedSearchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /search/suggest-index:
+    get:
+      tags:
+      - search
+      summary: Get Suggestion Index
+      operationId: get_suggestion_index_search_suggest_index_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 20
+          default: 240
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchSuggestionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /search/suggest:
+    get:
+      tags:
+      - search
+      summary: Get Search Suggestions
+      operationId: get_search_suggestions_search_suggest_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Q
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 40
+          minimum: 1
+          default: 18
+          title: Limit
+      - name: types
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Types
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchSuggestResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /todo/:
     get:
       tags:
@@ -1012,7 +1483,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TodoItem'
+                  $ref: '#/components/schemas/TodoRead'
                 title: Response Get Todos Todo  Get
         '422':
           description: Validation Error
@@ -1071,7 +1542,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TodoItem'
+                $ref: '#/components/schemas/TodoRead'
         '422':
           description: Validation Error
           content:
@@ -1114,7 +1585,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TodoItem'
+                  $ref: '#/components/schemas/TodoRead'
                 title: Response Create Todos From Chat Todo From Chat Post
         '422':
           description: Validation Error
@@ -1143,7 +1614,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TodoItem'
+                $ref: '#/components/schemas/TodoRead'
         '422':
           description: Validation Error
           content:
@@ -1171,7 +1642,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TodoItem'
+                $ref: '#/components/schemas/TodoRead'
         '422':
           description: Validation Error
           content:
@@ -1731,6 +2202,106 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /history/feed:
+    get:
+      tags:
+      - history
+      summary: Get History Feed
+      operationId: get_history_feed_history_feed_get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: domain
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: all
+          title: Domain
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ''
+          title: Q
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 30
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryEventRead'
+                title: Response Get History Feed History Feed Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /history/facets:
+    get:
+      tags:
+      - history
+      summary: Get History Facets
+      operationId: get_history_facets_history_facets_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryFacetResponse'
+      security:
+      - OAuth2PasswordBearer: []
+  /history/track:
+    post:
+      tags:
+      - history
+      summary: Track History Event
+      operationId: track_history_event_history_track_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoryTrackCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryEventRead'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - OAuth2PasswordBearer: []
   /showcase/landing-stats:
     get:
       tags:
@@ -1849,12 +2420,42 @@ paths:
                 title: Response List My Documents Policy Documents Mine Get
       security:
       - OAuth2PasswordBearer: []
+  /policy-documents/{doc_id}:
+    get:
+      tags:
+      - policy_document
+      summary: Get Document
+      operationId: get_document_policy_documents__doc_id__get
+      security:
+      - OAuth2PasswordBearer: []
+      parameters:
+      - name: doc_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Doc Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDocumentOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /policy-documents/{doc_id}/view:
     post:
       tags:
       - policy_document
       summary: Increment View
       operationId: increment_view_policy_documents__doc_id__view_post
+      security:
+      - OAuth2PasswordBearer: []
       parameters:
       - name: doc_id
         in: path
@@ -2272,7 +2873,6 @@ components:
             type: string
           type: array
           title: Tags
-          default: []
       type: object
       title: AgentEvidence
     AgentMessageRead:
@@ -2377,7 +2977,6 @@ components:
             $ref: '#/components/schemas/AgentToolCall'
           type: array
           title: Tool Calls
-          default: []
         checklist:
           items:
             additionalProperties: true
@@ -2419,6 +3018,12 @@ components:
             $ref: '#/components/schemas/AgentEvidence'
           type: array
           title: Evidence
+        display_cards:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Display Cards
         chat_message_id:
           anyOf:
           - type: integer
@@ -2436,14 +3041,7 @@ components:
       - confidence
       - summary
       - structured
-      - checklist
-      - timeline
-      - process_steps
-      - materials
-      - notices
-      - risks
       - rag_metrics
-      - evidence
       title: AgentRunResponse
     AgentToolCall:
       properties:
@@ -2462,6 +3060,32 @@ components:
       required:
       - tool
       title: AgentToolCall
+    BindEmailRequest:
+      properties:
+        email:
+          type: string
+          title: Email
+        code:
+          type: string
+          title: Code
+      type: object
+      required:
+      - email
+      - code
+      title: BindEmailRequest
+    BindPhoneRequest:
+      properties:
+        phone:
+          type: string
+          title: Phone
+        code:
+          type: string
+          title: Code
+      type: object
+      required:
+      - phone
+      - code
+      title: BindPhoneRequest
     Body_delete_chat_messages_chat_batch_delete_post:
       properties:
         message_ids:
@@ -2477,7 +3101,7 @@ components:
       properties:
         file:
           type: string
-          format: binary
+          contentMediaType: application/octet-stream
           title: File
       type: object
       required:
@@ -2522,7 +3146,7 @@ components:
       properties:
         file:
           type: string
-          format: binary
+          contentMediaType: application/octet-stream
           title: File
       type: object
       required:
@@ -2532,7 +3156,7 @@ components:
       properties:
         file:
           type: string
-          format: binary
+          contentMediaType: application/octet-stream
           title: File
       type: object
       required:
@@ -2542,12 +3166,29 @@ components:
       properties:
         file:
           type: string
-          format: binary
+          contentMediaType: application/octet-stream
           title: File
       type: object
       required:
       - file
       title: Body_upload_document_upload_document_post
+    CaptchaResponse:
+      properties:
+        captcha_id:
+          type: string
+          title: Captcha Id
+        svg:
+          type: string
+          title: Svg
+        expires_in:
+          type: integer
+          title: Expires In
+      type: object
+      required:
+      - captcha_id
+      - svg
+      - expires_in
+      title: CaptchaResponse
     ChatMessageCreate:
       properties:
         original_text:
@@ -2683,6 +3324,32 @@ components:
       required:
       - target_audience
       title: ChatMessageUpdate
+    CodeDispatchResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+        expires_in:
+          type: integer
+          title: Expires In
+        retry_after:
+          type: integer
+          title: Retry After
+        delivery_channel:
+          type: string
+          title: Delivery Channel
+          default: sandbox
+        preview_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Preview Code
+      type: object
+      required:
+      - message
+      - expires_in
+      - retry_after
+      title: CodeDispatchResponse
     DocStatus:
       type: string
       enum:
@@ -2690,6 +3357,28 @@ components:
       - approved
       - rejected
       title: DocStatus
+    EmailCodeSendRequest:
+      properties:
+        email:
+          type: string
+          title: Email
+        purpose:
+          type: string
+          const: bind_email
+          title: Purpose
+        captcha_id:
+          type: string
+          title: Captcha Id
+        captcha_answer:
+          type: string
+          title: Captcha Answer
+      type: object
+      required:
+      - email
+      - purpose
+      - captcha_id
+      - captcha_answer
+      title: EmailCodeSendRequest
     EmailVerificationRequest:
       properties:
         email:
@@ -2749,6 +3438,220 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    HistoryEventRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        user_id:
+          type: integer
+          title: User Id
+        actor_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Actor User Id
+        domain:
+          type: string
+          title: Domain
+        event_type:
+          type: string
+          title: Event Type
+        subject_type:
+          type: string
+          title: Subject Type
+        subject_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Subject Id
+        title:
+          type: string
+          title: Title
+        subtitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subtitle
+        summary:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Summary
+        content_excerpt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Content Excerpt
+        route_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Route Path
+        external_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Url
+        icon:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Icon
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        is_restorable:
+          type: boolean
+          title: Is Restorable
+          default: false
+        visibility:
+          type: string
+          title: Visibility
+          default: private
+        dedupe_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dedupe Key
+        occurred_time:
+          type: string
+          format: date-time
+          title: Occurred Time
+        created_time:
+          type: string
+          format: date-time
+          title: Created Time
+        search_text:
+          type: string
+          title: Search Text
+          default: ''
+        extra:
+          additionalProperties: true
+          type: object
+          title: Extra
+      type: object
+      required:
+      - id
+      - user_id
+      - domain
+      - event_type
+      - subject_type
+      - title
+      - occurred_time
+      - created_time
+      title: HistoryEventRead
+    HistoryFacetItem:
+      properties:
+        domain:
+          type: string
+          title: Domain
+        count:
+          type: integer
+          title: Count
+      type: object
+      required:
+      - domain
+      - count
+      title: HistoryFacetItem
+    HistoryFacetResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+        items:
+          items:
+            $ref: '#/components/schemas/HistoryFacetItem'
+          type: array
+          title: Items
+      type: object
+      required:
+      - total
+      title: HistoryFacetResponse
+    HistoryTrackCreate:
+      properties:
+        domain:
+          type: string
+          title: Domain
+        event_type:
+          type: string
+          title: Event Type
+        subject_type:
+          type: string
+          title: Subject Type
+        subject_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Subject Id
+        title:
+          type: string
+          title: Title
+        subtitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subtitle
+        summary:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Summary
+        content_excerpt:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Content Excerpt
+        route_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Route Path
+        external_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Url
+        icon:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Icon
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+        is_restorable:
+          type: boolean
+          title: Is Restorable
+          default: false
+        visibility:
+          type: string
+          title: Visibility
+          default: private
+        dedupe_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dedupe Key
+        search_text:
+          type: string
+          title: Search Text
+          default: ''
+        extra:
+          additionalProperties: true
+          type: object
+          title: Extra
+      type: object
+      required:
+      - domain
+      - event_type
+      - subject_type
+      - title
+      title: HistoryTrackCreate
     KGLink:
       properties:
         source:
@@ -2894,6 +3797,142 @@ components:
       - correction
       - message
       title: OpinionType
+    PasswordChangeRequest:
+      properties:
+        current_password:
+          type: string
+          title: Current Password
+        new_password:
+          type: string
+          title: New Password
+        confirm_password:
+          type: string
+          title: Confirm Password
+      type: object
+      required:
+      - current_password
+      - new_password
+      - confirm_password
+      title: PasswordChangeRequest
+    PasswordLoginRequest:
+      properties:
+        identity:
+          type: string
+          title: Identity
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - identity
+      - password
+      title: PasswordLoginRequest
+    PasswordResetRequest:
+      properties:
+        identifier:
+          type: string
+          title: Identifier
+        channel:
+          type: string
+          enum:
+          - phone
+          - email
+          title: Channel
+        code:
+          type: string
+          title: Code
+        new_password:
+          type: string
+          title: New Password
+        confirm_password:
+          type: string
+          title: Confirm Password
+      type: object
+      required:
+      - identifier
+      - channel
+      - code
+      - new_password
+      - confirm_password
+      title: PasswordResetRequest
+    PasswordSetRequest:
+      properties:
+        new_password:
+          type: string
+          title: New Password
+        confirm_password:
+          type: string
+          title: Confirm Password
+      type: object
+      required:
+      - new_password
+      - confirm_password
+      title: PasswordSetRequest
+    PhoneCodeSendRequest:
+      properties:
+        phone:
+          type: string
+          title: Phone
+        purpose:
+          type: string
+          enum:
+          - login
+          - register
+          - reset_password
+          - bind_phone
+          - bind_email
+          title: Purpose
+        captcha_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Captcha Id
+        captcha_answer:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Captcha Answer
+      type: object
+      required:
+      - phone
+      - purpose
+      title: PhoneCodeSendRequest
+    PhoneLoginRequest:
+      properties:
+        phone:
+          type: string
+          title: Phone
+        code:
+          type: string
+          title: Code
+      type: object
+      required:
+      - phone
+      - code
+      title: PhoneLoginRequest
+    PhoneRegisterRequest:
+      properties:
+        uname:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Uname
+        phone:
+          type: string
+          title: Phone
+        code:
+          type: string
+          title: Code
+        pwd:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pwd
+      type: object
+      required:
+      - phone
+      - code
+      title: PhoneRegisterRequest
     PolicyDocumentCreate:
       properties:
         title:
@@ -2993,6 +4032,165 @@ components:
       required:
       - status
       title: PolicyDocumentReview
+    RecoveryMethod:
+      properties:
+        channel:
+          type: string
+          enum:
+          - phone
+          - email
+          title: Channel
+        masked_target:
+          type: string
+          title: Masked Target
+        label:
+          type: string
+          title: Label
+      type: object
+      required:
+      - channel
+      - masked_target
+      - label
+      title: RecoveryMethod
+    RecoveryOptionsRequest:
+      properties:
+        identifier:
+          type: string
+          title: Identifier
+      type: object
+      required:
+      - identifier
+      title: RecoveryOptionsRequest
+    RecoveryOptionsResponse:
+      properties:
+        identifier:
+          type: string
+          title: Identifier
+        methods:
+          items:
+            $ref: '#/components/schemas/RecoveryMethod'
+          type: array
+          title: Methods
+      type: object
+      required:
+      - identifier
+      - methods
+      title: RecoveryOptionsResponse
+    RecoverySendRequest:
+      properties:
+        identifier:
+          type: string
+          title: Identifier
+        channel:
+          type: string
+          enum:
+          - phone
+          - email
+          title: Channel
+        captcha_id:
+          type: string
+          title: Captcha Id
+        captcha_answer:
+          type: string
+          title: Captcha Answer
+      type: object
+      required:
+      - identifier
+      - channel
+      - captcha_id
+      - captcha_answer
+      title: RecoverySendRequest
+    SearchSuggestItem:
+      properties:
+        source_type:
+          type: string
+          title: Source Type
+        title:
+          type: string
+          title: Title
+        subtitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subtitle
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        action_type:
+          type: string
+          title: Action Type
+        route_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Route Path
+        external_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Url
+        subject_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Type
+        subject_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Subject Id
+        published_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Published At
+        score:
+          type: number
+          title: Score
+          default: 0.0
+        extra:
+          additionalProperties: true
+          type: object
+          title: Extra
+        group:
+          type: string
+          title: Group
+          default: semantic
+      type: object
+      required:
+      - source_type
+      - title
+      - action_type
+      title: SearchSuggestItem
+    SearchSuggestResponse:
+      properties:
+        query:
+          type: string
+          title: Query
+          default: ''
+        items:
+          items:
+            $ref: '#/components/schemas/SearchSuggestItem'
+          type: array
+          title: Items
+        groups:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Groups
+      type: object
+      title: SearchSuggestResponse
+    SearchSuggestionResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/UnifiedSearchItem'
+          type: array
+          title: Items
+      type: object
+      title: SearchSuggestionResponse
     SettingsRead:
       properties:
         default_audience:
@@ -3124,12 +4322,10 @@ components:
       - total_parsed_count
       - user_id
       title: StatsAnalysisRead
-    TodoItem:
+    TodoRead:
       properties:
         id:
-          anyOf:
-          - type: integer
-          - type: 'null'
+          type: integer
           title: Id
         user_id:
           type: integer
@@ -3142,19 +4338,16 @@ components:
         title:
           type: string
           title: Title
-          description: 待办事项标题
         detail:
           anyOf:
           - type: string
           - type: 'null'
           title: Detail
-          description: 详细说明
         deadline:
           anyOf:
           - type: string
           - type: 'null'
           title: Deadline
-          description: 截止时间（字符串，来自AI提取）
         is_done:
           type: boolean
           title: Is Done
@@ -3162,7 +4355,6 @@ components:
         is_confirmed:
           type: boolean
           title: Is Confirmed
-          description: 用户已确认保存（False=待确认草稿）
           default: true
         created_time:
           type: string
@@ -3174,9 +4366,12 @@ components:
           title: Updated Time
       type: object
       required:
+      - id
       - user_id
       - title
-      title: TodoItem
+      - created_time
+      - updated_time
+      title: TodoRead
     Token:
       properties:
         access_token:
@@ -3190,6 +4385,79 @@ components:
       - access_token
       - token_type
       title: Token
+    UnifiedSearchItem:
+      properties:
+        source_type:
+          type: string
+          title: Source Type
+        title:
+          type: string
+          title: Title
+        subtitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subtitle
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        action_type:
+          type: string
+          title: Action Type
+        route_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Route Path
+        external_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Url
+        subject_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject Type
+        subject_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Subject Id
+        published_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Published At
+        score:
+          type: number
+          title: Score
+          default: 0.0
+        extra:
+          additionalProperties: true
+          type: object
+          title: Extra
+      type: object
+      required:
+      - source_type
+      - title
+      - action_type
+      title: UnifiedSearchItem
+    UnifiedSearchResponse:
+      properties:
+        query:
+          type: string
+          title: Query
+          default: ''
+        items:
+          items:
+            $ref: '#/components/schemas/UnifiedSearchItem'
+          type: array
+          title: Items
+      type: object
+      title: UnifiedSearchResponse
     UserCreate:
       properties:
         uname:
@@ -3203,6 +4471,11 @@ components:
           - type: string
           - type: 'null'
           title: Phone
+        login_phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Login Phone
         avatar_url:
           anyOf:
           - type: string
@@ -3231,13 +4504,20 @@ components:
           type: string
           title: Uname
         email:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Email
         phone:
           anyOf:
           - type: string
           - type: 'null'
           title: Phone
+        login_phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Login Phone
         avatar_url:
           anyOf:
           - type: string
@@ -3266,10 +4546,27 @@ components:
           type: boolean
           title: Email Verified
           default: false
+        phone_verified:
+          type: boolean
+          title: Phone Verified
+          default: false
+        password_login_enabled:
+          type: boolean
+          title: Password Login Enabled
+          default: true
+        preferred_login_method:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Preferred Login Method
+        last_login_method:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Login Method
       type: object
       required:
       - uname
-      - email
       - uid
       - created_time
       - last_login
@@ -3319,6 +4616,11 @@ components:
           - type: string
           - type: 'null'
           title: Phone
+        login_phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Login Phone
         pwd:
           anyOf:
           - type: string
@@ -3346,6 +4648,11 @@ components:
         type:
           type: string
           title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
       type: object
       required:
       - loc
@@ -3378,4 +4685,4 @@ components:
       flows:
         password:
           scopes: {}
-          tokenUrl: /
+          tokenUrl: /login/
