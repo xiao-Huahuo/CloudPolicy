@@ -46,6 +46,25 @@ _GRAPH_INTENT_KEYWORDS = (
     "\u603b\u7ed3",
     "\u77e5\u8bc6\u56fe\u8c31",
 )
+_UPLOAD_ACK_ONLY_REQUESTS = {
+    "",
+    "解析",
+    "解析它",
+    "解析文件",
+    "解析这个文件",
+    "解析一下",
+    "生成图谱",
+    "生成知识图谱",
+    "查看图谱",
+    "提取文本",
+    "提取文字",
+    "ocr",
+}
+_UPLOAD_ACK_REPLIES = {
+    "已生成图谱小窗，可直接查看知识图谱并切换原文。",
+    "已读取上传内容，并打开原文小窗。",
+    "已提取图片文字，并打开结果小窗。",
+}
 
 AGENT_NAME = "云小圆 (CloudCycle)"
 
@@ -276,6 +295,35 @@ def _build_uploaded_parse_reply(result: Dict[str, Any], user_text: str | None = 
     return "已读取上传内容，并打开原文小窗。"
 
 
+def _has_specific_upload_request(user_text: str | None) -> bool:
+    request_text = _extract_request_text_for_intent(user_text)
+    request_text = re.sub(_FILE_REF_RE, "", request_text).strip()
+    request_text = re.sub(r"\s+", "", request_text).lower().strip("。.!！?？：:，,；;、")
+    if request_text in _UPLOAD_ACK_ONLY_REQUESTS:
+        return False
+    return bool(request_text)
+
+
+def _meaningful_assistant_reply(result: Dict[str, Any]) -> str:
+    reply = str(result.get("assistant_reply") or "").strip()
+    if not reply or reply in _UPLOAD_ACK_REPLIES:
+        return ""
+    if _is_json_like(reply) or _is_low_signal_reply(reply):
+        return ""
+    return reply
+
+
+def _select_upload_assistant_reply(result: Dict[str, Any], user_text: str | None = None) -> str:
+    parse_display_intent = _detect_upload_parse_intent(user_text)
+    if not parse_display_intent.get("has_upload_context"):
+        return ""
+    if _has_specific_upload_request(user_text):
+        reply = _meaningful_assistant_reply(result)
+        if reply:
+            return reply
+    return _build_uploaded_parse_reply(result, user_text=user_text)
+
+
 def run_agent(
     session: Session,
     user_id: int,
@@ -471,14 +519,8 @@ def run_agent(
         "user_audience": user_audience_label,
     }
     if parse_display_intent.get("has_upload_context"):
-        result["assistant_reply"] = _build_uploaded_parse_reply(result, user_text=original_text)
+        result["assistant_reply"] = _select_upload_assistant_reply(result, user_text=original_text)
         return result
-        if parse_display_intent.get("display_mode") == "ocr_text":
-            result["assistant_reply"] = "已提取图片文字，并打开结果小窗。"
-        elif _has_display_card_type(display_cards, "knowledge_graph"):
-            result["assistant_reply"] = "已生成图谱小窗，可直接查看知识图谱并切换原文。"
-        else:
-            result["assistant_reply"] = "已读取上传内容，并打开原文小窗。"
     return result
 
 
@@ -665,14 +707,8 @@ def _guess_document_kind(title: str, text: str) -> str:
 
 def _build_generic_document_reply(result: Dict[str, Any], user_text: str | None = None) -> str:
     parse_display_intent = _detect_upload_parse_intent(user_text)
-    display_cards = [card for card in list(result.get("display_cards", []) or []) if isinstance(card, dict)]
     if parse_display_intent.get("has_upload_context"):
-        return _build_uploaded_parse_reply(result, user_text=user_text)
-        if parse_display_intent.get("display_mode") == "ocr_text":
-            return "已提取图片文字，并打开结果小窗。"
-        if _has_display_card_type(display_cards, "knowledge_graph"):
-            return "已生成图谱小窗，可直接查看知识图谱并切换原文。"
-        return "已读取上传内容，并打开原文小窗。"
+        return _select_upload_assistant_reply(result, user_text=user_text)
 
     structured = result.get("structured", {}) or {}
     title = _guess_document_title(structured, user_text)
@@ -706,20 +742,35 @@ def _is_low_signal_reply(text: str) -> bool:
     return any(phrase in normalized for phrase in _LOW_SIGNAL_REPLY_PHRASES)
 
 
+def _looks_like_document_text(structured: Dict[str, Any], user_text: str | None = None) -> bool:
+    text = str(structured.get("original_text") or user_text or "").strip()
+    if any(marker in text for marker in _UPLOAD_PARSE_MARKERS):
+        return True
+    if len(text) >= 180:
+        return True
+    meaningful_lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return len(meaningful_lines) >= 3
+
+
+def _build_general_followup_reply(user_text: str | None = None) -> str:
+    question = _compact_reply_text(user_text, limit=80)
+    if question:
+        return f"要判断“{question}”，我还需要知道具体事项或对应材料。你可以补充政策名称、办理对象、所在地区，或上传/粘贴原文，我再按流程、材料、时间节点帮你拆解。"
+    return "我还需要知道具体事项或对应材料。你可以补充政策名称、办理对象、所在地区，或上传/粘贴原文，我再按流程、材料、时间节点帮你拆解。"
+
+
 def build_agent_reply(result: Dict[str, Any], user_text: str | None = None) -> str:
     audience_label = "通用"
     if result.get("user_audience"):
         audience_label = str(result.get("user_audience"))
 
     parse_display_intent = _detect_upload_parse_intent(user_text)
-    display_cards = [card for card in list(result.get("display_cards", []) or []) if isinstance(card, dict)]
     if parse_display_intent.get("has_upload_context"):
-        return _build_uploaded_parse_reply(result, user_text=user_text)
-        if parse_display_intent.get("display_mode") == "ocr_text":
-            return "已提取图片文字，并打开结果小窗。"
-        if _has_display_card_type(display_cards, "knowledge_graph"):
-            return "已生成图谱小窗，可直接查看知识图谱并切换原文。"
-        return "已读取上传内容，并打开原文小窗。"
+        return _select_upload_assistant_reply(result, user_text=user_text)
+
+    existing_reply = _meaningful_assistant_reply(result)
+    if existing_reply:
+        return existing_reply
 
     structured = result.get("structured", {}) or {}
     has_core = any(
@@ -734,6 +785,8 @@ def build_agent_reply(result: Dict[str, Any], user_text: str | None = None) -> s
         ]
     )
     if not has_core:
+        if not _looks_like_document_text(structured, user_text=user_text):
+            return _build_general_followup_reply(user_text=user_text)
         return _build_generic_document_reply(result, user_text=user_text)
 
     handling_matter = _strip_noise(structured.get("handling_matter")) or "办理事项"

@@ -27,6 +27,7 @@ TOOL_CATALOG: list[dict[str, Any]] = [
     {"name": "inspect_agent_runtime", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "检查 Agent 运行时和可用工具"},
     {"name": "list_available_tools", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "列出当前用户可用工具"},
     {"name": "get_user_permission_scope", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "查看当前用户权限范围"},
+    {"name": "get_personal_profile", "category": "personal", "min_role": "normal", "side_effect": False, "description": "获取当前用户个人资料和画像摘要"},
     {"name": "debug_query_zero_results", "category": "diagnostic", "min_role": "normal", "side_effect": False, "description": "诊断为什么查询结果为 0"},
     {"name": "unified_search_tool", "category": "search", "min_role": "normal", "side_effect": False, "description": "执行全局统一搜索"},
     {"name": "list_user_uploaded_files", "category": "file", "min_role": "normal", "side_effect": False, "description": "列出最近上传的文件和导出快照"},

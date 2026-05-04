@@ -29,6 +29,7 @@ _FILE_PARSE_LINE_RE = re.compile(r"^【文件解析】.*$", re.MULTILINE)
 _FILE_REF_LINE_RE = re.compile(r"^【文件引用】.*$", re.MULTILINE)
 _AGENT_PROMPT_SOFT_LIMIT = 2200
 _AGENT_PROMPT_HARD_LIMIT = 3200
+_UPLOAD_TEXT_EXCERPT_LIMIT = 1200
 
 
 def _console(text: str) -> None:
@@ -309,6 +310,35 @@ def _extract_file_refs(prompt: str) -> list[str]:
     return refs
 
 
+def _extract_upload_text_excerpts(prompt: str, limit: int = _UPLOAD_TEXT_EXCERPT_LIMIT) -> list[str]:
+    excerpts: list[str] = []
+    current_title = ""
+    current_body: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current_title, current_body
+        body = "\n".join(current_body).strip()
+        if current_title and body:
+            excerpts.append(f"【文件正文摘录】{current_title}\n{_compact_text(body, limit=limit)}")
+        current_title = ""
+        current_body = []
+
+    for line in str(prompt or "").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("【文件解析】"):
+            flush_current()
+            current_title = stripped.replace("【文件解析】", "", 1).strip() or "上传文件"
+            continue
+        if not current_title:
+            continue
+        if stripped.startswith("【文件引用】"):
+            continue
+        current_body.append(line)
+
+    flush_current()
+    return excerpts[:4]
+
+
 def _build_agent_prompt(prompt: str) -> tuple[str, dict[str, Any]]:
     raw = str(prompt or "").strip()
     meta = {
@@ -332,15 +362,17 @@ def _build_agent_prompt(prompt: str) -> tuple[str, dict[str, Any]]:
 
     file_parse_lines = _FILE_PARSE_LINE_RE.findall(raw)[:6]
     file_ref_lines = _FILE_REF_LINE_RE.findall(raw)[:6]
+    upload_text_excerpts = _extract_upload_text_excerpts(raw)
 
     parts: list[str] = []
     if leading_text:
         parts.append(leading_text)
     parts.extend(file_parse_lines)
     parts.extend(file_ref_lines)
+    parts.extend(upload_text_excerpts)
 
     if file_refs:
-        parts.append("文档正文过长，已在入口处省略。请优先根据上述文件引用调用上传文件解析工具，再基于文件内容回答。")
+        parts.append("上方已包含上传文档解析后的正文摘录；若摘录不足以回答，再根据文件引用调用上传文件解析工具补全文档内容。")
     else:
         parts.append("输入正文过长，已在入口处截断。请基于保留内容先完成回答。")
         remaining = raw[len(leading_text) :] if leading_text and raw.startswith(leading_text) else raw

@@ -19,6 +19,7 @@ from app.services.agent_tool_services import (
     admin_tool_service,
     diagnostic_tool_service,
     file_tool_service,
+    personal_tool_service,
     search_tool_service,
     stats_tool_service,
 )
@@ -616,6 +617,17 @@ def get_user_permission_scope(user_id: str):
 
 
 @tool
+def get_personal_profile(user_id: str):
+    """获取当前用户的个人资料、画像摘要和偏好设置，用于个性化回答。"""
+    try:
+        uid = _uid(user_id)
+        with Session(engine) as session:
+            return _ok(personal_tool_service.get_personal_profile_payload(session, uid))
+    except Exception as exc:
+        return _err("PERSONAL_PROFILE_QUERY_FAILED", str(exc))
+
+
+@tool
 def debug_query_zero_results(
     user_id: str,
     tool_name: str,
@@ -918,6 +930,7 @@ tools = [
     inspect_agent_runtime,
     list_available_tools,
     get_user_permission_scope,
+    get_personal_profile,
     debug_query_zero_results,
     unified_search_tool,
     search_chat_messages_fulltext,
