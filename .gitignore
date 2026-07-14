@@ -73,8 +73,6 @@ coverage.xml
 .junit.xml
 .VSCodeCounter\
 
-
-
 # Embedding Model
 embedding
 
